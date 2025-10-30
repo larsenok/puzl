@@ -1,29 +1,28 @@
 # Puzl
 
-This repository contains **Star Orchard**, a phone-friendly React Native puzzle built with Expo. Players are given a single 5×5 orchard at a time and must place apples so every row and column matches the provided clue counts.
-
-## Game summary
-
-- Each puzzle is randomly generated when the app launches or when "New Puzzle" is pressed.
-- Tap a plot to cycle through empty ground, an apple (🍎), and a marker (✕) for notes.
-- Row and column hints update live and change colour when satisfied or exceeded, guiding progress without revealing the solution outright.
-- The "Check Solution" button verifies every plot against the hidden orchard layout, while "Clear Board" resets the current attempt without changing the underlying puzzle.
+Star Orchard is a bite-sized logic puzzle rendered with plain HTML, CSS, and vanilla JavaScript.
+Fill the 5×5 orchard with apples so every row and column matches the clue counts.
+Tap (or click) a plot to cycle through empty ground, an apple, and a marker for notes.
 
 ## Project structure
 
-- `App.js` hosts the full Star Orchard experience including puzzle generation, interaction logic, and responsive styling for small screens.
-- `app.json`, `babel.config.js`, and `package.json` configure the Expo React Native project for Android, iOS, and web targets.
+- `src/index.html` contains the static markup that Vercel serves.
+- `src/styles.css` styles the board, hints, and controls.
+- `src/main.js` handles puzzle generation, interactions, and win detection.
+- `build.js` copies everything in `src/` to `dist/` during the build step.
 
-## Why this approach?
+## Local development
 
-- **Expo & React Native** were chosen for rapid setup and built-in mobile optimisations, ensuring the layout scales gracefully on phones while still supporting web previews.
-- **Randomised puzzles with deterministic clues** keep gameplay fresh but fair. By exposing only row/column counts and colour-coded feedback, players always have a solvable logical challenge without guesswork.
-- **Minimal dependencies** beyond Expo’s core stack keep the project lightweight and easy to install or extend.
+No dependencies are required. To produce a deployable bundle run:
 
-To run the project locally, install dependencies with `npm install` and start with `npm run start` (or the platform-specific scripts defined in `package.json`).
+```bash
+npm run build
+```
 
+The static assets will be emitted to `dist/` and can be served by any static host.
 
-## Deployment
+## Gameplay highlights
 
-- Run `npm run build` to generate a static web bundle in the `dist/` folder.
-- Deploy the repository to Vercel using the default Node.js settings; the included `vercel.json` configures the build command and output directory for you.
+- Every puzzle is generated on the fly but always solvable by logic.
+- Row and column clues update immediately and change colour when satisfied or exceeded.
+- "Check Solution" validates the whole board, "Clear Board" resets the attempt, and "New Puzzle" generates a fresh orchard.
