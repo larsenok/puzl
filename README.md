@@ -21,3 +21,9 @@ This repository contains **Star Orchard**, a phone-friendly React Native puzzle 
 - **Minimal dependencies** beyond Expo’s core stack keep the project lightweight and easy to install or extend.
 
 To run the project locally, install dependencies with `npm install` and start with `npm run start` (or the platform-specific scripts defined in `package.json`).
+
+
+## Deployment
+
+- Run `npm run build` to generate a static web bundle in the `dist/` folder.
+- Deploy the repository to Vercel using the default Node.js settings; the included `vercel.json` configures the build command and output directory for you.
