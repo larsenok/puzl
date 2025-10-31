@@ -8,28 +8,20 @@
   </head>
   <body>
     <main class="app">
-      <header class="intro">
-        <h1 class="title">Orchard Lab</h1>
-        <p class="subtitle">
-          Each colored tetris-style plot shows how many apples belong inside it. Tap or click any cell to cycle between
-          empty soil, an apple, and a marker while keeping every row and column aligned with the clues.
-        </p>
-      </header>
-
       <section class="board-section">
         <div class="column-hints" id="column-hints" aria-label="Column clues"></div>
         <div class="board" id="board" aria-label="Puzzle board"></div>
       </section>
 
       <div class="actions">
-        <button id="check-button" class="action-button">Check Solution</button>
-        <button id="clear-button" class="action-button">Clear Board</button>
-        <button id="new-button" class="action-button">New Puzzle</button>
+        <button id="check-button" class="action-button">Check</button>
+        <button id="clear-button" class="action-button">Clear</button>
+        <button id="new-button" class="action-button">Change</button>
       </div>
 
-      <p class="message" id="message">
-        Welcome to the Orchard Lab! Each colored shape shows how many apples belong in it. Place apples so every row and column matches its clue.
-      </p>
+      <div class="status" id="status" aria-live="polite"></div>
+
+      <footer class="footer">Keep each badge count per shape and match every row and column total.</footer>
     </main>
 
     <script type="module" src="main.js"></script>

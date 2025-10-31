@@ -1,42 +1,81 @@
-const BOARD_SIZE = 5;
-const CELL_STATES = ['empty', 'fruit', 'mark'];
-
-const SHAPE_OVERLAYS = [
-  [
-    [0, 0, 0, 1, 1],
-    [2, 3, 0, 1, 4],
-    [2, 3, 3, 4, 4],
-    [5, 5, 6, 6, 7],
-    [8, 5, 9, 7, 7]
-  ],
-  [
-    [0, 0, 1, 1, 1],
-    [2, 0, 3, 4, 4],
-    [2, 3, 3, 5, 4],
-    [6, 6, 5, 5, 7],
-    [8, 6, 9, 7, 7]
-  ],
-  [
-    [0, 0, 1, 1, 2],
-    [3, 0, 1, 4, 2],
-    [3, 5, 4, 4, 2],
-    [6, 5, 5, 7, 7],
-    [6, 8, 8, 8, 9]
-  ]
+const PUZZLE_LIBRARY = [
+  {
+    size: 5,
+    weight: 1,
+    overlays: [
+      [
+        [0, 0, 0, 1, 1],
+        [2, 3, 0, 1, 4],
+        [2, 3, 3, 4, 4],
+        [5, 5, 6, 6, 7],
+        [8, 5, 9, 7, 7]
+      ],
+      [
+        [0, 0, 1, 1, 1],
+        [2, 0, 3, 4, 4],
+        [2, 3, 3, 5, 4],
+        [6, 6, 5, 5, 7],
+        [8, 6, 9, 7, 7]
+      ],
+      [
+        [0, 0, 1, 1, 2],
+        [3, 0, 1, 4, 2],
+        [3, 5, 4, 4, 2],
+        [6, 5, 5, 7, 7],
+        [6, 8, 8, 8, 9]
+      ]
+    ]
+  },
+  {
+    size: 6,
+    weight: 4,
+    overlays: [
+      [
+        [0, 0, 1, 1, 2, 2],
+        [0, 3, 3, 1, 4, 2],
+        [5, 3, 6, 4, 4, 2],
+        [5, 6, 6, 7, 8, 8],
+        [9, 9, 6, 7, 10, 8],
+        [9, 11, 11, 7, 10, 10]
+      ],
+      [
+        [0, 0, 1, 1, 2, 2],
+        [3, 0, 1, 4, 4, 2],
+        [3, 5, 5, 4, 6, 6],
+        [7, 7, 5, 8, 8, 6],
+        [7, 9, 9, 10, 8, 11],
+        [12, 9, 10, 10, 11, 11]
+      ],
+      [
+        [0, 0, 1, 1, 2, 2],
+        [3, 0, 4, 4, 2, 5],
+        [3, 6, 6, 4, 7, 5],
+        [8, 6, 9, 9, 7, 5],
+        [8, 10, 10, 11, 7, 12],
+        [13, 10, 11, 11, 12, 12]
+      ]
+    ]
+  }
 ];
 
 const REGION_COLORS = [
-  '#d4a373',
-  '#8ecae6',
-  '#b5e48c',
-  '#f6bd60',
-  '#e5989b',
-  '#b9fbc0',
-  '#a0c4ff',
-  '#f4978e',
-  '#ffcb77',
-  '#cdb4db'
+  '#ff595e',
+  '#1982c4',
+  '#8ac926',
+  '#ffca3a',
+  '#6a4c93',
+  '#ff924c',
+  '#277da1',
+  '#f72585',
+  '#4cc9f0',
+  '#80ffdb',
+  '#b5179e',
+  '#7209b7',
+  '#4895ef',
+  '#43aa8b'
 ];
+
+const CELL_STATES = ['empty', 'fruit', 'mark'];
 
 const createEmptyBoard = (size) =>
   Array.from({ length: size }, () => Array.from({ length: size }, () => 'empty'));
@@ -50,8 +89,18 @@ const shuffleArray = (input) => {
   return array;
 };
 
-const createPuzzle = (size = BOARD_SIZE) => {
-  const overlay = SHAPE_OVERLAYS[Math.floor(Math.random() * SHAPE_OVERLAYS.length)];
+const chooseConfig = () => {
+  const weighted = PUZZLE_LIBRARY.flatMap((config) =>
+    Array.from({ length: config.weight }, () => config)
+  );
+  const choice = weighted[Math.floor(Math.random() * weighted.length)];
+  return choice;
+};
+
+const createPuzzle = () => {
+  const config = chooseConfig();
+  const { size } = config;
+  const overlay = config.overlays[Math.floor(Math.random() * config.overlays.length)];
   const regionCells = new Map();
 
   for (let row = 0; row < size; row += 1) {
@@ -70,7 +119,8 @@ const createPuzzle = (size = BOARD_SIZE) => {
   let colorIndex = 0;
 
   for (const [regionId, cells] of regionCells.entries()) {
-    const requirement = Math.floor(Math.random() * Math.min(3, cells.length)) + 1;
+    const maxRequirement = Math.min(4, cells.length);
+    const requirement = Math.floor(Math.random() * maxRequirement) + 1;
     const chosenCells = shuffleArray(cells).slice(0, requirement);
     chosenCells.forEach(([row, column]) => {
       solution[row][column] = true;
@@ -106,6 +156,7 @@ const createPuzzle = (size = BOARD_SIZE) => {
   }, {});
 
   return {
+    size,
     solution,
     rowTotals,
     columnTotals,
@@ -115,14 +166,17 @@ const createPuzzle = (size = BOARD_SIZE) => {
   };
 };
 
+const initialPuzzle = createPuzzle();
+
 const state = {
-  puzzle: createPuzzle(),
-  boardState: createEmptyBoard(BOARD_SIZE)
+  puzzle: initialPuzzle,
+  boardState: createEmptyBoard(initialPuzzle.size)
 };
 
+const appRoot = document.querySelector('.app');
 const columnHintsContainer = document.getElementById('column-hints');
 const boardContainer = document.getElementById('board');
-const messageElement = document.getElementById('message');
+const statusElement = document.getElementById('status');
 const checkButton = document.getElementById('check-button');
 const clearButton = document.getElementById('clear-button');
 const newButton = document.getElementById('new-button');
@@ -131,13 +185,23 @@ const columnHintElements = [];
 const rowHintElements = [];
 const cellElements = [];
 
+const setBoardSizeVariable = (size) => {
+  if (appRoot) {
+    appRoot.style.setProperty('--board-size', String(size));
+  }
+};
+
+setBoardSizeVariable(state.puzzle.size);
+
 const getCurrentRowTotals = () =>
   state.boardState.map((row) => row.filter((cell) => cell === 'fruit').length);
 
-const getCurrentColumnTotals = () =>
-  Array.from({ length: BOARD_SIZE }, (_, column) =>
+const getCurrentColumnTotals = () => {
+  const size = state.puzzle.size;
+  return Array.from({ length: size }, (_, column) =>
     state.boardState.reduce((sum, row) => sum + (row[column] === 'fruit' ? 1 : 0), 0)
   );
+};
 
 const applyHintClasses = (element, current, target) => {
   element.classList.remove('hint-satisfied', 'hint-exceeded');
@@ -148,8 +212,28 @@ const applyHintClasses = (element, current, target) => {
   }
 };
 
-const updateMessage = (text) => {
-  messageElement.textContent = text;
+const updateStatus = (type, text) => {
+  statusElement.innerHTML = '';
+  if (!text) {
+    return;
+  }
+
+  const icon = document.createElement('span');
+  icon.className = 'status-icon';
+  if (type === 'success') {
+    icon.classList.add('success');
+  } else if (type === 'alert') {
+    icon.classList.add('alert');
+  } else {
+    icon.classList.add('notice');
+  }
+
+  const statusText = document.createElement('span');
+  statusText.className = 'status-text';
+  statusText.textContent = text;
+
+  statusElement.appendChild(icon);
+  statusElement.appendChild(statusText);
 };
 
 const updateCell = (row, column) => {
@@ -183,8 +267,9 @@ const updateHints = () => {
 };
 
 const updateBoard = () => {
-  for (let row = 0; row < BOARD_SIZE; row += 1) {
-    for (let column = 0; column < BOARD_SIZE; column += 1) {
+  const size = state.puzzle.size;
+  for (let row = 0; row < size; row += 1) {
+    for (let column = 0; column < size; column += 1) {
       updateCell(row, column);
     }
   }
@@ -200,17 +285,21 @@ const cycleCell = (row, column) => {
 };
 
 const resetBoard = () => {
-  state.boardState = createEmptyBoard(BOARD_SIZE);
-  for (let row = 0; row < BOARD_SIZE; row += 1) {
-    for (let column = 0; column < BOARD_SIZE; column += 1) {
+  const size = state.puzzle.size;
+  state.boardState = createEmptyBoard(size);
+  for (let row = 0; row < size; row += 1) {
+    for (let column = 0; column < size; column += 1) {
       updateCell(row, column);
     }
   }
   updateHints();
-  updateMessage('Board cleared. Rebuild the harvest so each shape and every clue lines up.');
+  updateStatus('notice', 'cleared');
 };
 
 const createBoardStructure = () => {
+  const size = state.puzzle.size;
+  setBoardSizeVariable(size);
+
   columnHintElements.length = 0;
   columnHintsContainer.innerHTML = '';
   state.puzzle.columnTotals.forEach((total, index) => {
@@ -228,7 +317,7 @@ const createBoardStructure = () => {
   cellElements.length = 0;
   rowHintElements.length = 0;
 
-  for (let row = 0; row < BOARD_SIZE; row += 1) {
+  for (let row = 0; row < size; row += 1) {
     const rowWrapper = document.createElement('div');
     rowWrapper.className = 'board-row';
 
@@ -236,7 +325,7 @@ const createBoardStructure = () => {
     cellRow.className = 'row-cells';
     const rowCells = [];
 
-    for (let column = 0; column < BOARD_SIZE; column += 1) {
+    for (let column = 0; column < size; column += 1) {
       const regionId = state.puzzle.regionGrid[row][column];
       const region = state.puzzle.regionsById[String(regionId)];
 
@@ -278,7 +367,7 @@ const createBoardStructure = () => {
 };
 
 const checkSolution = () => {
-  const { rowTotals, columnTotals, regionGrid, regions } = state.puzzle;
+  const { rowTotals, columnTotals, regionGrid, regions, size } = state.puzzle;
 
   const currentRowTotals = getCurrentRowTotals();
   const currentColumnTotals = getCurrentColumnTotals();
@@ -287,8 +376,8 @@ const checkSolution = () => {
   const columnsMatch = currentColumnTotals.every((count, index) => count === columnTotals[index]);
 
   const regionCounts = new Map();
-  for (let row = 0; row < BOARD_SIZE; row += 1) {
-    for (let column = 0; column < BOARD_SIZE; column += 1) {
+  for (let row = 0; row < size; row += 1) {
+    for (let column = 0; column < size; column += 1) {
       if (state.boardState[row][column] === 'fruit') {
         const regionId = regionGrid[row][column];
         regionCounts.set(regionId, (regionCounts.get(regionId) || 0) + 1);
@@ -302,22 +391,18 @@ const checkSolution = () => {
   });
 
   if (rowsMatch && columnsMatch && regionsMatch) {
-    updateMessage(
-      'Brilliant! Every shape has the right harvest and the row and column clues are all satisfied.'
-    );
+    updateStatus('success', 'success');
   } else {
-    updateMessage('Not quite there. Check the shape requirements and the row and column counts.');
+    updateStatus('alert', 'keep going');
   }
 };
 
 const newPuzzle = () => {
   state.puzzle = createPuzzle();
-  state.boardState = createEmptyBoard(BOARD_SIZE);
+  state.boardState = createEmptyBoard(state.puzzle.size);
   createBoardStructure();
   updateBoard();
-  updateMessage(
-    'New layout! Each colored shape badge shows how many apples belong inside. Balance the rows and columns to match the clues.'
-  );
+  updateStatus('notice', 'changed');
 };
 
 boardContainer.addEventListener('click', (event) => {
@@ -336,3 +421,4 @@ newButton.addEventListener('click', newPuzzle);
 
 createBoardStructure();
 updateBoard();
+updateStatus();
