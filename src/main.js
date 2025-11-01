@@ -1,7 +1,31 @@
 const PUZZLE_LIBRARY = [
   {
-    size: 5,
+    size: 4,
     weight: 1,
+    overlays: [
+      [
+        [0, 0, 1, 1],
+        [0, 2, 2, 1],
+        [3, 2, 4, 4],
+        [3, 5, 5, 4]
+      ],
+      [
+        [0, 0, 1, 1],
+        [2, 0, 1, 3],
+        [2, 4, 3, 3],
+        [5, 4, 6, 6]
+      ],
+      [
+        [0, 1, 1, 2],
+        [0, 3, 4, 2],
+        [5, 3, 4, 6],
+        [5, 7, 6, 6]
+      ]
+    ]
+  },
+  {
+    size: 5,
+    weight: 2,
     overlays: [
       [
         [0, 0, 0, 1, 1],
@@ -55,18 +79,51 @@ const PUZZLE_LIBRARY = [
         [13, 10, 11, 11, 12, 12]
       ]
     ]
+  },
+  {
+    size: 7,
+    weight: 6,
+    overlays: [
+      [
+        [0, 0, 1, 1, 2, 2, 2],
+        [0, 3, 3, 1, 4, 5, 2],
+        [6, 3, 7, 4, 4, 5, 8],
+        [6, 7, 7, 9, 10, 5, 8],
+        [11, 11, 9, 9, 10, 12, 12],
+        [13, 14, 14, 15, 10, 15, 12],
+        [13, 16, 16, 15, 17, 17, 12]
+      ],
+      [
+        [0, 0, 1, 1, 1, 2, 2],
+        [3, 0, 4, 5, 1, 6, 2],
+        [3, 4, 4, 5, 7, 6, 8],
+        [9, 9, 10, 5, 7, 6, 8],
+        [11, 12, 10, 13, 7, 14, 8],
+        [11, 12, 15, 13, 16, 14, 8],
+        [17, 12, 15, 13, 16, 18, 18]
+      ],
+      [
+        [0, 0, 1, 1, 2, 2, 3],
+        [4, 0, 5, 6, 2, 7, 3],
+        [4, 5, 5, 6, 7, 7, 3],
+        [8, 9, 9, 6, 10, 7, 11],
+        [8, 12, 9, 10, 10, 13, 11],
+        [14, 12, 15, 16, 13, 13, 11],
+        [14, 12, 15, 16, 17, 17, 18]
+      ]
+    ]
   }
 ];
 
 const DIFFICULTIES = {
   easy: {
     label: 'Easy',
-    allowedSizes: [5],
+    allowedSizes: [4],
     requirement: { min: 1, max: 2 }
   },
   normal: {
     label: 'Normal',
-    allowedSizes: [5, 6],
+    allowedSizes: [5],
     requirement: { min: 1, max: 3 }
   },
   hard: {
@@ -76,28 +133,28 @@ const DIFFICULTIES = {
   },
   veryhard: {
     label: 'Very Hard',
-    allowedSizes: [6],
-    requirement: { min: 3, max: 4 }
+    allowedSizes: [7],
+    requirement: { min: 3, max: 5 }
   }
 };
 
 const DEFAULT_DIFFICULTY = 'normal';
 
 const REGION_COLORS = [
-  '#ff595e',
-  '#1982c4',
-  '#8ac926',
-  '#ffca3a',
-  '#6a4c93',
-  '#ff924c',
-  '#277da1',
-  '#f72585',
-  '#4cc9f0',
-  '#80ffdb',
-  '#b5179e',
-  '#7209b7',
-  '#4895ef',
-  '#43aa8b'
+  '#475569',
+  '#64748b',
+  '#334155',
+  '#94a3b8',
+  '#1e293b',
+  '#6b7280',
+  '#0f172a',
+  '#4b5563',
+  '#52525b',
+  '#1f2937',
+  '#71717a',
+  '#3f4c5a',
+  '#2f3d4c',
+  '#5d6b7a'
 ];
 
 const CELL_STATES = ['empty', 'fruit', 'mark'];
@@ -132,7 +189,7 @@ const chooseConfig = (difficulty) => {
   return choice;
 };
 
-const createPuzzle = (difficulty) => {
+const createPuzzle = (difficulty, attempt = 0) => {
   const settings = getDifficultySettings(difficulty);
   const config = chooseConfig(difficulty);
   const { size } = config;
@@ -190,6 +247,13 @@ const createPuzzle = (difficulty) => {
   const columnTotals = Array.from({ length: size }, (_, column) =>
     solution.reduce((sum, row) => sum + (row[column] ? 1 : 0), 0)
   );
+
+  const hasMaxTotals =
+    rowTotals.some((total) => total === size) || columnTotals.some((total) => total === size);
+
+  if (hasMaxTotals && attempt < 6) {
+    return createPuzzle(difficulty, attempt + 1);
+  }
 
   const regionsById = regions.reduce((accumulator, region) => {
     accumulator[String(region.id)] = region;
@@ -285,9 +349,9 @@ const updateCell = (row, column) => {
   const stateValue = state.boardState[row][column];
   element.dataset.state = stateValue;
   if (stateValue === 'fruit') {
-    element.textContent = '🍎';
+    element.textContent = '●';
   } else if (stateValue === 'mark') {
-    element.textContent = '✕';
+    element.textContent = '×';
   } else {
     element.textContent = '';
   }
