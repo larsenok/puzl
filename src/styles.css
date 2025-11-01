@@ -1,8 +1,8 @@
 :root {
   color-scheme: light;
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-  background-color: #f1f5ff;
-  color: #1f2a44;
+  background-color: #f3f4f6;
+  color: #111827;
   --board-size: 5;
 }
 
@@ -12,7 +12,7 @@
 
 body {
   margin: 0;
-  background-color: #f1f5ff;
+  background-color: #f3f4f6;
   color: inherit;
 }
 
@@ -20,10 +20,10 @@ body {
   min-height: 100vh;
   max-width: 520px;
   margin: 0 auto;
-  padding: 24px 20px 40px;
+  padding: 32px 20px 48px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
 .board-section {
@@ -37,15 +37,15 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 0 6px;
+  padding: 0 4px;
 }
 
 .toolbar-label {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #475569;
+  color: #6b7280;
 }
 
 .difficulty-toggle {
@@ -53,8 +53,8 @@ body {
   align-items: center;
   gap: 4px;
   padding: 3px;
-  border-radius: 999px;
-  background-color: rgba(52, 84, 209, 0.08);
+  border-radius: 12px;
+  background-color: rgba(148, 163, 184, 0.15);
 }
 
 .difficulty-option {
@@ -62,33 +62,52 @@ body {
   font-weight: 600;
   font-size: 13px;
   padding: 6px 12px;
-  border-radius: 999px;
+  border-radius: 8px;
   border: none;
   background-color: transparent;
-  color: #1f2a44;
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .difficulty-option:hover:not(:disabled) {
-  background-color: rgba(52, 84, 209, 0.18);
+  background-color: rgba(15, 23, 42, 0.08);
 }
 
 .difficulty-option:focus-visible {
-  outline: 3px solid rgba(52, 84, 209, 0.55);
+  outline: 2px solid rgba(30, 64, 175, 0.55);
   outline-offset: 2px;
 }
 
 .difficulty-option.is-active {
-  background-color: #3454d1;
+  background-color: var(--difficulty-color, #1f2937);
   color: #ffffff;
+}
+
+.difficulty-option[data-difficulty='easy'] {
+  --difficulty-color: #2563eb;
+  color: #1d4ed8;
+}
+
+.difficulty-option[data-difficulty='normal'] {
+  --difficulty-color: #0f766e;
+  color: #0f766e;
+}
+
+.difficulty-option[data-difficulty='hard'] {
+  --difficulty-color: #b45309;
+  color: #b45309;
+}
+
+.difficulty-option[data-difficulty='xtrem'] {
+  --difficulty-color: #7f1d1d;
+  color: #7f1d1d;
 }
 
 .column-hints {
   display: grid;
   grid-template-columns: repeat(var(--board-size), minmax(0, 1fr));
   gap: 6px;
-  padding: 0 10px;
+  padding: 0 6px;
 }
 
 .column-hint-cell,
@@ -96,17 +115,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 32px;
+  min-height: 28px;
 }
 
 .board {
   background-color: #ffffff;
-  border-radius: 18px;
-  padding: 14px 14px 10px;
+  border-radius: 16px;
+  padding: 16px 16px 12px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  box-shadow: 0 8px 20px rgba(23, 37, 84, 0.14);
+  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
 }
 
 .board-row {
@@ -128,47 +147,49 @@ body {
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 12px;
-  background-color: #e2e8f0;
+  border-radius: 10px;
+  background-color: #e5e7eb;
   color: inherit;
-  font-size: 28px;
+  font-size: 24px;
   line-height: 1;
   aspect-ratio: 1 / 1;
   transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
   cursor: pointer;
-  box-shadow: inset 0 0 0 2px rgba(31, 42, 68, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12);
 }
 
 .cell:focus-visible {
-  outline: 3px solid rgba(68, 99, 178, 0.7);
+  outline: 2px solid rgba(37, 99, 235, 0.5);
   outline-offset: 3px;
 }
 
 .cell:active {
-  transform: scale(0.95);
+  transform: scale(0.97);
 }
 
 .cell::before {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 12px;
-  box-shadow: inset 0 0 0 2px var(--region-color, rgba(31, 42, 68, 0.12));
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 2px var(--region-color, rgba(15, 23, 42, 0.12));
   pointer-events: none;
 }
 
 .cell[data-state='empty'] {
-  background-color: #f1f5f9;
+  background-color: #f8fafc;
 }
 
 .cell[data-state='fruit'] {
-  background-color: #ffd166;
+  background-color: #1e293b;
+  color: #e2e8f0;
+  font-size: 20px;
 }
 
 .cell[data-state='mark'] {
-  background-color: #cbd5f5;
-  color: #2b2d42;
-  font-size: 24px;
+  background-color: #e2e8f0;
+  color: #475569;
+  font-size: 20px;
 }
 
 .cell[data-requirement]::after {
@@ -176,13 +197,13 @@ body {
   position: absolute;
   top: 4px;
   left: 4px;
-  min-width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  background-color: var(--region-color, #1f2a44);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  background-color: var(--region-color, #1f2937);
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -190,18 +211,18 @@ body {
 }
 
 .hint-text {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-  color: #1f2a44;
+  color: #1f2937;
   transition: color 0.15s ease;
 }
 
 .hint-satisfied {
-  color: #2a9d8f;
+  color: #047857;
 }
 
 .hint-exceeded {
-  color: #d62828;
+  color: #b91c1c;
 }
 
 .actions {
@@ -217,24 +238,24 @@ body {
   font-weight: 600;
   font-size: 14px;
   padding: 12px 0;
-  border-radius: 14px;
+  border-radius: 10px;
   border: none;
-  background-color: #3454d1;
-  color: #ffffff;
+  background-color: #111827;
+  color: #f9fafb;
   cursor: pointer;
-  box-shadow: 0 10px 18px rgba(36, 64, 142, 0.22);
+  box-shadow: 0 12px 20px rgba(15, 23, 42, 0.12);
   transition: background-color 0.15s ease, transform 0.15s ease;
   flex: 1 1 0;
 }
 
 .action-button:active {
   transform: translateY(1px);
-  background-color: #253c96;
+  background-color: #0f172a;
 }
 
 .action-button:focus-visible {
-  outline: 3px solid rgba(52, 84, 209, 0.55);
-  outline-offset: 4px;
+  outline: 2px solid rgba(59, 130, 246, 0.5);
+  outline-offset: 3px;
 }
 
 .status {
@@ -245,7 +266,7 @@ body {
   gap: 8px;
   font-size: 15px;
   font-weight: 600;
-  color: #1f2a44;
+  color: #1f2937;
 }
 
 .status-icon {
@@ -255,15 +276,15 @@ body {
 }
 
 .status-icon.success {
-  background-color: #2a9d8f;
+  background-color: #047857;
 }
 
 .status-icon.notice {
-  background-color: #ffd166;
+  background-color: #0369a1;
 }
 
 .status-icon.alert {
-  background-color: #d62828;
+  background-color: #b91c1c;
 }
 
 .status-text {
@@ -274,11 +295,11 @@ body {
   margin-top: auto;
   font-size: 12px;
   text-align: center;
-  color: #4b5563;
+  color: #6b7280;
 }
 
 @media (min-width: 520px) {
   .app {
-    padding: 36px 32px 48px;
+    padding: 40px 32px 56px;
   }
 }
