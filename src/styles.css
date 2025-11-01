@@ -29,7 +29,59 @@ body {
 .board-section {
   display: flex;
   flex-direction: column;
+  gap: 10px;
+}
+
+.board-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
+  padding: 0 6px;
+}
+
+.toolbar-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.difficulty-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background-color: rgba(52, 84, 209, 0.08);
+}
+
+.difficulty-option {
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: none;
+  background-color: transparent;
+  color: #1f2a44;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.difficulty-option:hover:not(:disabled) {
+  background-color: rgba(52, 84, 209, 0.18);
+}
+
+.difficulty-option:focus-visible {
+  outline: 3px solid rgba(52, 84, 209, 0.55);
+  outline-offset: 2px;
+}
+
+.difficulty-option.is-active {
+  background-color: #3454d1;
+  color: #ffffff;
 }
 
 .column-hints {

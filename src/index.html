@@ -10,6 +10,43 @@
   <body>
     <main class="app">
       <section class="board-section">
+        <div class="board-toolbar">
+          <span class="toolbar-label" id="difficulty-label">Difficulty</span>
+          <div class="difficulty-toggle" role="radiogroup" aria-labelledby="difficulty-label">
+            <button
+              type="button"
+              class="difficulty-option"
+              data-difficulty="easy"
+              aria-pressed="false"
+            >
+              Easy
+            </button>
+            <button
+              type="button"
+              class="difficulty-option"
+              data-difficulty="normal"
+              aria-pressed="false"
+            >
+              Normal
+            </button>
+            <button
+              type="button"
+              class="difficulty-option"
+              data-difficulty="hard"
+              aria-pressed="false"
+            >
+              Hard
+            </button>
+            <button
+              type="button"
+              class="difficulty-option"
+              data-difficulty="veryhard"
+              aria-pressed="false"
+            >
+              Very Hard
+            </button>
+          </div>
+        </div>
         <div class="column-hints" id="column-hints" aria-label="Column clues"></div>
         <div class="board" id="board" aria-label="Puzzle board"></div>
       </section>

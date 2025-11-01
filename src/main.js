@@ -58,6 +58,31 @@ const PUZZLE_LIBRARY = [
   }
 ];
 
+const DIFFICULTIES = {
+  easy: {
+    label: 'Easy',
+    allowedSizes: [5],
+    requirement: { min: 1, max: 2 }
+  },
+  normal: {
+    label: 'Normal',
+    allowedSizes: [5, 6],
+    requirement: { min: 1, max: 3 }
+  },
+  hard: {
+    label: 'Hard',
+    allowedSizes: [6],
+    requirement: { min: 2, max: 4 }
+  },
+  veryhard: {
+    label: 'Very Hard',
+    allowedSizes: [6],
+    requirement: { min: 3, max: 4 }
+  }
+};
+
+const DEFAULT_DIFFICULTY = 'normal';
+
 const REGION_COLORS = [
   '#ff595e',
   '#1982c4',
@@ -89,16 +114,27 @@ const shuffleArray = (input) => {
   return array;
 };
 
-const chooseConfig = () => {
-  const weighted = PUZZLE_LIBRARY.flatMap((config) =>
+const getDifficultySettings = (difficulty) =>
+  DIFFICULTIES[difficulty] || DIFFICULTIES[DEFAULT_DIFFICULTY];
+
+const chooseConfig = (difficulty) => {
+  const settings = getDifficultySettings(difficulty);
+  const pool = PUZZLE_LIBRARY.filter((config) =>
+    !settings.allowedSizes || settings.allowedSizes.includes(config.size)
+  );
+
+  const library = pool.length > 0 ? pool : PUZZLE_LIBRARY;
+
+  const weighted = library.flatMap((config) =>
     Array.from({ length: config.weight }, () => config)
   );
   const choice = weighted[Math.floor(Math.random() * weighted.length)];
   return choice;
 };
 
-const createPuzzle = () => {
-  const config = chooseConfig();
+const createPuzzle = (difficulty) => {
+  const settings = getDifficultySettings(difficulty);
+  const config = chooseConfig(difficulty);
   const { size } = config;
   const overlay = config.overlays[Math.floor(Math.random() * config.overlays.length)];
   const regionCells = new Map();
@@ -119,8 +155,13 @@ const createPuzzle = () => {
   let colorIndex = 0;
 
   for (const [regionId, cells] of regionCells.entries()) {
-    const maxRequirement = Math.min(4, cells.length);
-    const requirement = Math.floor(Math.random() * maxRequirement) + 1;
+    const maxRequirement = Math.min(4, cells.length, settings.requirement.max);
+    const minRequirement = Math.min(maxRequirement, settings.requirement.min);
+    const range = maxRequirement - minRequirement;
+    const requirement =
+      range > 0
+        ? Math.floor(Math.random() * (range + 1)) + minRequirement
+        : maxRequirement;
     const chosenCells = shuffleArray(cells).slice(0, requirement);
     chosenCells.forEach(([row, column]) => {
       solution[row][column] = true;
@@ -166,12 +207,14 @@ const createPuzzle = () => {
   };
 };
 
-const initialPuzzle = createPuzzle();
-
 const state = {
-  puzzle: initialPuzzle,
-  boardState: createEmptyBoard(initialPuzzle.size)
+  difficulty: DEFAULT_DIFFICULTY,
+  puzzle: null,
+  boardState: []
 };
+
+state.puzzle = createPuzzle(state.difficulty);
+state.boardState = createEmptyBoard(state.puzzle.size);
 
 const appRoot = document.querySelector('.app');
 const columnHintsContainer = document.getElementById('column-hints');
@@ -180,6 +223,7 @@ const statusElement = document.getElementById('status');
 const checkButton = document.getElementById('check-button');
 const clearButton = document.getElementById('clear-button');
 const newButton = document.getElementById('new-button');
+const difficultyButtons = Array.from(document.querySelectorAll('[data-difficulty]'));
 
 const columnHintElements = [];
 const rowHintElements = [];
@@ -397,12 +441,34 @@ const checkSolution = () => {
   }
 };
 
-const newPuzzle = () => {
-  state.puzzle = createPuzzle();
+const newPuzzle = ({ announce = true } = {}) => {
+  state.puzzle = createPuzzle(state.difficulty);
   state.boardState = createEmptyBoard(state.puzzle.size);
   createBoardStructure();
   updateBoard();
-  updateStatus('notice', 'changed');
+  if (announce) {
+    updateStatus('notice', 'changed');
+  }
+};
+
+const updateDifficultyButtons = () => {
+  difficultyButtons.forEach((button) => {
+    const difficulty = button.dataset.difficulty;
+    const isActive = difficulty === state.difficulty;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
+  });
+};
+
+const setDifficulty = (difficulty) => {
+  if (!DIFFICULTIES[difficulty] || state.difficulty === difficulty) {
+    return;
+  }
+  state.difficulty = difficulty;
+  updateDifficultyButtons();
+  newPuzzle({ announce: false });
+  const { label } = getDifficultySettings(difficulty);
+  updateStatus('notice', `${label} mode`);
 };
 
 boardContainer.addEventListener('click', (event) => {
@@ -418,7 +484,13 @@ boardContainer.addEventListener('click', (event) => {
 checkButton.addEventListener('click', checkSolution);
 clearButton.addEventListener('click', resetBoard);
 newButton.addEventListener('click', newPuzzle);
+difficultyButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    setDifficulty(button.dataset.difficulty);
+  });
+});
 
 createBoardStructure();
 updateBoard();
 updateStatus();
+updateDifficultyButtons();
