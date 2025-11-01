@@ -152,6 +152,60 @@ body {
   color: #d62828;
 }
 
+.difficulty-controls {
+  background-color: #ffffff;
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 6px 14px rgba(23, 37, 84, 0.12);
+}
+
+.difficulty-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.difficulty-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.difficulty-option {
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #d1d9f0;
+  background-color: #ffffff;
+  color: #1f2a44;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.difficulty-option:hover:not(:disabled) {
+  border-color: #3454d1;
+}
+
+.difficulty-option:focus-visible {
+  outline: 3px solid rgba(52, 84, 209, 0.55);
+  outline-offset: 3px;
+}
+
+.difficulty-option.is-active {
+  background-color: #3454d1;
+  color: #ffffff;
+  border-color: #3454d1;
+  box-shadow: 0 8px 16px rgba(36, 64, 142, 0.2);
+}
+
 .actions {
   display: flex;
   gap: 12px;
