@@ -141,20 +141,20 @@ const DIFFICULTIES = {
 const DEFAULT_DIFFICULTY = 'normal';
 
 const REGION_COLORS = [
-  '#475569',
-  '#64748b',
-  '#334155',
-  '#94a3b8',
-  '#1e293b',
-  '#6b7280',
-  '#0f172a',
-  '#4b5563',
-  '#52525b',
-  '#1f2937',
-  '#71717a',
-  '#3f4c5a',
-  '#2f3d4c',
-  '#5d6b7a'
+  '#ef4444',
+  '#f97316',
+  '#facc15',
+  '#22c55e',
+  '#14b8a6',
+  '#0ea5e9',
+  '#6366f1',
+  '#a855f7',
+  '#d946ef',
+  '#ec4899',
+  '#f43f5e',
+  '#84cc16',
+  '#10b981',
+  '#38bdf8'
 ];
 
 const CELL_STATES = ['empty', 'fruit', 'mark'];
@@ -212,7 +212,7 @@ const createPuzzle = (difficulty, attempt = 0) => {
   let colorIndex = 0;
 
   for (const [regionId, cells] of regionCells.entries()) {
-    const maxRequirement = Math.min(4, cells.length, settings.requirement.max);
+    const maxRequirement = Math.min(cells.length, settings.requirement.max);
     const minRequirement = Math.min(maxRequirement, settings.requirement.min);
     const range = maxRequirement - minRequirement;
     const requirement =
@@ -248,10 +248,11 @@ const createPuzzle = (difficulty, attempt = 0) => {
     solution.reduce((sum, row) => sum + (row[column] ? 1 : 0), 0)
   );
 
-  const hasMaxTotals =
-    rowTotals.some((total) => total === size) || columnTotals.some((total) => total === size);
+  const exceedsRowOrColumnLimit =
+    rowTotals.some((total) => total >= size || total > 6) ||
+    columnTotals.some((total) => total >= size || total > 6);
 
-  if (hasMaxTotals && attempt < 6) {
+  if (exceedsRowOrColumnLimit && attempt < 20) {
     return createPuzzle(difficulty, attempt + 1);
   }
 
@@ -531,8 +532,6 @@ const setDifficulty = (difficulty) => {
   state.difficulty = difficulty;
   updateDifficultyButtons();
   newPuzzle({ announce: false });
-  const { label } = getDifficultySettings(difficulty);
-  updateStatus('notice', `${label} mode`);
 };
 
 boardContainer.addEventListener('click', (event) => {
