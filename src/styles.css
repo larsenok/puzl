@@ -26,25 +26,6 @@ body {
   gap: 24px;
 }
 
-.app-header {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.app-title {
-  margin: 0;
-  font-size: 32px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.app-subtitle {
-  margin: 0;
-  font-size: 14px;
-  color: #4b5563;
-}
-
 .board-section {
   display: flex;
   flex-direction: column;
@@ -117,7 +98,7 @@ body {
   color: #b45309;
 }
 
-.difficulty-option[data-difficulty='veryhard'] {
+.difficulty-option[data-difficulty='xtrem'] {
   --difficulty-color: #7f1d1d;
   color: #7f1d1d;
 }

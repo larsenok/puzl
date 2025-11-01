@@ -131,8 +131,8 @@ const DIFFICULTIES = {
     allowedSizes: [6],
     requirement: { min: 2, max: 4 }
   },
-  veryhard: {
-    label: 'Very Hard',
+  xtrem: {
+    label: 'Xtrem',
     allowedSizes: [7],
     requirement: { min: 3, max: 5 }
   }
