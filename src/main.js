@@ -115,19 +115,133 @@ const PUZZLE_LIBRARY = [
   }
 ];
 
+const TRANSLATIONS = {
+  en: {
+    difficultyLabel: 'Difficulty',
+    difficultyEasy: 'Easy',
+    difficultyNormal: 'Normal',
+    difficultyHard: 'Hard',
+    columnHintsLabel: 'Column clues',
+    boardAriaLabel: 'Puzzle board',
+    actionCheck: 'Check',
+    actionClear: 'Clear',
+    actionNewBoard: 'New board',
+    timeSpent: 'Time spent',
+    timeSpentLocked: 'Time spent (locked)',
+    statusNewBoardReady: 'New board ready',
+    statusBoardReady: 'Board ready',
+    statusNewBoardCreated: 'New board created',
+    statusBoardCleared: 'Board cleared',
+    statusSolved: 'Solved!',
+    statusKeepGoing: 'Keep going',
+    difficultySet: 'Difficulty set to {difficulty}',
+    footer: 'Keep each badge count per shape and match every row and column total.',
+    cellAria:
+      'Row {row}, column {column}. Part of a shape needing {requirement} apples.'
+  },
+  nb: {
+    difficultyLabel: 'Vanskelighetsgrad',
+    difficultyEasy: 'Lett',
+    difficultyNormal: 'Normal',
+    difficultyHard: 'Vanskelig',
+    columnHintsLabel: 'Kolonnehint',
+    boardAriaLabel: 'Puslespillbrett',
+    actionCheck: 'Sjekk',
+    actionClear: 'Tøm',
+    actionNewBoard: 'Nytt brett',
+    timeSpent: 'Brukt tid',
+    timeSpentLocked: 'Brukt tid (låst)',
+    statusNewBoardReady: 'Nytt brett klart',
+    statusBoardReady: 'Brett klart',
+    statusNewBoardCreated: 'Nytt brett opprettet',
+    statusBoardCleared: 'Brett tømt',
+    statusSolved: 'Løst!',
+    statusKeepGoing: 'Fortsett',
+    difficultySet: 'Vanskelighetsgrad satt til {difficulty}',
+    footer: 'Hold antall merker per område og match hver rad- og kolonneverdi.',
+    cellAria:
+      'Rad {row}, kolonne {column}. Del av en form som trenger {requirement} epler.'
+  }
+};
+
+const LOCALE_ALIASES = {
+  no: 'nb',
+  nn: 'nb'
+};
+
+const DEFAULT_LOCALE = 'en';
+
+const detectLocale = () => {
+  const languages = [];
+  if (typeof navigator !== 'undefined') {
+    if (Array.isArray(navigator.languages)) {
+      languages.push(...navigator.languages);
+    }
+    if (navigator.language) {
+      languages.push(navigator.language);
+    }
+  }
+
+  for (const candidate of languages) {
+    if (!candidate) {
+      continue;
+    }
+    const normalized = String(candidate).toLowerCase();
+    const normalizedAlias = LOCALE_ALIASES[normalized];
+    if (normalizedAlias && Object.prototype.hasOwnProperty.call(TRANSLATIONS, normalizedAlias)) {
+      return normalizedAlias;
+    }
+    if (Object.prototype.hasOwnProperty.call(TRANSLATIONS, normalized)) {
+      return normalized;
+    }
+    const base = normalized.split('-')[0];
+    const baseAlias = LOCALE_ALIASES[base];
+    if (baseAlias && Object.prototype.hasOwnProperty.call(TRANSLATIONS, baseAlias)) {
+      return baseAlias;
+    }
+    if (Object.prototype.hasOwnProperty.call(TRANSLATIONS, base)) {
+      return base;
+    }
+  }
+
+  return DEFAULT_LOCALE;
+};
+
+const ACTIVE_LOCALE = detectLocale();
+
+const translate = (key, variables = {}) => {
+  const dictionary = TRANSLATIONS[ACTIVE_LOCALE] || TRANSLATIONS[DEFAULT_LOCALE];
+  const fallback = TRANSLATIONS[DEFAULT_LOCALE] || {};
+  const template =
+    (dictionary && Object.prototype.hasOwnProperty.call(dictionary, key)
+      ? dictionary[key]
+      : fallback[key]) || key;
+
+  if (typeof template !== 'string') {
+    return key;
+  }
+
+  return template.replace(/\{(\w+)\}/g, (_, token) => {
+    if (Object.prototype.hasOwnProperty.call(variables, token)) {
+      return variables[token];
+    }
+    return `{${token}}`;
+  });
+};
+
 const DIFFICULTIES = {
   easy: {
-    label: 'Easy',
+    labelKey: 'difficultyEasy',
     allowedSizes: [4],
     requirement: { min: 1, max: 2 }
   },
   normal: {
-    label: 'Normal',
+    labelKey: 'difficultyNormal',
     allowedSizes: [5],
     requirement: { min: 1, max: 3 }
   },
   hard: {
-    label: 'Hard',
+    labelKey: 'difficultyHard',
     allowedSizes: [6],
     requirement: { min: 2, max: 5 }
   }
@@ -311,8 +425,11 @@ const createPuzzle = (difficulty, attempt = 0) => {
   );
 
   const exceedsRowOrColumnLimit =
-    rowTotals.some((total) => total >= size || total > 6) ||
-    columnTotals.some((total) => total >= size || total > 6);
+    rowTotals.some((total) => total > 6 || (difficulty !== 'hard' && total >= size)) ||
+    columnTotals.some((total) => total > 6 || (difficulty !== 'hard' && total >= size));
+
+  const rowSixCount = rowTotals.filter((total) => total === 6).length;
+  const columnSixCount = columnTotals.filter((total) => total === 6).length;
 
   const highRequirementCount = regions.filter((region) => region.requirement >= 4).length;
   const requirementFiveCount = regions.filter((region) => region.requirement >= 5).length;
@@ -324,7 +441,9 @@ const createPuzzle = (difficulty, attempt = 0) => {
     (highRequirementCount < 2 ||
       (largestRegionSize >= 5 && requirementFiveCount < 1) ||
       smallColumnCount < Math.min(2, size) ||
-      smallRequirementCount > Math.ceil(regions.length / 2));
+      smallRequirementCount > Math.ceil(regions.length / 2) ||
+      rowSixCount > 1 ||
+      columnSixCount > 1);
 
   if ((exceedsRowOrColumnLimit || requiresHardRegeneration) && attempt < MAX_GENERATION_ATTEMPTS) {
     return createPuzzle(difficulty, attempt + 1);
@@ -362,6 +481,7 @@ const state = {
 };
 
 const appRoot = document.querySelector('.app');
+const difficultyLabelElement = document.getElementById('difficulty-label');
 const columnHintsContainer = document.getElementById('column-hints');
 const boardContainer = document.getElementById('board');
 const statusElement = document.getElementById('status');
@@ -370,6 +490,7 @@ const clearButton = document.getElementById('clear-button');
 const timerElement = document.getElementById('timer-display');
 const testButton = document.getElementById('test-new-button');
 const difficultyButtons = Array.from(document.querySelectorAll('[data-difficulty]'));
+const footerElement = document.querySelector('.footer');
 
 const columnHintElements = [];
 const rowHintElements = [];
@@ -380,6 +501,52 @@ const ensurePuzzlesStorage = () => {
     storage.puzzles = {};
   }
   return storage.puzzles;
+};
+
+const applyTranslations = () => {
+  if (typeof document !== 'undefined' && document.documentElement) {
+    document.documentElement.lang = ACTIVE_LOCALE;
+  }
+
+  if (difficultyLabelElement) {
+    difficultyLabelElement.textContent = translate('difficultyLabel');
+  }
+
+  difficultyButtons.forEach((button) => {
+    const difficulty = button.dataset.difficulty;
+    const settings = DIFFICULTIES[difficulty];
+    if (settings?.labelKey) {
+      button.textContent = translate(settings.labelKey);
+    }
+  });
+
+  if (columnHintsContainer) {
+    columnHintsContainer.setAttribute('aria-label', translate('columnHintsLabel'));
+  }
+
+  if (boardContainer) {
+    boardContainer.setAttribute('aria-label', translate('boardAriaLabel'));
+  }
+
+  if (checkButton) {
+    checkButton.textContent = translate('actionCheck');
+  }
+
+  if (clearButton) {
+    clearButton.textContent = translate('actionClear');
+  }
+
+  if (testButton) {
+    testButton.textContent = translate('actionNewBoard');
+  }
+
+  if (timerElement) {
+    timerElement.setAttribute('aria-label', translate('timeSpent'));
+  }
+
+  if (footerElement) {
+    footerElement.textContent = translate('footer');
+  }
 };
 
 const persistCurrentState = (additional = {}) => {
@@ -413,9 +580,9 @@ const updateTimerLockState = () => {
   }
   if (state.isSolved) {
     timerElement.dataset.locked = 'true';
-    timerElement.setAttribute('aria-label', 'Time spent (locked)');
+    timerElement.setAttribute('aria-label', translate('timeSpentLocked'));
   } else {
-    timerElement.setAttribute('aria-label', 'Time spent');
+    timerElement.setAttribute('aria-label', translate('timeSpent'));
     delete timerElement.dataset.locked;
   }
 };
@@ -497,7 +664,10 @@ const renderCurrentPuzzle = ({ announce = false, message, additionalState } = {}
   let statusDetails = null;
 
   if (announce) {
-    statusDetails = { type: 'notice', text: message || 'New board ready' };
+    statusDetails = {
+      type: 'notice',
+      text: message || translate('statusNewBoardReady')
+    };
   }
 
   if (additionalState && Object.prototype.hasOwnProperty.call(additionalState, 'status')) {
@@ -630,13 +800,14 @@ const resetBoard = () => {
   }
   updateHints();
   resetTimer(0);
-  updateStatus('notice', 'Board cleared');
+  const clearedMessage = translate('statusBoardCleared');
+  updateStatus('notice', clearedMessage);
   state.isSolved = false;
   updateTimerLockState();
   persistCurrentState({
     solved: false,
     solvedAt: null,
-    status: { type: 'notice', text: 'Board cleared' }
+    status: { type: 'notice', text: clearedMessage }
   });
 };
 
@@ -690,7 +861,11 @@ const createBoardStructure = () => {
       button.style.setProperty('--region-color', region.color);
       button.setAttribute(
         'aria-label',
-        `Row ${row + 1}, column ${column + 1}. Part of a shape needing ${region.requirement} apples.`
+        translate('cellAria', {
+          row: row + 1,
+          column: column + 1,
+          requirement: region.requirement
+        })
       );
 
       if (region.anchor[0] === row && region.anchor[1] === column) {
@@ -745,33 +920,38 @@ const checkSolution = () => {
     stopTimer();
     state.isSolved = true;
     updateTimerLockState();
-    updateStatus('success', 'Solved!');
+    const solvedMessage = translate('statusSolved');
+    updateStatus('success', solvedMessage);
     persistCurrentState({
       solved: true,
       solvedAt: getTimestamp(),
-      status: { type: 'success', text: 'Solved!' }
+      status: { type: 'success', text: solvedMessage }
     });
   } else {
-    updateStatus('alert', 'Keep going');
+    const keepGoingMessage = translate('statusKeepGoing');
+    updateStatus('alert', keepGoingMessage);
     state.isSolved = false;
     updateTimerLockState();
     persistCurrentState({
       solved: false,
       solvedAt: null,
-      status: { type: 'alert', text: 'Keep going' }
+      status: { type: 'alert', text: keepGoingMessage }
     });
   }
 };
 
 const newPuzzle = ({ announce = true, forceNew = false } = {}) => {
   loadPuzzle({ difficulty: state.difficulty, forceNew });
+  const message = forceNew
+    ? translate('statusNewBoardCreated')
+    : translate('statusBoardReady');
   renderCurrentPuzzle({
     announce,
-    message: forceNew ? 'New board created' : 'Board ready',
+    message,
     additionalState: {
       solved: false,
       solvedAt: null,
-      status: { type: 'notice', text: forceNew ? 'New board created' : 'Board ready' }
+      status: { type: 'notice', text: message }
     }
   });
 };
@@ -790,7 +970,8 @@ const setDifficulty = (difficulty) => {
     return;
   }
   loadPuzzle({ difficulty, forceNew: false });
-  const message = `Difficulty set to ${DIFFICULTIES[difficulty].label}`;
+  const difficultyLabel = translate(DIFFICULTIES[difficulty].labelKey);
+  const message = translate('difficultySet', { difficulty: difficultyLabel });
   renderCurrentPuzzle({
     announce: true,
     message,
@@ -832,6 +1013,7 @@ if (testButton) {
 }
 
 const initializeApp = () => {
+  applyTranslations();
   const storedDifficulty = storage.difficulty;
   if (storedDifficulty && DIFFICULTIES[storedDifficulty]) {
     state.difficulty = storedDifficulty;
