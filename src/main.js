@@ -129,12 +129,33 @@ const DIFFICULTIES = {
   hard: {
     label: 'Hard',
     allowedSizes: [6],
-    requirement: { min: 2, max: 4 }
+    requirement: { min: 2, max: 5 }
   }
 };
 
 const DEFAULT_DIFFICULTY = 'normal';
 const STORAGE_KEY = 'puzl-daily-state-v1';
+
+const MAX_GENERATION_ATTEMPTS = 40;
+
+const chooseRegionRequirement = (difficulty, minRequirement, maxRequirement) => {
+  if (maxRequirement <= minRequirement) {
+    return maxRequirement;
+  }
+
+  if (difficulty === 'hard') {
+    const weighted = [];
+    for (let value = minRequirement; value <= maxRequirement; value += 1) {
+      const weight = value >= maxRequirement ? 3 : value >= maxRequirement - 1 ? 2 : 1;
+      for (let index = 0; index < weight; index += 1) {
+        weighted.push(value);
+      }
+    }
+    return weighted[Math.floor(Math.random() * weighted.length)];
+  }
+
+  return Math.floor(Math.random() * (maxRequirement - minRequirement + 1)) + minRequirement;
+};
 
 const getTodayKey = () => {
   const today = new Date();
@@ -243,15 +264,13 @@ const createPuzzle = (difficulty, attempt = 0) => {
 
   const regions = [];
   let colorIndex = 0;
+  const regionSizes = Array.from(regionCells.values(), (cells) => cells.length);
+  const largestRegionSize = regionSizes.reduce((max, current) => Math.max(max, current), 0);
 
   for (const [regionId, cells] of regionCells.entries()) {
     const maxRequirement = Math.min(cells.length, settings.requirement.max);
     const minRequirement = Math.min(maxRequirement, settings.requirement.min);
-    const range = maxRequirement - minRequirement;
-    const requirement =
-      range > 0
-        ? Math.floor(Math.random() * (range + 1)) + minRequirement
-        : maxRequirement;
+    const requirement = chooseRegionRequirement(difficulty, minRequirement, maxRequirement);
     const chosenCells = shuffleArray(cells).slice(0, requirement);
     chosenCells.forEach(([row, column]) => {
       solution[row][column] = true;
@@ -285,7 +304,19 @@ const createPuzzle = (difficulty, attempt = 0) => {
     rowTotals.some((total) => total >= size || total > 6) ||
     columnTotals.some((total) => total >= size || total > 6);
 
-  if (exceedsRowOrColumnLimit && attempt < 20) {
+  const highRequirementCount = regions.filter((region) => region.requirement >= 4).length;
+  const requirementFiveCount = regions.filter((region) => region.requirement >= 5).length;
+  const smallRequirementCount = regions.filter((region) => region.requirement <= 2).length;
+  const smallColumnCount = columnTotals.filter((total) => total >= 1 && total <= 2).length;
+
+  const requiresHardRegeneration =
+    difficulty === 'hard' &&
+    (highRequirementCount < 2 ||
+      (largestRegionSize >= 5 && requirementFiveCount < 1) ||
+      smallColumnCount < Math.min(2, size) ||
+      smallRequirementCount > Math.ceil(regions.length / 2));
+
+  if ((exceedsRowOrColumnLimit || requiresHardRegeneration) && attempt < MAX_GENERATION_ATTEMPTS) {
     return createPuzzle(difficulty, attempt + 1);
   }
 
@@ -312,6 +343,7 @@ const state = {
   difficulty: DEFAULT_DIFFICULTY,
   puzzle: null,
   boardState: [],
+  isSolved: false,
   timer: {
     running: false,
     intervalId: null,
@@ -365,10 +397,24 @@ const formatTime = (seconds) => {
   return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
 };
 
+const updateTimerLockState = () => {
+  if (!timerElement) {
+    return;
+  }
+  if (state.isSolved) {
+    timerElement.dataset.locked = 'true';
+    timerElement.setAttribute('aria-label', 'Time spent (locked)');
+  } else {
+    timerElement.setAttribute('aria-label', 'Time spent');
+    delete timerElement.dataset.locked;
+  }
+};
+
 const updateTimerDisplay = () => {
   if (timerElement) {
     timerElement.textContent = formatTime(state.timer.secondsElapsed);
   }
+  updateTimerLockState();
 };
 
 const stopTimer = () => {
@@ -412,6 +458,7 @@ const loadPuzzle = ({ difficulty = state.difficulty, forceNew = false } = {}) =>
       boardState,
       solved: false,
       solvedAt: null,
+      status: null,
       secondsElapsed: 0,
       createdAt: getTimestamp(),
       updatedAt: getTimestamp()
@@ -426,6 +473,10 @@ const loadPuzzle = ({ difficulty = state.difficulty, forceNew = false } = {}) =>
   state.difficulty = difficulty;
   state.puzzle = entry.puzzle;
   state.boardState = cloneBoard(entry.boardState);
+  state.isSolved = Boolean(entry.solved);
+  if (currentEntry && !Object.prototype.hasOwnProperty.call(currentEntry, 'status')) {
+    currentEntry.status = null;
+  }
   resetTimer(entry.secondsElapsed || 0);
 };
 
@@ -433,13 +484,27 @@ const renderCurrentPuzzle = ({ announce = false, message, additionalState } = {}
   createBoardStructure();
   updateBoard();
   updateTimerDisplay();
+  let statusDetails = null;
+
   if (announce) {
-    updateStatus('notice', message || 'New board ready');
+    statusDetails = { type: 'notice', text: message || 'New board ready' };
+  }
+
+  if (additionalState && Object.prototype.hasOwnProperty.call(additionalState, 'status')) {
+    statusDetails = additionalState.status;
+  } else if (!statusDetails && currentEntry?.status) {
+    statusDetails = currentEntry.status;
+  }
+
+  if (statusDetails && statusDetails.text) {
+    updateStatus(statusDetails.type, statusDetails.text);
   } else {
     updateStatus();
   }
   updateDifficultyButtons();
-  persistCurrentState(additionalState);
+  const stateToPersist =
+    additionalState || (announce && statusDetails ? { status: statusDetails } : undefined);
+  persistCurrentState(stateToPersist);
 };
 
 const setBoardSizeVariable = (size) => {
@@ -538,7 +603,11 @@ const cycleCell = (row, column) => {
   state.boardState[row][column] = nextState;
   updateCell(row, column);
   updateHints();
-  persistCurrentState({ solved: false, solvedAt: null });
+  if (state.isSolved) {
+    state.isSolved = false;
+    updateTimerLockState();
+  }
+  persistCurrentState({ solved: false, solvedAt: null, status: null });
 };
 
 const resetBoard = () => {
@@ -552,7 +621,13 @@ const resetBoard = () => {
   updateHints();
   resetTimer(0);
   updateStatus('notice', 'Board cleared');
-  persistCurrentState({ solved: false, solvedAt: null });
+  state.isSolved = false;
+  updateTimerLockState();
+  persistCurrentState({
+    solved: false,
+    solvedAt: null,
+    status: { type: 'notice', text: 'Board cleared' }
+  });
 };
 
 const createBoardStructure = () => {
@@ -561,6 +636,8 @@ const createBoardStructure = () => {
 
   columnHintElements.length = 0;
   columnHintsContainer.innerHTML = '';
+  const columnHintGrid = document.createElement('div');
+  columnHintGrid.className = 'column-hints-grid';
   state.puzzle.columnTotals.forEach((total, index) => {
     const wrapper = document.createElement('div');
     wrapper.className = 'column-hint-cell';
@@ -568,9 +645,14 @@ const createBoardStructure = () => {
     text.className = 'hint-text';
     text.textContent = total;
     wrapper.appendChild(text);
-    columnHintsContainer.appendChild(wrapper);
+    columnHintGrid.appendChild(wrapper);
     columnHintElements[index] = text;
   });
+  columnHintsContainer.appendChild(columnHintGrid);
+  const spacer = document.createElement('div');
+  spacer.className = 'column-hint-spacer';
+  spacer.setAttribute('aria-hidden', 'true');
+  columnHintsContainer.appendChild(spacer);
 
   boardContainer.innerHTML = '';
   cellElements.length = 0;
@@ -651,11 +733,23 @@ const checkSolution = () => {
 
   if (rowsMatch && columnsMatch && regionsMatch) {
     stopTimer();
+    state.isSolved = true;
+    updateTimerLockState();
     updateStatus('success', 'Solved!');
-    persistCurrentState({ solved: true, solvedAt: getTimestamp() });
+    persistCurrentState({
+      solved: true,
+      solvedAt: getTimestamp(),
+      status: { type: 'success', text: 'Solved!' }
+    });
   } else {
     updateStatus('alert', 'Keep going');
-    persistCurrentState({ solved: false, solvedAt: null });
+    state.isSolved = false;
+    updateTimerLockState();
+    persistCurrentState({
+      solved: false,
+      solvedAt: null,
+      status: { type: 'alert', text: 'Keep going' }
+    });
   }
 };
 
@@ -664,7 +758,11 @@ const newPuzzle = ({ announce = true, forceNew = false } = {}) => {
   renderCurrentPuzzle({
     announce,
     message: forceNew ? 'New board created' : 'Board ready',
-    additionalState: { solved: false, solvedAt: null }
+    additionalState: {
+      solved: false,
+      solvedAt: null,
+      status: { type: 'notice', text: forceNew ? 'New board created' : 'Board ready' }
+    }
   });
 };
 
@@ -682,7 +780,16 @@ const setDifficulty = (difficulty) => {
     return;
   }
   loadPuzzle({ difficulty, forceNew: false });
-  renderCurrentPuzzle({ announce: true, message: `Difficulty set to ${DIFFICULTIES[difficulty].label}` });
+  const message = `Difficulty set to ${DIFFICULTIES[difficulty].label}`;
+  renderCurrentPuzzle({
+    announce: true,
+    message,
+    additionalState: {
+      solved: false,
+      solvedAt: null,
+      status: { type: 'notice', text: message }
+    }
+  });
 };
 
 boardContainer.addEventListener('click', (event) => {
