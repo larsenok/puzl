@@ -65,6 +65,7 @@ body {
   border-radius: 8px;
   border: none;
   background-color: transparent;
+  color: var(--difficulty-color, #1f2937);
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
@@ -79,28 +80,27 @@ body {
 }
 
 .difficulty-option.is-active {
-  background-color: var(--difficulty-color, #1f2937);
-  color: #ffffff;
+  background-color: var(--difficulty-active-bg, rgba(15, 23, 42, 0.12));
+  color: var(--difficulty-active-text, var(--difficulty-color, #111827));
+  box-shadow: inset 0 0 0 1px var(--difficulty-color, rgba(15, 23, 42, 0.3));
 }
 
 .difficulty-option[data-difficulty='easy'] {
   --difficulty-color: #2563eb;
-  color: #1d4ed8;
+  --difficulty-active-bg: rgba(37, 99, 235, 0.16);
+  --difficulty-active-text: #1d4ed8;
 }
 
 .difficulty-option[data-difficulty='normal'] {
   --difficulty-color: #0f766e;
-  color: #0f766e;
+  --difficulty-active-bg: rgba(15, 118, 110, 0.18);
+  --difficulty-active-text: #0f766e;
 }
 
 .difficulty-option[data-difficulty='hard'] {
   --difficulty-color: #b45309;
-  color: #b45309;
-}
-
-.difficulty-option[data-difficulty='xtrem'] {
-  --difficulty-color: #7f1d1d;
-  color: #7f1d1d;
+  --difficulty-active-bg: rgba(180, 83, 9, 0.18);
+  --difficulty-active-text: #b45309;
 }
 
 .column-hints {
@@ -156,6 +156,7 @@ body {
   transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
   cursor: pointer;
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12);
+  touch-action: manipulation;
 }
 
 .cell:focus-visible {
@@ -181,8 +182,8 @@ body {
 }
 
 .cell[data-state='fruit'] {
-  background-color: #1e293b;
-  color: #e2e8f0;
+  background-color: #fef3c7;
+  color: #92400e;
   font-size: 20px;
 }
 
@@ -248,7 +249,18 @@ body {
   flex: 1 1 0;
 }
 
-.action-button:active {
+.action-button--secondary {
+  background-color: #e5e7eb;
+  color: #111827;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+  margin-top: -4px;
+}
+
+.action-button--secondary:active {
+  background-color: #d1d5db;
+}
+
+.action-button:not(.action-button--secondary):active {
   transform: translateY(1px);
   background-color: #0f172a;
 }
@@ -267,6 +279,22 @@ body {
   font-size: 15px;
   font-weight: 600;
   color: #1f2937;
+}
+
+.timer-display {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 18px;
+  padding: 12px 0;
+  border-radius: 10px;
+  background-color: rgba(15, 23, 42, 0.08);
+  color: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  letter-spacing: 0.06em;
+  flex: 1 1 0;
 }
 
 .status-icon {

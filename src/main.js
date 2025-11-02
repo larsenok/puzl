@@ -130,15 +130,48 @@ const DIFFICULTIES = {
     label: 'Hard',
     allowedSizes: [6],
     requirement: { min: 2, max: 4 }
-  },
-  xtrem: {
-    label: 'Xtrem',
-    allowedSizes: [7],
-    requirement: { min: 3, max: 5 }
   }
 };
 
 const DEFAULT_DIFFICULTY = 'normal';
+const STORAGE_KEY = 'puzl-daily-state-v1';
+
+const getTodayKey = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const cloneBoard = (board) => board.map((row) => [...row]);
+
+const readStorage = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return {};
+    }
+    const parsed = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) {
+      return {};
+    }
+    return parsed;
+  } catch (error) {
+    console.error('Failed to read stored puzzle state', error);
+    return {};
+  }
+};
+
+const writeStorage = (value) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+  } catch (error) {
+    console.error('Failed to store puzzle state', error);
+  }
+};
+
+const getTimestamp = () => new Date().toISOString();
 
 const REGION_COLORS = [
   '#ef4444',
@@ -272,14 +305,19 @@ const createPuzzle = (difficulty, attempt = 0) => {
   };
 };
 
+let storage = readStorage();
+let currentEntry = null;
+
 const state = {
   difficulty: DEFAULT_DIFFICULTY,
   puzzle: null,
-  boardState: []
+  boardState: [],
+  timer: {
+    running: false,
+    intervalId: null,
+    secondsElapsed: 0
+  }
 };
-
-state.puzzle = createPuzzle(state.difficulty);
-state.boardState = createEmptyBoard(state.puzzle.size);
 
 const appRoot = document.querySelector('.app');
 const columnHintsContainer = document.getElementById('column-hints');
@@ -287,20 +325,128 @@ const boardContainer = document.getElementById('board');
 const statusElement = document.getElementById('status');
 const checkButton = document.getElementById('check-button');
 const clearButton = document.getElementById('clear-button');
-const newButton = document.getElementById('new-button');
+const timerElement = document.getElementById('timer-display');
+const testButton = document.getElementById('test-new-button');
 const difficultyButtons = Array.from(document.querySelectorAll('[data-difficulty]'));
 
 const columnHintElements = [];
 const rowHintElements = [];
 const cellElements = [];
 
+const ensurePuzzlesStorage = () => {
+  if (!storage.puzzles || typeof storage.puzzles !== 'object') {
+    storage.puzzles = {};
+  }
+  return storage.puzzles;
+};
+
+const persistCurrentState = (additional = {}) => {
+  if (!currentEntry) {
+    return;
+  }
+  const puzzles = ensurePuzzlesStorage();
+  currentEntry = {
+    ...currentEntry,
+    puzzle: state.puzzle,
+    boardState: cloneBoard(state.boardState),
+    secondsElapsed: state.timer.secondsElapsed,
+    updatedAt: getTimestamp(),
+    ...additional
+  };
+  puzzles[state.difficulty] = currentEntry;
+  storage.difficulty = state.difficulty;
+  writeStorage(storage);
+};
+
+const formatTime = (seconds) => {
+  const totalSeconds = Math.max(0, Number.isFinite(seconds) ? Math.floor(seconds) : 0);
+  const minutes = Math.floor(totalSeconds / 60);
+  const remainingSeconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+};
+
+const updateTimerDisplay = () => {
+  if (timerElement) {
+    timerElement.textContent = formatTime(state.timer.secondsElapsed);
+  }
+};
+
+const stopTimer = () => {
+  if (state.timer.intervalId) {
+    window.clearInterval(state.timer.intervalId);
+  }
+  state.timer.intervalId = null;
+  state.timer.running = false;
+};
+
+const resetTimer = (seconds = 0) => {
+  stopTimer();
+  state.timer.secondsElapsed = seconds;
+  updateTimerDisplay();
+};
+
+const startTimer = () => {
+  if (state.timer.running) {
+    return;
+  }
+  state.timer.running = true;
+  state.timer.intervalId = window.setInterval(() => {
+    state.timer.secondsElapsed += 1;
+    updateTimerDisplay();
+    persistCurrentState();
+  }, 1000);
+  persistCurrentState();
+};
+
+const loadPuzzle = ({ difficulty = state.difficulty, forceNew = false } = {}) => {
+  const puzzles = ensurePuzzlesStorage();
+  const todayKey = getTodayKey();
+  let entry = puzzles[difficulty];
+
+  if (!entry || entry.date !== todayKey || forceNew) {
+    const puzzle = createPuzzle(difficulty);
+    const boardState = createEmptyBoard(puzzle.size);
+    entry = {
+      date: todayKey,
+      puzzle,
+      boardState,
+      solved: false,
+      solvedAt: null,
+      secondsElapsed: 0,
+      createdAt: getTimestamp(),
+      updatedAt: getTimestamp()
+    };
+  }
+
+  puzzles[difficulty] = entry;
+  storage.difficulty = difficulty;
+  writeStorage(storage);
+
+  currentEntry = entry;
+  state.difficulty = difficulty;
+  state.puzzle = entry.puzzle;
+  state.boardState = cloneBoard(entry.boardState);
+  resetTimer(entry.secondsElapsed || 0);
+};
+
+const renderCurrentPuzzle = ({ announce = false, message, additionalState } = {}) => {
+  createBoardStructure();
+  updateBoard();
+  updateTimerDisplay();
+  if (announce) {
+    updateStatus('notice', message || 'New board ready');
+  } else {
+    updateStatus();
+  }
+  updateDifficultyButtons();
+  persistCurrentState(additionalState);
+};
+
 const setBoardSizeVariable = (size) => {
   if (appRoot) {
     appRoot.style.setProperty('--board-size', String(size));
   }
 };
-
-setBoardSizeVariable(state.puzzle.size);
 
 const getCurrentRowTotals = () =>
   state.boardState.map((row) => row.filter((cell) => cell === 'fruit').length);
@@ -350,7 +496,7 @@ const updateCell = (row, column) => {
   const stateValue = state.boardState[row][column];
   element.dataset.state = stateValue;
   if (stateValue === 'fruit') {
-    element.textContent = '●';
+    element.textContent = '★';
   } else if (stateValue === 'mark') {
     element.textContent = '×';
   } else {
@@ -386,11 +532,13 @@ const updateBoard = () => {
 };
 
 const cycleCell = (row, column) => {
+  startTimer();
   const currentState = state.boardState[row][column];
   const nextState = CELL_STATES[(CELL_STATES.indexOf(currentState) + 1) % CELL_STATES.length];
   state.boardState[row][column] = nextState;
   updateCell(row, column);
   updateHints();
+  persistCurrentState({ solved: false, solvedAt: null });
 };
 
 const resetBoard = () => {
@@ -402,7 +550,9 @@ const resetBoard = () => {
     }
   }
   updateHints();
-  updateStatus('notice', 'cleared');
+  resetTimer(0);
+  updateStatus('notice', 'Board cleared');
+  persistCurrentState({ solved: false, solvedAt: null });
 };
 
 const createBoardStructure = () => {
@@ -500,20 +650,22 @@ const checkSolution = () => {
   });
 
   if (rowsMatch && columnsMatch && regionsMatch) {
-    updateStatus('success', 'success');
+    stopTimer();
+    updateStatus('success', 'Solved!');
+    persistCurrentState({ solved: true, solvedAt: getTimestamp() });
   } else {
-    updateStatus('alert', 'keep going');
+    updateStatus('alert', 'Keep going');
+    persistCurrentState({ solved: false, solvedAt: null });
   }
 };
 
-const newPuzzle = ({ announce = true } = {}) => {
-  state.puzzle = createPuzzle(state.difficulty);
-  state.boardState = createEmptyBoard(state.puzzle.size);
-  createBoardStructure();
-  updateBoard();
-  if (announce) {
-    updateStatus('notice', 'changed');
-  }
+const newPuzzle = ({ announce = true, forceNew = false } = {}) => {
+  loadPuzzle({ difficulty: state.difficulty, forceNew });
+  renderCurrentPuzzle({
+    announce,
+    message: forceNew ? 'New board created' : 'Board ready',
+    additionalState: { solved: false, solvedAt: null }
+  });
 };
 
 const updateDifficultyButtons = () => {
@@ -529,9 +681,8 @@ const setDifficulty = (difficulty) => {
   if (!DIFFICULTIES[difficulty] || state.difficulty === difficulty) {
     return;
   }
-  state.difficulty = difficulty;
-  updateDifficultyButtons();
-  newPuzzle({ announce: false });
+  loadPuzzle({ difficulty, forceNew: false });
+  renderCurrentPuzzle({ announce: true, message: `Difficulty set to ${DIFFICULTIES[difficulty].label}` });
 };
 
 boardContainer.addEventListener('click', (event) => {
@@ -544,16 +695,32 @@ boardContainer.addEventListener('click', (event) => {
   cycleCell(row, column);
 });
 
+boardContainer.addEventListener('dblclick', (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+});
+
 checkButton.addEventListener('click', checkSolution);
 clearButton.addEventListener('click', resetBoard);
-newButton.addEventListener('click', newPuzzle);
 difficultyButtons.forEach((button) => {
   button.addEventListener('click', () => {
     setDifficulty(button.dataset.difficulty);
   });
 });
 
-createBoardStructure();
-updateBoard();
-updateStatus();
-updateDifficultyButtons();
+if (testButton) {
+  testButton.addEventListener('click', () => {
+    newPuzzle({ announce: true, forceNew: true });
+  });
+}
+
+const initializeApp = () => {
+  const storedDifficulty = storage.difficulty;
+  if (storedDifficulty && DIFFICULTIES[storedDifficulty]) {
+    state.difficulty = storedDifficulty;
+  }
+  loadPuzzle({ difficulty: state.difficulty, forceNew: false });
+  renderCurrentPuzzle({ announce: false });
+};
+
+initializeApp();

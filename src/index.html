@@ -37,14 +37,6 @@
             >
               Hard
             </button>
-            <button
-              type="button"
-              class="difficulty-option"
-              data-difficulty="xtrem"
-              aria-pressed="false"
-            >
-              Xtrem
-            </button>
           </div>
         </div>
         <div class="column-hints" id="column-hints" aria-label="Column clues"></div>
@@ -54,8 +46,14 @@
       <div class="actions">
         <button id="check-button" class="action-button">Check</button>
         <button id="clear-button" class="action-button">Clear</button>
-        <button id="new-button" class="action-button">Change</button>
+        <div id="timer-display" class="timer-display" aria-live="polite" aria-label="Time spent">
+          00:00
+        </div>
       </div>
+
+      <button id="test-new-button" class="action-button action-button--secondary">
+        Test: New Board
+      </button>
 
       <div class="status" id="status" aria-live="polite"></div>
 
