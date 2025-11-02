@@ -145,8 +145,18 @@ const chooseRegionRequirement = (difficulty, minRequirement, maxRequirement) => 
 
   if (difficulty === 'hard') {
     const weighted = [];
+    const span = maxRequirement - minRequirement;
     for (let value = minRequirement; value <= maxRequirement; value += 1) {
-      const weight = value >= maxRequirement ? 3 : value >= maxRequirement - 1 ? 2 : 1;
+      if (span <= 0) {
+        weighted.push(value);
+        continue;
+      }
+
+      const distanceFromMax = maxRequirement - value;
+      const distanceFromMin = value - minRequirement;
+      const baseWeight = distanceFromMax + 1;
+      const lowerBias = distanceFromMin === 0 && span > 1 ? 1 : 0;
+      const weight = Math.max(1, baseWeight + lowerBias);
       for (let index = 0; index < weight; index += 1) {
         weighted.push(value);
       }
