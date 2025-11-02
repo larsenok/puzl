@@ -129,12 +129,33 @@ const DIFFICULTIES = {
   hard: {
     label: 'Hard',
     allowedSizes: [6],
-    requirement: { min: 2, max: 4 }
+    requirement: { min: 2, max: 5 }
   }
 };
 
 const DEFAULT_DIFFICULTY = 'normal';
 const STORAGE_KEY = 'puzl-daily-state-v1';
+
+const MAX_GENERATION_ATTEMPTS = 40;
+
+const chooseRegionRequirement = (difficulty, minRequirement, maxRequirement) => {
+  if (maxRequirement <= minRequirement) {
+    return maxRequirement;
+  }
+
+  if (difficulty === 'hard') {
+    const weighted = [];
+    for (let value = minRequirement; value <= maxRequirement; value += 1) {
+      const weight = value >= maxRequirement ? 3 : value >= maxRequirement - 1 ? 2 : 1;
+      for (let index = 0; index < weight; index += 1) {
+        weighted.push(value);
+      }
+    }
+    return weighted[Math.floor(Math.random() * weighted.length)];
+  }
+
+  return Math.floor(Math.random() * (maxRequirement - minRequirement + 1)) + minRequirement;
+};
 
 const getTodayKey = () => {
   const today = new Date();
@@ -195,6 +216,55 @@ const CELL_STATES = ['empty', 'fruit', 'mark'];
 const createEmptyBoard = (size) =>
   Array.from({ length: size }, () => Array.from({ length: size }, () => 'empty'));
 
+const isFruitValue = (value) => value === true || value === 'fruit';
+
+const computeRowTotalsForBoard = (board) =>
+  board.map((row) => row.reduce((total, cell) => total + (isFruitValue(cell) ? 1 : 0), 0));
+
+const computeColumnTotalsForBoard = (board, size) =>
+  Array.from({ length: size }, (_, column) =>
+    board.reduce((total, row) => total + (isFruitValue(row[column]) ? 1 : 0), 0)
+  );
+
+const computeRegionCountsForBoard = (board, regionGrid, size) => {
+  const counts = new Map();
+  for (let row = 0; row < size; row += 1) {
+    for (let column = 0; column < size; column += 1) {
+      if (isFruitValue(board[row][column])) {
+        const regionId = regionGrid[row][column];
+        counts.set(regionId, (counts.get(regionId) || 0) + 1);
+      }
+    }
+  }
+  return counts;
+};
+
+const evaluateBoardAgainstPuzzle = (board, puzzle) => {
+  if (!puzzle) {
+    return { rowsMatch: false, columnsMatch: false, regionsMatch: false, isSolved: false };
+  }
+
+  const { size, rowTotals, columnTotals, regionGrid, regions } = puzzle;
+  const currentRowTotals = computeRowTotalsForBoard(board);
+  const currentColumnTotals = computeColumnTotalsForBoard(board, size);
+  const regionCounts = computeRegionCountsForBoard(board, regionGrid, size);
+
+  const rowsMatch = currentRowTotals.every((count, index) => count === rowTotals[index]);
+  const columnsMatch = currentColumnTotals.every((count, index) => count === columnTotals[index]);
+  const regionsMatch = regions.every(
+    (region) => (regionCounts.get(region.id) || 0) === region.requirement
+  );
+
+  return {
+    rowsMatch,
+    columnsMatch,
+    regionsMatch,
+    isSolved: rowsMatch && columnsMatch && regionsMatch
+  };
+};
+
+const isPuzzleSolutionValid = (puzzle) => evaluateBoardAgainstPuzzle(puzzle.solution, puzzle).isSolved;
+
 const shuffleArray = (input) => {
   const array = [...input];
   for (let index = array.length - 1; index > 0; index -= 1) {
@@ -243,15 +313,13 @@ const createPuzzle = (difficulty, attempt = 0) => {
 
   const regions = [];
   let colorIndex = 0;
+  const regionSizes = Array.from(regionCells.values(), (cells) => cells.length);
+  const largestRegionSize = regionSizes.reduce((max, current) => Math.max(max, current), 0);
 
   for (const [regionId, cells] of regionCells.entries()) {
     const maxRequirement = Math.min(cells.length, settings.requirement.max);
     const minRequirement = Math.min(maxRequirement, settings.requirement.min);
-    const range = maxRequirement - minRequirement;
-    const requirement =
-      range > 0
-        ? Math.floor(Math.random() * (range + 1)) + minRequirement
-        : maxRequirement;
+    const requirement = chooseRegionRequirement(difficulty, minRequirement, maxRequirement);
     const chosenCells = shuffleArray(cells).slice(0, requirement);
     chosenCells.forEach(([row, column]) => {
       solution[row][column] = true;
@@ -276,17 +344,44 @@ const createPuzzle = (difficulty, attempt = 0) => {
     regions.push({ id: regionId, requirement, anchor, color });
   }
 
-  const rowTotals = solution.map((row) => row.filter(Boolean).length);
-  const columnTotals = Array.from({ length: size }, (_, column) =>
-    solution.reduce((sum, row) => sum + (row[column] ? 1 : 0), 0)
-  );
+  const rowTotals = computeRowTotalsForBoard(solution);
+  const columnTotals = computeColumnTotalsForBoard(solution, size);
 
   const exceedsRowOrColumnLimit =
     rowTotals.some((total) => total >= size || total > 6) ||
     columnTotals.some((total) => total >= size || total > 6);
 
-  if (exceedsRowOrColumnLimit && attempt < 20) {
+  const highRequirementCount = regions.filter((region) => region.requirement >= 4).length;
+  const requirementFiveCount = regions.filter((region) => region.requirement >= 5).length;
+  const smallRequirementCount = regions.filter((region) => region.requirement <= 2).length;
+  const smallColumnCount = columnTotals.filter((total) => total >= 1 && total <= 2).length;
+
+  const requiresHardRegeneration =
+    difficulty === 'hard' &&
+    (highRequirementCount < 2 ||
+      (largestRegionSize >= 5 && requirementFiveCount < 1) ||
+      smallColumnCount < Math.min(2, size) ||
+      smallRequirementCount > Math.ceil(regions.length / 2));
+
+  const puzzle = {
+    size,
+    solution,
+    rowTotals,
+    columnTotals,
+    regionGrid: overlay,
+    regions
+  };
+
+  const hasValidSolution = isPuzzleSolutionValid(puzzle);
+
+  const shouldRetry = exceedsRowOrColumnLimit || requiresHardRegeneration || !hasValidSolution;
+
+  if (shouldRetry && attempt < MAX_GENERATION_ATTEMPTS) {
     return createPuzzle(difficulty, attempt + 1);
+  }
+
+  if (!hasValidSolution) {
+    console.warn('Generated puzzle failed validation', { difficulty, attempt });
   }
 
   const regionsById = regions.reduce((accumulator, region) => {
@@ -295,12 +390,7 @@ const createPuzzle = (difficulty, attempt = 0) => {
   }, {});
 
   return {
-    size,
-    solution,
-    rowTotals,
-    columnTotals,
-    regionGrid: overlay,
-    regions,
+    ...puzzle,
     regionsById
   };
 };
@@ -312,6 +402,7 @@ const state = {
   difficulty: DEFAULT_DIFFICULTY,
   puzzle: null,
   boardState: [],
+  isSolved: false,
   timer: {
     running: false,
     intervalId: null,
@@ -365,10 +456,24 @@ const formatTime = (seconds) => {
   return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
 };
 
+const updateTimerLockState = () => {
+  if (!timerElement) {
+    return;
+  }
+  if (state.isSolved) {
+    timerElement.dataset.locked = 'true';
+    timerElement.setAttribute('aria-label', 'Time spent (locked)');
+  } else {
+    timerElement.setAttribute('aria-label', 'Time spent');
+    delete timerElement.dataset.locked;
+  }
+};
+
 const updateTimerDisplay = () => {
   if (timerElement) {
     timerElement.textContent = formatTime(state.timer.secondsElapsed);
   }
+  updateTimerLockState();
 };
 
 const stopTimer = () => {
@@ -412,6 +517,7 @@ const loadPuzzle = ({ difficulty = state.difficulty, forceNew = false } = {}) =>
       boardState,
       solved: false,
       solvedAt: null,
+      status: null,
       secondsElapsed: 0,
       createdAt: getTimestamp(),
       updatedAt: getTimestamp()
@@ -426,6 +532,10 @@ const loadPuzzle = ({ difficulty = state.difficulty, forceNew = false } = {}) =>
   state.difficulty = difficulty;
   state.puzzle = entry.puzzle;
   state.boardState = cloneBoard(entry.boardState);
+  state.isSolved = Boolean(entry.solved);
+  if (currentEntry && !Object.prototype.hasOwnProperty.call(currentEntry, 'status')) {
+    currentEntry.status = null;
+  }
   resetTimer(entry.secondsElapsed || 0);
 };
 
@@ -433,13 +543,27 @@ const renderCurrentPuzzle = ({ announce = false, message, additionalState } = {}
   createBoardStructure();
   updateBoard();
   updateTimerDisplay();
+  let statusDetails = null;
+
   if (announce) {
-    updateStatus('notice', message || 'New board ready');
+    statusDetails = { type: 'notice', text: message || 'New board ready' };
+  }
+
+  if (additionalState && Object.prototype.hasOwnProperty.call(additionalState, 'status')) {
+    statusDetails = additionalState.status;
+  } else if (!statusDetails && currentEntry?.status) {
+    statusDetails = currentEntry.status;
+  }
+
+  if (statusDetails && statusDetails.text) {
+    updateStatus(statusDetails.type, statusDetails.text);
   } else {
     updateStatus();
   }
   updateDifficultyButtons();
-  persistCurrentState(additionalState);
+  const stateToPersist =
+    additionalState || (announce && statusDetails ? { status: statusDetails } : undefined);
+  persistCurrentState(stateToPersist);
 };
 
 const setBoardSizeVariable = (size) => {
@@ -448,15 +572,10 @@ const setBoardSizeVariable = (size) => {
   }
 };
 
-const getCurrentRowTotals = () =>
-  state.boardState.map((row) => row.filter((cell) => cell === 'fruit').length);
+const getCurrentRowTotals = () => computeRowTotalsForBoard(state.boardState);
 
-const getCurrentColumnTotals = () => {
-  const size = state.puzzle.size;
-  return Array.from({ length: size }, (_, column) =>
-    state.boardState.reduce((sum, row) => sum + (row[column] === 'fruit' ? 1 : 0), 0)
-  );
-};
+const getCurrentColumnTotals = () =>
+  computeColumnTotalsForBoard(state.boardState, state.puzzle.size);
 
 const applyHintClasses = (element, current, target) => {
   element.classList.remove('hint-satisfied', 'hint-exceeded');
@@ -531,6 +650,36 @@ const updateBoard = () => {
   updateHints();
 };
 
+const handleSolvedState = () => {
+  stopTimer();
+  state.isSolved = true;
+  updateTimerLockState();
+  updateStatus('success', 'Solved!');
+  persistCurrentState({
+    solved: true,
+    solvedAt: getTimestamp(),
+    status: { type: 'success', text: 'Solved!' }
+  });
+};
+
+const applyUnsolvedState = (status, { updateDisplay = Boolean(status) } = {}) => {
+  const wasSolved = state.isSolved;
+  state.isSolved = false;
+  updateTimerLockState();
+  if (updateDisplay || wasSolved) {
+    if (status && status.text) {
+      updateStatus(status.type, status.text);
+    } else {
+      updateStatus();
+    }
+  }
+  persistCurrentState({
+    solved: false,
+    solvedAt: null,
+    status: status || null
+  });
+};
+
 const cycleCell = (row, column) => {
   startTimer();
   const currentState = state.boardState[row][column];
@@ -538,7 +687,12 @@ const cycleCell = (row, column) => {
   state.boardState[row][column] = nextState;
   updateCell(row, column);
   updateHints();
-  persistCurrentState({ solved: false, solvedAt: null });
+  const evaluation = evaluateBoardAgainstPuzzle(state.boardState, state.puzzle);
+  if (evaluation.isSolved) {
+    handleSolvedState();
+  } else {
+    applyUnsolvedState(null);
+  }
 };
 
 const resetBoard = () => {
@@ -551,8 +705,7 @@ const resetBoard = () => {
   }
   updateHints();
   resetTimer(0);
-  updateStatus('notice', 'Board cleared');
-  persistCurrentState({ solved: false, solvedAt: null });
+  applyUnsolvedState({ type: 'notice', text: 'Board cleared' });
 };
 
 const createBoardStructure = () => {
@@ -561,6 +714,8 @@ const createBoardStructure = () => {
 
   columnHintElements.length = 0;
   columnHintsContainer.innerHTML = '';
+  const columnHintGrid = document.createElement('div');
+  columnHintGrid.className = 'column-hints-grid';
   state.puzzle.columnTotals.forEach((total, index) => {
     const wrapper = document.createElement('div');
     wrapper.className = 'column-hint-cell';
@@ -568,9 +723,14 @@ const createBoardStructure = () => {
     text.className = 'hint-text';
     text.textContent = total;
     wrapper.appendChild(text);
-    columnHintsContainer.appendChild(wrapper);
+    columnHintGrid.appendChild(wrapper);
     columnHintElements[index] = text;
   });
+  columnHintsContainer.appendChild(columnHintGrid);
+  const spacer = document.createElement('div');
+  spacer.className = 'column-hint-spacer';
+  spacer.setAttribute('aria-hidden', 'true');
+  columnHintsContainer.appendChild(spacer);
 
   boardContainer.innerHTML = '';
   cellElements.length = 0;
@@ -626,36 +786,11 @@ const createBoardStructure = () => {
 };
 
 const checkSolution = () => {
-  const { rowTotals, columnTotals, regionGrid, regions, size } = state.puzzle;
-
-  const currentRowTotals = getCurrentRowTotals();
-  const currentColumnTotals = getCurrentColumnTotals();
-
-  const rowsMatch = currentRowTotals.every((count, index) => count === rowTotals[index]);
-  const columnsMatch = currentColumnTotals.every((count, index) => count === columnTotals[index]);
-
-  const regionCounts = new Map();
-  for (let row = 0; row < size; row += 1) {
-    for (let column = 0; column < size; column += 1) {
-      if (state.boardState[row][column] === 'fruit') {
-        const regionId = regionGrid[row][column];
-        regionCounts.set(regionId, (regionCounts.get(regionId) || 0) + 1);
-      }
-    }
-  }
-
-  const regionsMatch = regions.every((region) => {
-    const count = regionCounts.get(region.id) || 0;
-    return count === region.requirement;
-  });
-
-  if (rowsMatch && columnsMatch && regionsMatch) {
-    stopTimer();
-    updateStatus('success', 'Solved!');
-    persistCurrentState({ solved: true, solvedAt: getTimestamp() });
+  const evaluation = evaluateBoardAgainstPuzzle(state.boardState, state.puzzle);
+  if (evaluation.isSolved) {
+    handleSolvedState();
   } else {
-    updateStatus('alert', 'Keep going');
-    persistCurrentState({ solved: false, solvedAt: null });
+    applyUnsolvedState({ type: 'alert', text: 'Keep going' });
   }
 };
 
@@ -664,7 +799,11 @@ const newPuzzle = ({ announce = true, forceNew = false } = {}) => {
   renderCurrentPuzzle({
     announce,
     message: forceNew ? 'New board created' : 'Board ready',
-    additionalState: { solved: false, solvedAt: null }
+    additionalState: {
+      solved: false,
+      solvedAt: null,
+      status: { type: 'notice', text: forceNew ? 'New board created' : 'Board ready' }
+    }
   });
 };
 
@@ -682,7 +821,16 @@ const setDifficulty = (difficulty) => {
     return;
   }
   loadPuzzle({ difficulty, forceNew: false });
-  renderCurrentPuzzle({ announce: true, message: `Difficulty set to ${DIFFICULTIES[difficulty].label}` });
+  const message = `Difficulty set to ${DIFFICULTIES[difficulty].label}`;
+  renderCurrentPuzzle({
+    announce: true,
+    message,
+    additionalState: {
+      solved: false,
+      solvedAt: null,
+      status: { type: 'notice', text: message }
+    }
+  });
 };
 
 boardContainer.addEventListener('click', (event) => {
