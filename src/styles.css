@@ -220,7 +220,6 @@ body {
   border-radius: 999px;
   background-color: transparent;
   color: var(--region-color, #1f2937);
-  border: 1.5px solid currentColor;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.1;
