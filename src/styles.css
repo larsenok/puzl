@@ -3,7 +3,7 @@
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
   background-color: #f3f4f6;
   color: #111827;
-  --board-size: 8;
+  --board-size: 5;
 }
 
 * {
