@@ -11,8 +11,7 @@
     <main class="app">
       <section class="board-section">
         <div class="board-toolbar">
-          <span class="toolbar-label" id="difficulty-label">Difficulty</span>
-          <div class="difficulty-toggle" role="radiogroup" aria-labelledby="difficulty-label">
+          <div class="difficulty-toggle" role="radiogroup" aria-label="Difficulty">
             <button
               type="button"
               class="difficulty-option"
@@ -37,6 +36,15 @@
             >
               Hard
             </button>
+            <button
+              type="button"
+              class="difficulty-option"
+              data-difficulty="extreme"
+              aria-pressed="false"
+              hidden
+            >
+              Extreme
+            </button>
           </div>
         </div>
         <div class="column-hints" id="column-hints" aria-label="Column clues"></div>
@@ -57,7 +65,15 @@
 
       <div class="status" id="status" aria-live="polite"></div>
 
-      <footer class="footer">Keep each badge count per shape and match every row and column total.</footer>
+      <footer class="footer">Balance each shape badge while matching every row and column total.</footer>
+      <button
+        id="reset-progress-button"
+        class="reset-progress-button"
+        type="button"
+        aria-label="Reset local progress"
+      >
+        <span aria-hidden="true">&#8635;</span>
+      </button>
     </main>
 
     <script type="module" src="main.js"></script>

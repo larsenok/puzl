@@ -1,131 +1,47 @@
 const PUZZLE_LIBRARY = [
   {
-    size: 4,
-    weight: 1,
+    size: 8,
+    weight: 12,
     overlays: [
       [
-        [0, 0, 1, 1],
-        [0, 2, 2, 1],
-        [3, 2, 4, 4],
-        [3, 5, 5, 4]
+        [0, 0, 0, 1, 1, 2, 2, 3],
+        [4, 4, 0, 1, 5, 2, 6, 3],
+        [4, 7, 0, 8, 5, 5, 6, 3],
+        [9, 7, 10, 8, 8, 11, 6, 12],
+        [9, 13, 10, 14, 15, 11, 16, 12],
+        [17, 13, 18, 14, 15, 19, 16, 20],
+        [17, 21, 18, 22, 22, 19, 23, 20],
+        [24, 21, 25, 25, 26, 19, 23, 27]
       ],
       [
-        [0, 0, 1, 1],
-        [2, 0, 1, 3],
-        [2, 4, 3, 3],
-        [5, 4, 6, 6]
+        [0, 0, 1, 1, 2, 2, 3, 3],
+        [0, 4, 1, 5, 2, 6, 6, 3],
+        [0, 4, 5, 5, 7, 6, 8, 3],
+        [0, 10, 10, 11, 7, 7, 8, 12],
+        [9, 13, 14, 11, 15, 16, 8, 12],
+        [17, 13, 14, 18, 15, 16, 19, 19],
+        [17, 20, 20, 18, 21, 22, 23, 19],
+        [24, 20, 25, 25, 21, 22, 23, 26]
       ],
       [
-        [0, 1, 1, 2],
-        [0, 3, 4, 2],
-        [5, 3, 4, 6],
-        [5, 7, 6, 6]
-      ]
-    ]
-  },
-  {
-    size: 5,
-    weight: 2,
-    overlays: [
-      [
-        [0, 0, 0, 1, 1],
-        [2, 3, 0, 1, 4],
-        [2, 3, 3, 4, 4],
-        [5, 5, 6, 6, 7],
-        [8, 5, 9, 7, 7]
+        [0, 0, 1, 1, 2, 2, 3, 3],
+        [4, 0, 1, 5, 2, 6, 6, 3],
+        [0, 7, 7, 5, 8, 6, 9, 9],
+        [0, 7, 11, 11, 8, 12, 12, 13],
+        [10, 14, 14, 15, 8, 16, 17, 13],
+        [18, 19, 14, 15, 20, 16, 17, 21],
+        [18, 19, 22, 22, 20, 23, 24, 21],
+        [25, 26, 22, 27, 27, 23, 24, 28]
       ],
       [
-        [0, 0, 1, 1, 1],
-        [2, 0, 3, 4, 4],
-        [2, 3, 3, 5, 4],
-        [6, 6, 5, 5, 7],
-        [8, 6, 9, 7, 7]
-      ],
-      [
-        [0, 0, 1, 1, 2],
-        [3, 0, 1, 4, 2],
-        [3, 5, 4, 4, 2],
-        [6, 5, 5, 7, 7],
-        [6, 8, 8, 8, 9]
-      ]
-    ]
-  },
-  {
-    size: 6,
-    weight: 4,
-    overlays: [
-      [
-        [0, 0, 1, 1, 2, 2],
-        [0, 3, 3, 1, 4, 2],
-        [5, 3, 6, 4, 4, 2],
-        [5, 6, 6, 7, 8, 8],
-        [9, 9, 6, 7, 10, 8],
-        [9, 11, 11, 7, 10, 10]
-      ],
-      [
-        [0, 0, 1, 1, 2, 2],
-        [3, 0, 1, 4, 4, 2],
-        [3, 5, 5, 4, 6, 6],
-        [7, 7, 5, 8, 8, 6],
-        [7, 9, 9, 10, 8, 11],
-        [12, 9, 10, 10, 11, 11]
-      ],
-      [
-        [0, 0, 1, 1, 2, 2],
-        [3, 0, 4, 4, 2, 5],
-        [3, 6, 6, 4, 7, 5],
-        [8, 6, 9, 9, 7, 5],
-        [8, 10, 10, 11, 7, 12],
-        [13, 10, 11, 11, 12, 12]
-      ],
-      [
-        [0, 0, 0, 1, 1, 1],
-        [0, 2, 0, 1, 3, 1],
-        [2, 2, 0, 3, 3, 3],
-        [4, 2, 5, 5, 6, 6],
-        [4, 5, 5, 7, 6, 8],
-        [4, 4, 7, 7, 6, 8]
-      ],
-      [
-        [0, 0, 0, 1, 1, 1],
-        [0, 2, 0, 1, 3, 3],
-        [2, 2, 0, 1, 3, 4],
-        [5, 2, 6, 6, 4, 4],
-        [5, 7, 6, 8, 8, 4],
-        [5, 7, 7, 8, 9, 9]
-      ]
-    ]
-  },
-  {
-    size: 7,
-    weight: 6,
-    overlays: [
-      [
-        [0, 0, 1, 1, 2, 2, 2],
-        [0, 3, 3, 1, 4, 5, 2],
-        [6, 3, 7, 4, 4, 5, 8],
-        [6, 7, 7, 9, 10, 5, 8],
-        [11, 11, 9, 9, 10, 12, 12],
-        [13, 14, 14, 15, 10, 15, 12],
-        [13, 16, 16, 15, 17, 17, 12]
-      ],
-      [
-        [0, 0, 1, 1, 1, 2, 2],
-        [3, 0, 4, 5, 1, 6, 2],
-        [3, 4, 4, 5, 7, 6, 8],
-        [9, 9, 10, 5, 7, 6, 8],
-        [11, 12, 10, 13, 7, 14, 8],
-        [11, 12, 15, 13, 16, 14, 8],
-        [17, 12, 15, 13, 16, 18, 18]
-      ],
-      [
-        [0, 0, 1, 1, 2, 2, 3],
-        [4, 0, 5, 6, 2, 7, 3],
-        [4, 5, 5, 6, 7, 7, 3],
-        [8, 9, 9, 6, 10, 7, 11],
-        [8, 12, 9, 10, 10, 13, 11],
-        [14, 12, 15, 16, 13, 13, 11],
-        [14, 12, 15, 16, 17, 17, 18]
+        [0, 1, 1, 2, 2, 3, 3, 4],
+        [0, 0, 5, 5, 6, 6, 7, 4],
+        [8, 0, 5, 9, 9, 10, 7, 11],
+        [0, 12, 13, 13, 14, 10, 15, 11],
+        [16, 12, 13, 17, 14, 18, 15, 19],
+        [16, 20, 21, 17, 22, 18, 23, 19],
+        [24, 20, 21, 25, 22, 26, 23, 27],
+        [24, 28, 28, 25, 29, 29, 30, 27]
       ]
     ]
   }
@@ -137,11 +53,13 @@ const TRANSLATIONS = {
     difficultyEasy: 'Easy',
     difficultyNormal: 'Normal',
     difficultyHard: 'Hard',
+    difficultyExtreme: 'Extreme',
     columnHintsLabel: 'Column clues',
     boardAriaLabel: 'Puzzle board',
     actionCheck: 'Check',
     actionClear: 'Clear',
     actionNewBoard: 'New board',
+    actionResetProgress: 'Reset local progress',
     timeSpent: 'Time spent',
     timeSpentLocked: 'Time spent (locked)',
     statusNewBoardReady: 'New board ready',
@@ -150,8 +68,9 @@ const TRANSLATIONS = {
     statusBoardCleared: 'Board cleared',
     statusSolved: 'Solved!',
     statusKeepGoing: 'Keep going',
+    statusProgressCleared: 'Progress cleared. Fresh boards await.',
     difficultySet: 'Difficulty set to {difficulty}',
-    footer: 'Keep each badge count per shape and match every row and column total.',
+    footer: 'Balance each shape badge while matching every row and column total.',
     cellAria:
       'Row {row}, column {column}. Part of a shape needing {requirement} apples.'
   },
@@ -160,11 +79,13 @@ const TRANSLATIONS = {
     difficultyEasy: 'Lett',
     difficultyNormal: 'Normal',
     difficultyHard: 'Vanskelig',
+    difficultyExtreme: 'Ekstrem',
     columnHintsLabel: 'Kolonnehint',
     boardAriaLabel: 'Puslespillbrett',
     actionCheck: 'Sjekk',
     actionClear: 'Tøm',
     actionNewBoard: 'Nytt brett',
+    actionResetProgress: 'Tilbakestill lokal fremdrift',
     timeSpent: 'Brukt tid',
     timeSpentLocked: 'Brukt tid (låst)',
     statusNewBoardReady: 'Nytt brett klart',
@@ -174,7 +95,8 @@ const TRANSLATIONS = {
     statusSolved: 'Løst!',
     statusKeepGoing: 'Fortsett',
     difficultySet: 'Vanskelighetsgrad satt til {difficulty}',
-    footer: 'Hold antall merker per område og match hver rad- og kolonneverdi.',
+    statusProgressCleared: 'Fremdrift slettet. Klar for nye brett.',
+    footer: 'Match hver rad- og kolonneverdi mens hvert område får riktig antall merker.',
     cellAria:
       'Rad {row}, kolonne {column}. Del av en form som trenger {requirement} epler.'
   }
@@ -248,18 +170,23 @@ const translate = (key, variables = {}) => {
 const DIFFICULTIES = {
   easy: {
     labelKey: 'difficultyEasy',
-    allowedSizes: [4],
+    allowedSizes: [8],
     requirement: { min: 1, max: 2 }
   },
   normal: {
     labelKey: 'difficultyNormal',
-    allowedSizes: [5],
+    allowedSizes: [8],
     requirement: { min: 1, max: 3 }
   },
   hard: {
     labelKey: 'difficultyHard',
-    allowedSizes: [6],
+    allowedSizes: [8],
     requirement: { min: 2, max: 5 }
+  },
+  extreme: {
+    labelKey: 'difficultyExtreme',
+    allowedSizes: [8],
+    requirement: { min: 3, max: 6 }
   }
 };
 
@@ -273,7 +200,7 @@ const chooseRegionRequirement = (difficulty, minRequirement, maxRequirement) => 
     return maxRequirement;
   }
 
-  if (difficulty === 'hard') {
+  if (difficulty === 'hard' || difficulty === 'extreme') {
     const weighted = [];
     const span = maxRequirement - minRequirement;
     for (let value = minRequirement; value <= maxRequirement; value += 1) {
@@ -472,7 +399,7 @@ const createPuzzle = (difficulty, attempt = 0) => {
   const smallColumnCount = columnTotals.filter((total) => total >= 1 && total <= 2).length;
 
   const requiresHardRegeneration =
-    difficulty === 'hard' &&
+    (difficulty === 'hard' || difficulty === 'extreme') &&
     (highRequirementCount < 2 ||
       largeRegionCount < 1 ||
       (largestRegionSize >= 5 && requirementFiveCount < 1) ||
@@ -517,7 +444,7 @@ const state = {
 };
 
 const appRoot = document.querySelector('.app');
-const difficultyLabelElement = document.getElementById('difficulty-label');
+const difficultyToggleElement = document.querySelector('.difficulty-toggle');
 const columnHintsContainer = document.getElementById('column-hints');
 const boardContainer = document.getElementById('board');
 const statusElement = document.getElementById('status');
@@ -525,8 +452,12 @@ const checkButton = document.getElementById('check-button');
 const clearButton = document.getElementById('clear-button');
 const timerElement = document.getElementById('timer-display');
 const testButton = document.getElementById('test-new-button');
-const difficultyButtons = Array.from(document.querySelectorAll('[data-difficulty]'));
+const difficultyButtons = Array.from(document.querySelectorAll('.difficulty-option'));
+const extremeDifficultyButton = difficultyButtons.find(
+  (button) => button.dataset.difficulty === 'extreme'
+);
 const footerElement = document.querySelector('.footer');
+const resetProgressButton = document.getElementById('reset-progress-button');
 
 const columnHintElements = [];
 const rowHintElements = [];
@@ -539,13 +470,35 @@ const ensurePuzzlesStorage = () => {
   return storage.puzzles;
 };
 
+const hasSolvedHardPuzzle = () => {
+  const puzzles = ensurePuzzlesStorage();
+  const hardEntry = puzzles.hard;
+  return Boolean(hardEntry && hardEntry.solved);
+};
+
+const updateExtremeAvailability = () => {
+  if (!extremeDifficultyButton) {
+    return;
+  }
+  const unlocked = hasSolvedHardPuzzle();
+  if (unlocked) {
+    extremeDifficultyButton.hidden = false;
+    extremeDifficultyButton.disabled = false;
+  } else {
+    extremeDifficultyButton.hidden = true;
+    extremeDifficultyButton.disabled = true;
+    extremeDifficultyButton.classList.remove('is-active');
+    extremeDifficultyButton.setAttribute('aria-pressed', 'false');
+  }
+};
+
 const applyTranslations = () => {
   if (typeof document !== 'undefined' && document.documentElement) {
     document.documentElement.lang = ACTIVE_LOCALE;
   }
 
-  if (difficultyLabelElement) {
-    difficultyLabelElement.textContent = translate('difficultyLabel');
+  if (difficultyToggleElement) {
+    difficultyToggleElement.setAttribute('aria-label', translate('difficultyLabel'));
   }
 
   difficultyButtons.forEach((button) => {
@@ -582,6 +535,12 @@ const applyTranslations = () => {
 
   if (footerElement) {
     footerElement.textContent = translate('footer');
+  }
+
+  if (resetProgressButton) {
+    const label = translate('actionResetProgress');
+    resetProgressButton.setAttribute('aria-label', label);
+    resetProgressButton.setAttribute('title', label);
   }
 };
 
@@ -636,6 +595,36 @@ const stopTimer = () => {
   }
   state.timer.intervalId = null;
   state.timer.running = false;
+};
+
+const resetProgress = () => {
+  stopTimer();
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    console.error('Failed to clear stored puzzle state', error);
+  }
+  storage = readStorage();
+  currentEntry = null;
+  state.difficulty = DEFAULT_DIFFICULTY;
+  state.puzzle = null;
+  state.boardState = [];
+  state.isSolved = false;
+  state.timer.secondsElapsed = 0;
+  state.timer.intervalId = null;
+  state.timer.running = false;
+  const message = translate('statusProgressCleared');
+  loadPuzzle({ difficulty: state.difficulty, forceNew: true });
+  renderCurrentPuzzle({
+    announce: true,
+    message,
+    additionalState: {
+      solved: false,
+      solvedAt: null,
+      status: { type: 'notice', text: message }
+    }
+  });
+  updateExtremeAvailability();
 };
 
 const resetTimer = (seconds = 0) => {
@@ -718,6 +707,7 @@ const renderCurrentPuzzle = ({ announce = false, message, additionalState } = {}
   } else {
     updateStatus();
   }
+  updateExtremeAvailability();
   updateDifficultyButtons();
   const stateToPersist =
     additionalState || (announce && statusDetails ? { status: statusDetails } : undefined);
@@ -970,6 +960,9 @@ const checkSolution = () => {
       solvedAt: getTimestamp(),
       status: { type: 'success', text: solvedMessage }
     });
+    if (state.difficulty === 'hard') {
+      updateExtremeAvailability();
+    }
   } else {
     const keepGoingMessage = translate('statusKeepGoing');
     updateStatus('alert', keepGoingMessage);
@@ -1012,6 +1005,9 @@ const setDifficulty = (difficulty) => {
   if (!DIFFICULTIES[difficulty] || state.difficulty === difficulty) {
     return;
   }
+  if (difficulty === 'extreme' && !hasSolvedHardPuzzle()) {
+    return;
+  }
   loadPuzzle({ difficulty, forceNew: false });
   const difficultyLabel = translate(DIFFICULTIES[difficulty].labelKey);
   const message = translate('difficultySet', { difficulty: difficultyLabel });
@@ -1052,6 +1048,12 @@ difficultyButtons.forEach((button) => {
 if (testButton) {
   testButton.addEventListener('click', () => {
     newPuzzle({ announce: true, forceNew: true });
+  });
+}
+
+if (resetProgressButton) {
+  resetProgressButton.addEventListener('click', () => {
+    resetProgress();
   });
 }
 
