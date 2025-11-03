@@ -274,7 +274,7 @@ const DIFFICULTIES = {
 const DEFAULT_DIFFICULTY = 'normal';
 const STORAGE_KEY = 'puzl-daily-state-v1';
 
-const MAX_GENERATION_ATTEMPTS = 40;
+const MAX_GENERATION_ATTEMPTS = 80;
 
 const chooseRegionRequirement = (difficulty, minRequirement, maxRequirement) => {
   if (maxRequirement <= minRequirement) {
@@ -344,7 +344,7 @@ const getTimestamp = () => new Date().toISOString();
 
 const REGION_COLORS = [
   '#ef4444',
-  '#f97316',
+  '#f59e0b',
   '#facc15',
   '#22c55e',
   '#14b8a6',
@@ -489,7 +489,12 @@ const createPuzzle = (difficulty, attempt = 0) => {
       rowMaxCount > 1 ||
       columnMaxCount > 1);
 
-  if ((exceedsRowOrColumnLimit || requiresHardRegeneration) && attempt < MAX_GENERATION_ATTEMPTS) {
+  if (exceedsRowOrColumnLimit || requiresHardRegeneration) {
+    if (attempt >= MAX_GENERATION_ATTEMPTS) {
+      throw new Error(
+        `Failed to generate a ${difficulty} puzzle within ${MAX_GENERATION_ATTEMPTS} attempts`
+      );
+    }
     return createPuzzle(difficulty, attempt + 1);
   }
 
@@ -551,17 +556,33 @@ const ensurePuzzlesStorage = () => {
   return storage.puzzles;
 };
 
-const hasSolvedHardPuzzle = () => {
+const markExtremeUnlocked = () => {
+  if (!storage.extremeUnlocked) {
+    storage.extremeUnlocked = true;
+    writeStorage(storage);
+  }
+};
+
+const isExtremeDifficultyUnlocked = () => {
+  if (storage.extremeUnlocked) {
+    return true;
+  }
+
   const puzzles = ensurePuzzlesStorage();
   const hardEntry = puzzles.hard;
-  return Boolean(hardEntry && hardEntry.solved);
+  if (hardEntry?.solved) {
+    markExtremeUnlocked();
+    return true;
+  }
+
+  return false;
 };
 
 const updateExtremeAvailability = () => {
   if (!extremeDifficultyButton) {
     return;
   }
-  const unlocked = hasSolvedHardPuzzle();
+  const unlocked = isExtremeDifficultyUnlocked();
   if (unlocked) {
     extremeDifficultyButton.hidden = false;
     extremeDifficultyButton.disabled = false;
@@ -1086,7 +1107,7 @@ const setDifficulty = (difficulty) => {
   if (!DIFFICULTIES[difficulty] || state.difficulty === difficulty) {
     return;
   }
-  if (difficulty === 'extreme' && !hasSolvedHardPuzzle()) {
+  if (difficulty === 'extreme' && !isExtremeDifficultyUnlocked()) {
     return;
   }
   loadPuzzle({ difficulty, forceNew: false });
