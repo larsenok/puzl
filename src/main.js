@@ -77,6 +77,22 @@ const PUZZLE_LIBRARY = [
         [8, 6, 9, 9, 7, 5],
         [8, 10, 10, 11, 7, 12],
         [13, 10, 11, 11, 12, 12]
+      ],
+      [
+        [0, 0, 0, 1, 1, 1],
+        [0, 2, 0, 1, 3, 1],
+        [2, 2, 0, 3, 3, 3],
+        [4, 2, 5, 5, 6, 6],
+        [4, 5, 5, 7, 6, 8],
+        [4, 4, 7, 7, 6, 8]
+      ],
+      [
+        [0, 0, 0, 1, 1, 1],
+        [0, 2, 0, 1, 3, 3],
+        [2, 2, 0, 1, 3, 4],
+        [5, 2, 6, 6, 4, 4],
+        [5, 7, 6, 8, 8, 4],
+        [5, 7, 7, 8, 9, 9]
       ]
     ]
   },
@@ -390,6 +406,7 @@ const createPuzzle = (difficulty, attempt = 0) => {
   let colorIndex = 0;
   const regionSizes = Array.from(regionCells.values(), (cells) => cells.length);
   const largestRegionSize = regionSizes.reduce((max, current) => Math.max(max, current), 0);
+  const largeRegionCount = regionSizes.filter((size) => size >= 5).length;
 
   for (const [regionId, cells] of regionCells.entries()) {
     const maxRequirement = Math.min(cells.length, settings.requirement.max);
@@ -424,12 +441,30 @@ const createPuzzle = (difficulty, attempt = 0) => {
     solution.reduce((sum, row) => sum + (row[column] ? 1 : 0), 0)
   );
 
-  const exceedsRowOrColumnLimit =
-    rowTotals.some((total) => total > 6 || (difficulty !== 'hard' && total >= size)) ||
-    columnTotals.some((total) => total > 6 || (difficulty !== 'hard' && total >= size));
+  const hardMaxRowColumnTotal = 5;
+  const rowLimitExceeded =
+    difficulty === 'hard'
+      ? rowTotals.some((total) => total > hardMaxRowColumnTotal)
+      : rowTotals.some((total) => total >= size);
+  const columnLimitExceeded =
+    difficulty === 'hard'
+      ? columnTotals.some((total) => total > hardMaxRowColumnTotal)
+      : columnTotals.some((total) => total >= size);
 
-  const rowSixCount = rowTotals.filter((total) => total === 6).length;
-  const columnSixCount = columnTotals.filter((total) => total === 6).length;
+  const exceedsRowOrColumnLimit =
+    rowTotals.some((total) => total > 6) ||
+    columnTotals.some((total) => total > 6) ||
+    rowLimitExceeded ||
+    columnLimitExceeded;
+
+  const rowMaxCount =
+    difficulty === 'hard'
+      ? rowTotals.filter((total) => total === hardMaxRowColumnTotal).length
+      : 0;
+  const columnMaxCount =
+    difficulty === 'hard'
+      ? columnTotals.filter((total) => total === hardMaxRowColumnTotal).length
+      : 0;
 
   const highRequirementCount = regions.filter((region) => region.requirement >= 4).length;
   const requirementFiveCount = regions.filter((region) => region.requirement >= 5).length;
@@ -439,11 +474,12 @@ const createPuzzle = (difficulty, attempt = 0) => {
   const requiresHardRegeneration =
     difficulty === 'hard' &&
     (highRequirementCount < 2 ||
+      largeRegionCount < 1 ||
       (largestRegionSize >= 5 && requirementFiveCount < 1) ||
       smallColumnCount < Math.min(2, size) ||
       smallRequirementCount > Math.ceil(regions.length / 2) ||
-      rowSixCount > 1 ||
-      columnSixCount > 1);
+      rowMaxCount > 1 ||
+      columnMaxCount > 1);
 
   if ((exceedsRowOrColumnLimit || requiresHardRegeneration) && attempt < MAX_GENERATION_ATTEMPTS) {
     return createPuzzle(difficulty, attempt + 1);
@@ -648,6 +684,7 @@ const loadPuzzle = ({ difficulty = state.difficulty, forceNew = false } = {}) =>
 
   currentEntry = entry;
   state.difficulty = difficulty;
+  setAppDifficultyAttribute(difficulty);
   state.puzzle = entry.puzzle;
   state.boardState = cloneBoard(entry.boardState);
   state.isSolved = Boolean(entry.solved);
@@ -690,6 +727,12 @@ const renderCurrentPuzzle = ({ announce = false, message, additionalState } = {}
 const setBoardSizeVariable = (size) => {
   if (appRoot) {
     appRoot.style.setProperty('--board-size', String(size));
+  }
+};
+
+const setAppDifficultyAttribute = (difficulty) => {
+  if (appRoot) {
+    appRoot.dataset.difficulty = difficulty;
   }
 };
 
