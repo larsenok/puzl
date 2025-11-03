@@ -482,10 +482,8 @@ const createPuzzle = (difficulty, attempt = 0) => {
 
   const minHighRequirement = 1;
   const maxSmallRequirementFraction = difficulty === 'extreme' ? 0.95 : 0.8;
-  const maxRowMaxCount =
-    difficulty === 'extreme' ? Math.max(0, size - 1) : 2;
-  const maxColumnMaxCount =
-    difficulty === 'extreme' ? Math.max(0, size - 1) : 2;
+  const maxRowMaxCount = 2;
+  const maxColumnMaxCount = 2;
 
   const requiresHardRegeneration =
     (difficulty === 'hard' || difficulty === 'extreme') &&
