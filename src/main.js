@@ -481,9 +481,11 @@ const createPuzzle = (difficulty, attempt = 0) => {
   const smallRequirementCount = regions.filter((region) => region.requirement <= 2).length;
 
   const minHighRequirement = 1;
-  const maxSmallRequirementFraction = difficulty === 'extreme' ? 0.7 : 0.8;
-  const maxRowMaxCount = 2;
-  const maxColumnMaxCount = difficulty === 'extreme' ? 3 : 2;
+  const maxSmallRequirementFraction = difficulty === 'extreme' ? 0.95 : 0.8;
+  const maxRowMaxCount =
+    difficulty === 'extreme' ? Math.max(0, size - 1) : 2;
+  const maxColumnMaxCount =
+    difficulty === 'extreme' ? Math.max(0, size - 1) : 2;
 
   const requiresHardRegeneration =
     (difficulty === 'hard' || difficulty === 'extreme') &&
