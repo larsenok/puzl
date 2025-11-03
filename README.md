@@ -1,8 +1,23 @@
 # Puzl
 
 Star Orchard is a bite-sized logic puzzle rendered with plain HTML, CSS, and vanilla JavaScript.
-Fill the 5×5 orchard with apples so every row and column matches the clue counts.
-Tap (or click) a plot to cycle through empty ground, an apple, and a marker for notes.
+Boards range from compact 4×4 orchards to sprawling 8×8 estates depending on the chosen difficulty.
+
+## Status
+
+- ✅ Fully playable across four difficulties with unlockable Extreme mode.
+- ✅ Daily seeds stored locally so players can revisit a board later the same day.
+- ✅ Zero-runtime build that ships static assets ready for any CDN or static host.
+
+## How the game works
+
+Each puzzle presents an orchard divided into irregular regions. Every region has a badge
+showing how many apples it must contain. Rows and columns list their own apple totals as well.
+
+Click or tap a cell to cycle through empty soil, an apple, and a note marker. When a row or
+column matches its total exactly the clue turns green; exceeding the total turns it red. Use the
+logic of overlapping constraints to ensure each region hits its requirement while the rows and
+columns all satisfy their totals.
 
 ## Project structure
 
