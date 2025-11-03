@@ -418,7 +418,11 @@ const createPuzzle = (difficulty, attempt = 0) => {
 
   for (const [regionId, cells] of regionCells.entries()) {
     const maxRequirement = Math.min(cells.length, settings.requirement.max);
-    const minRequirement = Math.min(maxRequirement, settings.requirement.min);
+    let minRequirement = Math.min(maxRequirement, settings.requirement.min);
+    if (difficulty === 'extreme') {
+      const adjustableMin = Math.max(1, maxRequirement - 1);
+      minRequirement = Math.min(minRequirement, adjustableMin);
+    }
     const requirement = chooseRegionRequirement(difficulty, minRequirement, maxRequirement);
     const chosenCells = shuffleArray(cells).slice(0, requirement);
     chosenCells.forEach(([row, column]) => {
