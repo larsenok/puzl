@@ -46,6 +46,11 @@ body {
   --cell-gap: calc(var(--base-cell-gap) * 0.85);
 }
 
+.app[data-difficulty='extreme'] {
+  max-width: 640px;
+  --cell-gap: calc(var(--base-cell-gap) * 0.7);
+}
+
 .board-section {
   display: flex;
   flex-direction: column;
