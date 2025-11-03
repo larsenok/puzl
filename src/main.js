@@ -449,19 +449,20 @@ const createPuzzle = (difficulty, attempt = 0) => {
     solution.reduce((sum, row) => sum + (row[column] ? 1 : 0), 0)
   );
 
-  const hardMaxRowColumnTotal = 5;
+  const hardMaxRowColumnTotal = Math.min(size, 6);
   const rowLimitExceeded =
     difficulty === 'hard'
       ? rowTotals.some((total) => total > hardMaxRowColumnTotal)
-      : rowTotals.some((total) => total >= size);
+      : rowTotals.some((total) => total > size);
   const columnLimitExceeded =
     difficulty === 'hard'
       ? columnTotals.some((total) => total > hardMaxRowColumnTotal)
-      : columnTotals.some((total) => total >= size);
+      : columnTotals.some((total) => total > size);
 
+  const softRowColumnLimit = Math.max(6, size);
   const exceedsRowOrColumnLimit =
-    rowTotals.some((total) => total > 6) ||
-    columnTotals.some((total) => total > 6) ||
+    rowTotals.some((total) => total > softRowColumnLimit) ||
+    columnTotals.some((total) => total > softRowColumnLimit) ||
     rowLimitExceeded ||
     columnLimitExceeded;
 
@@ -477,17 +478,20 @@ const createPuzzle = (difficulty, attempt = 0) => {
   const highRequirementCount = regions.filter((region) => region.requirement >= 4).length;
   const requirementFiveCount = regions.filter((region) => region.requirement >= 5).length;
   const smallRequirementCount = regions.filter((region) => region.requirement <= 2).length;
-  const smallColumnCount = columnTotals.filter((total) => total >= 1 && total <= 2).length;
+
+  const minHighRequirement = 1;
+  const maxSmallRequirementFraction = difficulty === 'extreme' ? 0.7 : 0.8;
+  const maxRowMaxCount = 2;
+  const maxColumnMaxCount = difficulty === 'extreme' ? 3 : 2;
 
   const requiresHardRegeneration =
     (difficulty === 'hard' || difficulty === 'extreme') &&
-    (highRequirementCount < 2 ||
+    (highRequirementCount < minHighRequirement ||
       largeRegionCount < 1 ||
-      (largestRegionSize >= 5 && requirementFiveCount < 1) ||
-      smallColumnCount < Math.min(2, size) ||
-      smallRequirementCount > Math.ceil(regions.length / 2) ||
-      rowMaxCount > 1 ||
-      columnMaxCount > 1);
+      (largestRegionSize >= 6 && requirementFiveCount < 1) ||
+      smallRequirementCount > Math.ceil(regions.length * maxSmallRequirementFraction) ||
+      rowMaxCount > maxRowMaxCount ||
+      columnMaxCount > maxColumnMaxCount);
 
   if (exceedsRowOrColumnLimit || requiresHardRegeneration) {
     if (attempt >= MAX_GENERATION_ATTEMPTS) {
