@@ -3,7 +3,7 @@
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
   background-color: #f3f4f6;
   color: #111827;
-  --board-size: 5;
+  --board-size: 8;
 }
 
 * {
@@ -24,7 +24,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  --base-cell-gap: 6px;
+  --base-cell-gap: 4px;
   --cell-gap: var(--base-cell-gap);
   --cell-requirement-offset-x: 6px;
   --cell-requirement-offset-y: 6px;
@@ -33,15 +33,17 @@ body {
 }
 
 .app[data-difficulty='normal'],
-.app[data-difficulty='hard'] {
+.app[data-difficulty='hard'],
+.app[data-difficulty='extreme'] {
   --cell-requirement-offset-x: 3px;
   --cell-requirement-offset-y: 3px;
   --cell-requirement-padding-y: 1px;
   --cell-requirement-padding-x: 4px;
 }
 
-.app[data-difficulty='hard'] {
-  --cell-gap: calc(var(--base-cell-gap) * 0.9);
+.app[data-difficulty='hard'],
+.app[data-difficulty='extreme'] {
+  --cell-gap: calc(var(--base-cell-gap) * 0.85);
 }
 
 .board-section {
@@ -53,24 +55,16 @@ body {
 .board-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
   padding: 0 4px;
-}
-
-.toolbar-label {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #6b7280;
 }
 
 .difficulty-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px;
+  gap: 3px;
+  padding: 3px 4px;
   border-radius: 12px;
   background-color: rgba(148, 163, 184, 0.15);
 }
@@ -121,10 +115,16 @@ body {
   --difficulty-active-text: #b45309;
 }
 
+.difficulty-option[data-difficulty='extreme'] {
+  --difficulty-color: #7c3aed;
+  --difficulty-active-bg: rgba(124, 58, 237, 0.2);
+  --difficulty-active-text: #6d28d9;
+}
+
 .column-hints {
   display: flex;
   align-items: flex-end;
-  gap: 10px;
+  gap: 8px;
   padding: 0 16px;
   width: 100%;
   box-sizing: border-box;
@@ -156,21 +156,21 @@ body {
   padding: 16px 16px 12px;
   display: flex;
   flex-direction: column;
-  gap: var(--cell-gap, 6px);
+  gap: var(--cell-gap, 4px);
   box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
 }
 
 .board-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .row-cells {
   flex: 1;
   display: grid;
   grid-template-columns: repeat(var(--board-size), minmax(0, 1fr));
-  gap: var(--cell-gap, 6px);
+  gap: var(--cell-gap, 4px);
 }
 
 .row-hint-cell {
@@ -317,7 +317,10 @@ body {
 }
 
 #test-new-button {
-  padding: 8px 0;
+  padding: 8px 18px;
+  align-self: center;
+  width: auto;
+  max-height: 44px;
 }
 
 .action-button:focus-visible {
@@ -372,6 +375,33 @@ body {
   border-radius: 50%;
   background-color: #64748b;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+.reset-progress-button {
+  align-self: center;
+  background-color: transparent;
+  border: none;
+  color: #64748b;
+  padding: 4px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+
+.reset-progress-button:hover:not(:disabled) {
+  color: #475569;
+  background-color: rgba(100, 116, 139, 0.12);
+}
+
+.reset-progress-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.reset-progress-button:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.45);
+  outline-offset: 3px;
 }
 
 .status-icon {
