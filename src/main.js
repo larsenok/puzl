@@ -466,14 +466,15 @@ const createPuzzle = (difficulty, attempt = 0) => {
     rowLimitExceeded ||
     columnLimitExceeded;
 
-  const rowMaxCount =
-    difficulty === 'hard'
-      ? rowTotals.filter((total) => total === hardMaxRowColumnTotal).length
-      : 0;
-  const columnMaxCount =
-    difficulty === 'hard'
-      ? columnTotals.filter((total) => total === hardMaxRowColumnTotal).length
-      : 0;
+  const enforceMaxCounts = difficulty === 'hard' || difficulty === 'extreme';
+  const maxRowColumnTotal =
+    difficulty === 'hard' ? hardMaxRowColumnTotal : size;
+  const rowMaxCount = enforceMaxCounts
+    ? rowTotals.filter((total) => total === maxRowColumnTotal).length
+    : 0;
+  const columnMaxCount = enforceMaxCounts
+    ? columnTotals.filter((total) => total === maxRowColumnTotal).length
+    : 0;
 
   const highRequirementCount = regions.filter((region) => region.requirement >= 4).length;
   const requirementFiveCount = regions.filter((region) => region.requirement >= 5).length;
