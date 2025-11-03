@@ -24,6 +24,24 @@ body {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  --base-cell-gap: 6px;
+  --cell-gap: var(--base-cell-gap);
+  --cell-requirement-offset-x: 6px;
+  --cell-requirement-offset-y: 6px;
+  --cell-requirement-padding-y: 2px;
+  --cell-requirement-padding-x: 6px;
+}
+
+.app[data-difficulty='normal'],
+.app[data-difficulty='hard'] {
+  --cell-requirement-offset-x: 3px;
+  --cell-requirement-offset-y: 3px;
+  --cell-requirement-padding-y: 1px;
+  --cell-requirement-padding-x: 4px;
+}
+
+.app[data-difficulty='hard'] {
+  --cell-gap: calc(var(--base-cell-gap) * 0.9);
 }
 
 .board-section {
@@ -115,7 +133,7 @@ body {
 .column-hints-grid {
   display: grid;
   grid-template-columns: repeat(var(--board-size), minmax(0, 1fr));
-  gap: 6px;
+  gap: var(--cell-gap, 6px);
   flex: 1 1 auto;
 }
 
@@ -138,7 +156,7 @@ body {
   padding: 16px 16px 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--cell-gap, 6px);
   box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
 }
 
@@ -152,7 +170,7 @@ body {
   flex: 1;
   display: grid;
   grid-template-columns: repeat(var(--board-size), minmax(0, 1fr));
-  gap: 6px;
+  gap: var(--cell-gap, 6px);
 }
 
 .row-hint-cell {
@@ -214,9 +232,9 @@ body {
 .cell[data-requirement]::after {
   content: attr(data-requirement);
   position: absolute;
-  top: 6px;
-  left: 6px;
-  padding: 2px 6px;
+  top: var(--cell-requirement-offset-y, 6px);
+  left: var(--cell-requirement-offset-x, 6px);
+  padding: var(--cell-requirement-padding-y, 2px) var(--cell-requirement-padding-x, 6px);
   border-radius: 999px;
   background-color: transparent;
   color: var(--region-color, #1f2937);
