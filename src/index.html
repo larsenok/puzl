@@ -59,9 +59,21 @@
         </div>
       </div>
 
-      <button id="test-new-button" class="action-button action-button--secondary">
-        New board
-      </button>
+      <div class="new-board-controls">
+        <button
+          id="lock-controls-button"
+          class="lock-toggle-button"
+          type="button"
+          aria-pressed="false"
+          aria-label="Lock controls"
+          title="Lock controls"
+        >
+          <span class="lock-toggle-button__icon" aria-hidden="true"></span>
+        </button>
+        <button id="test-new-button" class="action-button action-button--secondary">
+          New board
+        </button>
+      </div>
 
       <div class="status" id="status" aria-live="polite"></div>
 

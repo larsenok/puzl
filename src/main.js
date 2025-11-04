@@ -140,6 +140,8 @@ const TRANSLATIONS = {
     actionCheck: 'Check',
     actionClear: 'Clear',
     actionNewBoard: 'New board',
+    actionLockControls: 'Lock controls',
+    actionUnlockControls: 'Unlock controls',
     actionResetProgress: 'Reset local progress',
     timeSpent: 'Time spent',
     timeSpentLocked: 'Time spent (locked)',
@@ -166,6 +168,8 @@ const TRANSLATIONS = {
     actionCheck: 'Sjekk',
     actionClear: 'Tøm',
     actionNewBoard: 'Nytt brett',
+    actionLockControls: 'Lås handlinger',
+    actionUnlockControls: 'Lås opp handlinger',
     actionResetProgress: 'Tilbakestill lokal fremdrift',
     timeSpent: 'Brukt tid',
     timeSpentLocked: 'Brukt tid (låst)',
@@ -524,6 +528,9 @@ const createPuzzle = (difficulty, attempt = 0) => {
 };
 
 let storage = readStorage();
+if (typeof storage.controlsLocked !== 'boolean') {
+  storage.controlsLocked = false;
+}
 let currentEntry = null;
 
 const state = {
@@ -531,6 +538,7 @@ const state = {
   puzzle: null,
   boardState: [],
   isSolved: false,
+  controlsLocked: Boolean(storage.controlsLocked),
   timer: {
     running: false,
     intervalId: null,
@@ -547,6 +555,7 @@ const checkButton = document.getElementById('check-button');
 const clearButton = document.getElementById('clear-button');
 const timerElement = document.getElementById('timer-display');
 const testButton = document.getElementById('test-new-button');
+const lockControlsButton = document.getElementById('lock-controls-button');
 const difficultyButtons = Array.from(document.querySelectorAll('.difficulty-option'));
 const extremeDifficultyButton = difficultyButtons.find(
   (button) => button.dataset.difficulty === 'extreme'
@@ -640,6 +649,13 @@ const applyTranslations = () => {
     testButton.textContent = translate('actionNewBoard');
   }
 
+  if (lockControlsButton) {
+    const labelKey = state.controlsLocked ? 'actionUnlockControls' : 'actionLockControls';
+    const label = translate(labelKey);
+    lockControlsButton.setAttribute('aria-label', label);
+    lockControlsButton.setAttribute('title', label);
+  }
+
   if (timerElement) {
     timerElement.setAttribute('aria-label', translate('timeSpent'));
   }
@@ -670,6 +686,7 @@ const persistCurrentState = (additional = {}) => {
   };
   puzzles[state.difficulty] = currentEntry;
   storage.difficulty = state.difficulty;
+  syncControlsLockToStorage();
   writeStorage(storage);
 };
 
@@ -700,6 +717,50 @@ const updateTimerDisplay = () => {
   updateTimerLockState();
 };
 
+const syncControlsLockToStorage = () => {
+  storage.controlsLocked = state.controlsLocked;
+};
+
+const getControlsLockLabel = () =>
+  translate(state.controlsLocked ? 'actionUnlockControls' : 'actionLockControls');
+
+const updateControlsLockState = () => {
+  const locked = Boolean(state.controlsLocked);
+
+  if (testButton) {
+    testButton.disabled = locked;
+    if (locked) {
+      testButton.dataset.locked = 'true';
+    } else {
+      delete testButton.dataset.locked;
+    }
+  }
+
+  if (clearButton) {
+    clearButton.disabled = locked;
+  }
+
+  if (resetProgressButton) {
+    resetProgressButton.disabled = locked;
+  }
+
+  if (lockControlsButton) {
+    lockControlsButton.setAttribute('aria-pressed', String(locked));
+    lockControlsButton.dataset.locked = locked ? 'true' : 'false';
+    const label = getControlsLockLabel();
+    lockControlsButton.setAttribute('aria-label', label);
+    lockControlsButton.setAttribute('title', label);
+  }
+
+};
+
+const setControlsLocked = (locked) => {
+  state.controlsLocked = Boolean(locked);
+  syncControlsLockToStorage();
+  updateControlsLockState();
+  writeStorage(storage);
+};
+
 const stopTimer = () => {
   if (state.timer.intervalId) {
     window.clearInterval(state.timer.intervalId);
@@ -716,6 +777,7 @@ const resetProgress = () => {
     console.error('Failed to clear stored puzzle state', error);
   }
   storage = readStorage();
+  storage.controlsLocked = state.controlsLocked;
   currentEntry = null;
   state.difficulty = DEFAULT_DIFFICULTY;
   state.puzzle = null;
@@ -780,6 +842,7 @@ const loadPuzzle = ({ difficulty = state.difficulty, forceNew = false } = {}) =>
 
   puzzles[difficulty] = entry;
   storage.difficulty = difficulty;
+  syncControlsLockToStorage();
   writeStorage(storage);
 
   currentEntry = entry;
@@ -818,6 +881,7 @@ const renderCurrentPuzzle = ({ announce = false, message, additionalState } = {}
   } else {
     updateStatus();
   }
+  updateControlsLockState();
   updateExtremeAvailability();
   updateDifficultyButtons();
   const stateToPersist =
@@ -1149,27 +1213,45 @@ boardContainer.addEventListener('dblclick', (event) => {
 });
 
 checkButton.addEventListener('click', checkSolution);
-clearButton.addEventListener('click', resetBoard);
+clearButton.addEventListener('click', () => {
+  if (state.controlsLocked) {
+    return;
+  }
+  resetBoard();
+});
 difficultyButtons.forEach((button) => {
   button.addEventListener('click', () => {
     setDifficulty(button.dataset.difficulty);
   });
 });
 
+if (lockControlsButton) {
+  lockControlsButton.addEventListener('click', () => {
+    setControlsLocked(!state.controlsLocked);
+  });
+}
+
 if (testButton) {
   testButton.addEventListener('click', () => {
+    if (state.controlsLocked) {
+      return;
+    }
     newPuzzle({ announce: true, forceNew: true });
   });
 }
 
 if (resetProgressButton) {
   resetProgressButton.addEventListener('click', () => {
+    if (state.controlsLocked) {
+      return;
+    }
     resetProgress();
   });
 }
 
 const initializeApp = () => {
   applyTranslations();
+  updateControlsLockState();
   const storedDifficulty = storage.difficulty;
   if (storedDifficulty && DIFFICULTIES[storedDifficulty]) {
     state.difficulty = storedDifficulty;
