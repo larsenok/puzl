@@ -51,6 +51,16 @@ body {
   --cell-gap: calc(var(--base-cell-gap) * 0.7);
 }
 
+.app[data-difficulty='extreme'] .board {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.app[data-difficulty='extreme'] .column-hints {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
 .board-section {
   display: flex;
   flex-direction: column;
