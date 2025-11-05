@@ -140,6 +140,7 @@ const TRANSLATIONS = {
     actionCheck: 'Check',
     actionClear: 'Clear',
     actionNewBoard: 'New board',
+    actionLeaderboard: 'Leaderboard',
     actionLockControls: 'Lock controls',
     actionUnlockControls: 'Unlock controls',
     actionResetProgress: 'Reset local progress',
@@ -152,6 +153,9 @@ const TRANSLATIONS = {
     statusSolved: 'Solved!',
     statusKeepGoing: 'Keep going',
     statusProgressCleared: 'Progress cleared. Fresh boards await.',
+    leaderboardTitle: 'Local leaderboard',
+    leaderboardEmpty: 'Solve a board to see it here.',
+    actionCloseLeaderboard: 'Close leaderboard',
     difficultySet: 'Difficulty set to {difficulty}',
     footer: 'Balance each shape badge while matching every row and column total.',
     cellAria:
@@ -168,6 +172,7 @@ const TRANSLATIONS = {
     actionCheck: 'Sjekk',
     actionClear: 'Tøm',
     actionNewBoard: 'Nytt brett',
+    actionLeaderboard: 'Toppliste',
     actionLockControls: 'Lås handlinger',
     actionUnlockControls: 'Lås opp handlinger',
     actionResetProgress: 'Tilbakestill lokal fremdrift',
@@ -179,6 +184,9 @@ const TRANSLATIONS = {
     statusBoardCleared: 'Brett tømt',
     statusSolved: 'Løst!',
     statusKeepGoing: 'Fortsett',
+    leaderboardTitle: 'Lokal toppliste',
+    leaderboardEmpty: 'Løs et brett for å se det her.',
+    actionCloseLeaderboard: 'Lukk topplisten',
     difficultySet: 'Vanskelighetsgrad satt til {difficulty}',
     statusProgressCleared: 'Fremdrift slettet. Klar for nye brett.',
     footer: 'Match hver rad- og kolonneverdi mens hvert område får riktig antall merker.',
@@ -279,6 +287,7 @@ const DEFAULT_DIFFICULTY = 'normal';
 const STORAGE_KEY = 'puzl-daily-state-v1';
 
 const MAX_GENERATION_ATTEMPTS = 80;
+const MAX_LEADERBOARD_ENTRIES = 20;
 
 const chooseRegionRequirement = (difficulty, minRequirement, maxRequirement) => {
   if (maxRequirement <= minRequirement) {
@@ -562,6 +571,14 @@ const extremeDifficultyButton = difficultyButtons.find(
 );
 const footerElement = document.querySelector('.footer');
 const resetProgressButton = document.getElementById('reset-progress-button');
+const leaderboardButton = document.getElementById('leaderboard-button');
+const leaderboardOverlay = document.getElementById('leaderboard-overlay');
+const leaderboardList = document.getElementById('leaderboard-list');
+const leaderboardEmptyState = document.getElementById('leaderboard-empty-state');
+const leaderboardCloseButton = document.getElementById('leaderboard-close-button');
+const leaderboardTitleElement = document.getElementById('leaderboard-title');
+
+let lastFocusedElementBeforeLeaderboard = null;
 
 const columnHintElements = [];
 const rowHintElements = [];
@@ -572,6 +589,13 @@ const ensurePuzzlesStorage = () => {
     storage.puzzles = {};
   }
   return storage.puzzles;
+};
+
+const ensureLeaderboardStorage = () => {
+  if (!Array.isArray(storage.leaderboard)) {
+    storage.leaderboard = [];
+  }
+  return storage.leaderboard;
 };
 
 const markExtremeUnlocked = () => {
@@ -649,6 +673,24 @@ const applyTranslations = () => {
     testButton.textContent = translate('actionNewBoard');
   }
 
+  if (leaderboardButton) {
+    const label = translate('actionLeaderboard');
+    leaderboardButton.setAttribute('aria-label', label);
+    leaderboardButton.setAttribute('title', label);
+  }
+
+  if (leaderboardTitleElement) {
+    leaderboardTitleElement.textContent = translate('leaderboardTitle');
+  }
+
+  if (leaderboardEmptyState) {
+    leaderboardEmptyState.textContent = translate('leaderboardEmpty');
+  }
+
+  if (leaderboardCloseButton) {
+    leaderboardCloseButton.setAttribute('aria-label', translate('actionCloseLeaderboard'));
+  }
+
   if (lockControlsButton) {
     const labelKey = state.controlsLocked ? 'actionUnlockControls' : 'actionLockControls';
     const label = translate(labelKey);
@@ -695,6 +737,157 @@ const formatTime = (seconds) => {
   const minutes = Math.floor(totalSeconds / 60);
   const remainingSeconds = totalSeconds % 60;
   return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+};
+
+const getDifficultyLabel = (difficulty) => {
+  const config = DIFFICULTIES[difficulty];
+  if (config?.labelKey) {
+    return translate(config.labelKey);
+  }
+  if (typeof difficulty === 'string' && difficulty.length > 0) {
+    return difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+  }
+  return translate('difficultyLabel');
+};
+
+const getLeaderboardEntries = () => {
+  const entries = ensureLeaderboardStorage();
+  return entries
+    .filter((entry) => entry && typeof entry === 'object')
+    .slice()
+    .sort((a, b) => {
+      const aSeconds = Number.isFinite(a.seconds) ? a.seconds : Number.MAX_SAFE_INTEGER;
+      const bSeconds = Number.isFinite(b.seconds) ? b.seconds : Number.MAX_SAFE_INTEGER;
+      if (aSeconds === bSeconds) {
+        return (a.solvedAt || '').localeCompare(b.solvedAt || '');
+      }
+      return aSeconds - bSeconds;
+    });
+};
+
+const renderLeaderboard = () => {
+  if (!leaderboardList || !leaderboardEmptyState) {
+    return;
+  }
+
+  const entries = getLeaderboardEntries();
+  leaderboardList.innerHTML = '';
+
+  if (!entries.length) {
+    leaderboardList.hidden = true;
+    leaderboardEmptyState.hidden = false;
+    return;
+  }
+
+  leaderboardEmptyState.hidden = true;
+  leaderboardList.hidden = false;
+
+  entries.forEach((entry, index) => {
+    const item = document.createElement('li');
+    item.className = 'leaderboard-list__item';
+
+    const rank = document.createElement('span');
+    rank.className = 'leaderboard-list__rank';
+    rank.textContent = String(index + 1);
+    item.appendChild(rank);
+
+    const details = document.createElement('div');
+    details.className = 'leaderboard-list__details';
+
+    const difficulty = document.createElement('span');
+    difficulty.className = 'leaderboard-list__difficulty';
+    difficulty.textContent = getDifficultyLabel(entry.difficulty);
+
+    const time = document.createElement('span');
+    time.className = 'leaderboard-list__time';
+    time.textContent = formatTime(entry.seconds);
+
+    details.appendChild(difficulty);
+    details.appendChild(time);
+    item.appendChild(details);
+
+    leaderboardList.appendChild(item);
+  });
+};
+
+const recordLeaderboardEntry = () => {
+  if (!currentEntry) {
+    return;
+  }
+
+  const leaderboard = ensureLeaderboardStorage();
+  const boardId = currentEntry.createdAt || `${state.difficulty}-${currentEntry.date || getTimestamp()}`;
+  const seconds = state.timer.secondsElapsed;
+  const solvedAt = getTimestamp();
+
+  const newEntry = {
+    boardId,
+    difficulty: state.difficulty,
+    seconds,
+    solvedAt,
+    date: currentEntry.date
+  };
+
+  const existingIndex = leaderboard.findIndex((entry) => entry.boardId === boardId);
+
+  if (existingIndex >= 0) {
+    const existing = leaderboard[existingIndex];
+    if (!Number.isFinite(existing.seconds) || seconds < existing.seconds) {
+      leaderboard[existingIndex] = newEntry;
+    } else {
+      leaderboard[existingIndex] = { ...existing, solvedAt };
+    }
+  } else {
+    leaderboard.push(newEntry);
+  }
+
+  leaderboard.sort((a, b) => {
+    const aSeconds = Number.isFinite(a.seconds) ? a.seconds : Number.MAX_SAFE_INTEGER;
+    const bSeconds = Number.isFinite(b.seconds) ? b.seconds : Number.MAX_SAFE_INTEGER;
+    if (aSeconds === bSeconds) {
+      return (a.solvedAt || '').localeCompare(b.solvedAt || '');
+    }
+    return aSeconds - bSeconds;
+  });
+
+  if (leaderboard.length > MAX_LEADERBOARD_ENTRIES) {
+    leaderboard.length = MAX_LEADERBOARD_ENTRIES;
+  }
+
+  writeStorage(storage);
+  renderLeaderboard();
+};
+
+const isLeaderboardOpen = () => Boolean(leaderboardOverlay && !leaderboardOverlay.hidden);
+
+const openLeaderboard = () => {
+  if (!leaderboardOverlay) {
+    return;
+  }
+  renderLeaderboard();
+  lastFocusedElementBeforeLeaderboard =
+    document.activeElement && typeof document.activeElement.focus === 'function'
+      ? document.activeElement
+      : null;
+  leaderboardOverlay.hidden = false;
+  leaderboardOverlay.setAttribute('data-open', 'true');
+  if (leaderboardCloseButton) {
+    window.setTimeout(() => {
+      leaderboardCloseButton.focus();
+    }, 0);
+  }
+};
+
+const closeLeaderboard = () => {
+  if (!leaderboardOverlay) {
+    return;
+  }
+  leaderboardOverlay.hidden = true;
+  leaderboardOverlay.removeAttribute('data-open');
+  if (lastFocusedElementBeforeLeaderboard && typeof lastFocusedElementBeforeLeaderboard.focus === 'function') {
+    lastFocusedElementBeforeLeaderboard.focus();
+  }
+  lastFocusedElementBeforeLeaderboard = null;
 };
 
 const updateTimerLockState = () => {
@@ -798,6 +991,7 @@ const resetProgress = () => {
     }
   });
   updateExtremeAvailability();
+  renderLeaderboard();
 };
 
 const resetTimer = (seconds = 0) => {
@@ -1125,11 +1319,15 @@ const checkSolution = () => {
   });
 
   if (rowsMatch && columnsMatch && regionsMatch) {
+    const alreadySolved = Boolean(currentEntry?.solved);
     stopTimer();
     state.isSolved = true;
     updateTimerLockState();
     const solvedMessage = translate('statusSolved');
     updateStatus('success', solvedMessage);
+    if (!alreadySolved) {
+      recordLeaderboardEntry();
+    }
     persistCurrentState({
       solved: true,
       solvedAt: getTimestamp(),
@@ -1249,6 +1447,33 @@ if (resetProgressButton) {
   });
 }
 
+if (leaderboardButton) {
+  leaderboardButton.addEventListener('click', () => {
+    openLeaderboard();
+  });
+}
+
+if (leaderboardCloseButton) {
+  leaderboardCloseButton.addEventListener('click', () => {
+    closeLeaderboard();
+  });
+}
+
+if (leaderboardOverlay) {
+  leaderboardOverlay.addEventListener('click', (event) => {
+    if (event.target === leaderboardOverlay) {
+      closeLeaderboard();
+    }
+  });
+}
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && isLeaderboardOpen()) {
+    event.preventDefault();
+    closeLeaderboard();
+  }
+});
+
 const initializeApp = () => {
   applyTranslations();
   updateControlsLockState();
@@ -1258,6 +1483,7 @@ const initializeApp = () => {
   }
   loadPuzzle({ difficulty: state.difficulty, forceNew: false });
   renderCurrentPuzzle({ announce: false });
+  renderLeaderboard();
 };
 
 initializeApp();

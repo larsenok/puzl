@@ -73,6 +73,26 @@
         <button id="test-new-button" class="action-button action-button--secondary">
           New board
         </button>
+        <button
+          id="leaderboard-button"
+          class="leaderboard-button"
+          type="button"
+          aria-label="Leaderboard"
+          title="Leaderboard"
+        >
+          <svg
+            class="leaderboard-button__icon"
+            width="20"
+            height="20"
+            viewBox="0 0 20 20"
+            aria-hidden="true"
+          >
+            <path
+              d="M4 9h3a1 1 0 0 1 1 1v6H3v-5a2 2 0 0 1 1-2Zm5-6h2a2 2 0 0 1 2 2v11H7V5a2 2 0 0 1 2-2Zm5 5h2a1 1 0 0 1 1 1v7h-4V8Z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
       </div>
 
       <div class="status" id="status" aria-live="polite"></div>
@@ -89,5 +109,29 @@
     </main>
 
     <script type="module" src="main.js"></script>
+    <div id="leaderboard-overlay" class="leaderboard-overlay" hidden>
+      <div
+        class="leaderboard-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="leaderboard-title"
+      >
+        <div class="leaderboard-modal__header">
+          <h2 id="leaderboard-title" class="leaderboard-modal__title">Leaderboard</h2>
+          <button
+            id="leaderboard-close-button"
+            class="leaderboard-modal__close"
+            type="button"
+            aria-label="Close leaderboard"
+          >
+            &times;
+          </button>
+        </div>
+        <div class="leaderboard-modal__body">
+          <p id="leaderboard-empty-state" class="leaderboard-empty">No completed boards yet.</p>
+          <ol id="leaderboard-list" class="leaderboard-list" hidden></ol>
+        </div>
+      </div>
+    </div>
   </body>
 </html>
