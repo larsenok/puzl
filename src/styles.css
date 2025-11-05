@@ -418,12 +418,16 @@ body {
 .leaderboard-overlay {
   position: fixed;
   inset: 0;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   padding: 24px;
   background-color: rgba(15, 23, 42, 0.45);
   z-index: 1000;
+}
+
+.leaderboard-overlay[data-open] {
+  display: flex;
 }
 
 .leaderboard-modal {
