@@ -1,544 +1,38 @@
-const PUZZLE_LIBRARY = [
-  {
-    size: 4,
-    weight: 6,
-    overlays: [
-      [
-        [0, 0, 1, 1],
-        [0, 0, 1, 1],
-        [2, 2, 3, 3],
-        [2, 2, 3, 3]
-      ],
-      [
-        [0, 0, 1, 1],
-        [0, 2, 2, 1],
-        [3, 2, 4, 4],
-        [3, 3, 4, 5]
-      ],
-      [
-        [0, 1, 1, 2],
-        [0, 0, 3, 2],
-        [4, 5, 3, 2],
-        [4, 5, 5, 6]
-      ]
-    ]
-  },
-  {
-    size: 5,
-    weight: 8,
-    overlays: [
-      [
-        [0, 0, 1, 1, 2],
-        [0, 3, 3, 1, 2],
-        [4, 3, 5, 5, 2],
-        [4, 6, 6, 7, 7],
-        [8, 8, 6, 9, 7]
-      ],
-      [
-        [0, 0, 1, 1, 2],
-        [3, 0, 4, 4, 2],
-        [3, 5, 5, 4, 6],
-        [7, 7, 5, 8, 6],
-        [7, 9, 8, 8, 6]
-      ],
-      [
-        [0, 1, 1, 2, 2],
-        [0, 0, 3, 3, 4],
-        [5, 5, 6, 3, 4],
-        [7, 6, 6, 8, 8],
-        [7, 9, 9, 10, 10]
-      ]
-    ]
-  },
-  {
-    size: 6,
-    weight: 10,
-    overlays: [
-      [
-        [0, 0, 0, 1, 1, 2],
-        [0, 0, 0, 1, 3, 2],
-        [4, 4, 5, 5, 3, 2],
-        [4, 6, 6, 5, 3, 2],
-        [7, 6, 8, 8, 9, 2],
-        [7, 10, 10, 8, 9, 11]
-      ],
-      [
-        [0, 0, 0, 1, 1, 2],
-        [3, 0, 0, 1, 4, 2],
-        [3, 5, 5, 6, 4, 2],
-        [7, 5, 8, 6, 4, 2],
-        [7, 9, 8, 10, 10, 2],
-        [11, 9, 12, 12, 13, 2]
-      ],
-      [
-        [0, 0, 0, 1, 1, 2],
-        [0, 3, 0, 1, 4, 2],
-        [5, 3, 6, 6, 4, 2],
-        [5, 7, 6, 8, 8, 2],
-        [9, 7, 10, 10, 8, 2],
-        [9, 11, 11, 12, 12, 2]
-      ]
-    ]
-  },
-  {
-    size: 8,
-    weight: 12,
-    overlays: [
-      [
-        [0, 0, 0, 1, 1, 2, 2, 3],
-        [4, 4, 0, 1, 5, 2, 6, 3],
-        [4, 7, 0, 8, 5, 5, 6, 3],
-        [9, 7, 10, 8, 8, 11, 6, 12],
-        [9, 13, 10, 14, 15, 11, 16, 12],
-        [17, 13, 18, 14, 15, 19, 16, 20],
-        [17, 21, 18, 22, 22, 19, 23, 20],
-        [24, 21, 25, 25, 26, 19, 23, 27]
-      ],
-      [
-        [0, 0, 1, 1, 2, 2, 3, 3],
-        [0, 4, 1, 5, 2, 6, 6, 3],
-        [0, 4, 5, 5, 7, 6, 8, 3],
-        [0, 10, 10, 11, 7, 7, 8, 12],
-        [9, 13, 14, 11, 15, 16, 8, 12],
-        [17, 13, 14, 18, 15, 16, 19, 19],
-        [17, 20, 20, 18, 21, 22, 23, 19],
-        [24, 20, 25, 25, 21, 22, 23, 26]
-      ],
-      [
-        [0, 0, 1, 1, 2, 2, 3, 3],
-        [4, 0, 1, 5, 2, 6, 6, 3],
-        [0, 7, 7, 5, 8, 6, 9, 9],
-        [0, 7, 11, 11, 8, 12, 12, 13],
-        [10, 14, 14, 15, 8, 16, 17, 13],
-        [18, 19, 14, 15, 20, 16, 17, 21],
-        [18, 19, 22, 22, 20, 23, 24, 21],
-        [25, 26, 22, 27, 27, 23, 24, 28]
-      ],
-      [
-        [0, 1, 1, 2, 2, 3, 3, 4],
-        [0, 0, 5, 5, 6, 6, 7, 4],
-        [8, 0, 5, 9, 9, 10, 7, 11],
-        [0, 12, 13, 13, 14, 10, 15, 11],
-        [16, 12, 13, 17, 14, 18, 15, 19],
-        [16, 20, 21, 17, 22, 18, 23, 19],
-        [24, 20, 21, 25, 22, 26, 23, 27],
-        [24, 28, 28, 25, 29, 29, 30, 27]
-      ]
-    ]
-  }
-];
+import { ACTIVE_LOCALE, translate } from './config/translations.js';
+import { DIFFICULTIES, DEFAULT_DIFFICULTY } from './config/difficulties.js';
+import {
+  COLOR_PALETTES,
+  COLOR_PALETTE_MAP,
+  DEFAULT_COLOR_PALETTE_ID,
+  PALETTE_ORDER,
+  getPaletteById,
+  getPaletteColorsById,
+  getPalettePreviewGradient
+} from './palette.js';
+import { CELL_STATES, createEmptyBoard, createPuzzle } from './puzzle.js';
+import { cloneBoard } from './utils/board.js';
+import {
+  STORAGE_KEY,
+  getTimestamp,
+  getTodayKey,
+  readStorage,
+  writeStorage
+} from './storage.js';
 
-const TRANSLATIONS = {
-  en: {
-    difficultyLabel: 'Difficulty',
-    difficultyEasy: 'Easy',
-    difficultyNormal: 'Normal',
-    difficultyHard: 'Hard',
-    difficultyExtreme: 'Extreme',
-    columnHintsLabel: 'Column clues',
-    boardAriaLabel: 'Puzzle board',
-    actionCheck: 'Check',
-    actionClear: 'Clear',
-    actionNewBoard: 'New board',
-    actionLeaderboard: 'Leaderboard',
-    actionLockControls: 'Lock controls',
-    actionUnlockControls: 'Unlock controls',
-    actionResetProgress: 'Reset local progress',
-    timeSpent: 'Time spent',
-    timeSpentLocked: 'Time spent (locked)',
-    statusNewBoardReady: 'New board ready',
-    statusBoardReady: 'Board ready',
-    statusNewBoardCreated: 'New board created',
-    statusBoardCleared: 'Board cleared',
-    statusSolved: 'Solved!',
-    statusKeepGoing: 'Keep going',
-    statusProgressCleared: 'Progress cleared. Fresh boards await.',
-    leaderboardTitle: 'Leaderboard',
-    leaderboardEmpty: 'Solve a board to see it here.',
-    actionCloseLeaderboard: 'Close leaderboard',
-    difficultySet: 'Difficulty set to {difficulty}',
-    footer: 'Balance each shape badge while matching every row and column total.',
-    cellAria:
-      'Row {row}, column {column}. Part of a shape needing {requirement} apples.'
-  },
-  nb: {
-    difficultyLabel: 'Vanskelighetsgrad',
-    difficultyEasy: 'Lett',
-    difficultyNormal: 'Normal',
-    difficultyHard: 'Vanskelig',
-    difficultyExtreme: 'Ekstrem',
-    columnHintsLabel: 'Kolonnehint',
-    boardAriaLabel: 'Puslespillbrett',
-    actionCheck: 'Sjekk',
-    actionClear: 'Tøm',
-    actionNewBoard: 'Nytt brett',
-    actionLeaderboard: 'Toppliste',
-    actionLockControls: 'Lås handlinger',
-    actionUnlockControls: 'Lås opp handlinger',
-    actionResetProgress: 'Tilbakestill lokal fremdrift',
-    timeSpent: 'Brukt tid',
-    timeSpentLocked: 'Brukt tid (låst)',
-    statusNewBoardReady: 'Nytt brett klart',
-    statusBoardReady: 'Brett klart',
-    statusNewBoardCreated: 'Nytt brett opprettet',
-    statusBoardCleared: 'Brett tømt',
-    statusSolved: 'Løst!',
-    statusKeepGoing: 'Fortsett',
-    leaderboardTitle: 'Toppliste',
-    leaderboardEmpty: 'Løs et brett for å se det her.',
-    actionCloseLeaderboard: 'Lukk topplisten',
-    difficultySet: 'Vanskelighetsgrad satt til {difficulty}',
-    statusProgressCleared: 'Fremdrift slettet. Klar for nye brett.',
-    footer: 'Match hver rad- og kolonneverdi mens hvert område får riktig antall merker.',
-    cellAria:
-      'Rad {row}, kolonne {column}. Del av en form som trenger {requirement} epler.'
-  }
-};
-
-const LOCALE_ALIASES = {
-  no: 'nb',
-  nn: 'nb'
-};
-
-const DEFAULT_LOCALE = 'en';
-
-const detectLocale = () => {
-  const languages = [];
-  if (typeof navigator !== 'undefined') {
-    if (Array.isArray(navigator.languages)) {
-      languages.push(...navigator.languages);
-    }
-    if (navigator.language) {
-      languages.push(navigator.language);
-    }
-  }
-
-  for (const candidate of languages) {
-    if (!candidate) {
-      continue;
-    }
-    const normalized = String(candidate).toLowerCase();
-    const normalizedAlias = LOCALE_ALIASES[normalized];
-    if (normalizedAlias && Object.prototype.hasOwnProperty.call(TRANSLATIONS, normalizedAlias)) {
-      return normalizedAlias;
-    }
-    if (Object.prototype.hasOwnProperty.call(TRANSLATIONS, normalized)) {
-      return normalized;
-    }
-    const base = normalized.split('-')[0];
-    const baseAlias = LOCALE_ALIASES[base];
-    if (baseAlias && Object.prototype.hasOwnProperty.call(TRANSLATIONS, baseAlias)) {
-      return baseAlias;
-    }
-    if (Object.prototype.hasOwnProperty.call(TRANSLATIONS, base)) {
-      return base;
-    }
-  }
-
-  return DEFAULT_LOCALE;
-};
-
-const ACTIVE_LOCALE = detectLocale();
-
-const translate = (key, variables = {}) => {
-  const dictionary = TRANSLATIONS[ACTIVE_LOCALE] || TRANSLATIONS[DEFAULT_LOCALE];
-  const fallback = TRANSLATIONS[DEFAULT_LOCALE] || {};
-  const template =
-    (dictionary && Object.prototype.hasOwnProperty.call(dictionary, key)
-      ? dictionary[key]
-      : fallback[key]) || key;
-
-  if (typeof template !== 'string') {
-    return key;
-  }
-
-  return template.replace(/\{(\w+)\}/g, (_, token) => {
-    if (Object.prototype.hasOwnProperty.call(variables, token)) {
-      return variables[token];
-    }
-    return `{${token}}`;
-  });
-};
-
-const DIFFICULTIES = {
-  easy: {
-    labelKey: 'difficultyEasy',
-    allowedSizes: [4],
-    requirement: { min: 1, max: 2 }
-  },
-  normal: {
-    labelKey: 'difficultyNormal',
-    allowedSizes: [5],
-    requirement: { min: 1, max: 3 }
-  },
-  hard: {
-    labelKey: 'difficultyHard',
-    allowedSizes: [6],
-    requirement: { min: 2, max: 5 }
-  },
-  extreme: {
-    labelKey: 'difficultyExtreme',
-    allowedSizes: [8],
-    requirement: { min: 3, max: 6 }
-  }
-};
-
-const DEFAULT_DIFFICULTY = 'normal';
-const STORAGE_KEY = 'puzl-daily-state-v1';
-
-const MAX_GENERATION_ATTEMPTS = 80;
 const MAX_LEADERBOARD_ENTRIES = 20;
 
-const chooseRegionRequirement = (difficulty, minRequirement, maxRequirement) => {
-  if (maxRequirement <= minRequirement) {
-    return maxRequirement;
-  }
+let activeColorPaletteId = DEFAULT_COLOR_PALETTE_ID;
 
-  if (difficulty === 'hard' || difficulty === 'extreme') {
-    const weighted = [];
-    const span = maxRequirement - minRequirement;
-    for (let value = minRequirement; value <= maxRequirement; value += 1) {
-      if (span <= 0) {
-        weighted.push(value);
-        continue;
-      }
-
-      const distanceFromMax = maxRequirement - value;
-      const distanceFromMin = value - minRequirement;
-      const baseWeight = distanceFromMax + 1;
-      const lowerBias = distanceFromMin === 0 && span > 1 ? 1 : 0;
-      const weight = Math.max(1, baseWeight + lowerBias);
-      for (let index = 0; index < weight; index += 1) {
-        weighted.push(value);
-      }
-    }
-    return weighted[Math.floor(Math.random() * weighted.length)];
-  }
-
-  return Math.floor(Math.random() * (maxRequirement - minRequirement + 1)) + minRequirement;
-};
-
-const getTodayKey = () => {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-const cloneBoard = (board) => board.map((row) => [...row]);
-
-const readStorage = () => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return {};
-    }
-    const parsed = JSON.parse(raw);
-    if (typeof parsed !== 'object' || parsed === null) {
-      return {};
-    }
-    return parsed;
-  } catch (error) {
-    console.error('Failed to read stored puzzle state', error);
-    return {};
-  }
-};
-
-const writeStorage = (value) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
-  } catch (error) {
-    console.error('Failed to store puzzle state', error);
-  }
-};
-
-const getTimestamp = () => new Date().toISOString();
-
-const REGION_COLORS = [
-  '#ef4444',
-  '#f59e0b',
-  '#facc15',
-  '#22c55e',
-  '#14b8a6',
-  '#0ea5e9',
-  '#6366f1',
-  '#a855f7',
-  '#d946ef',
-  '#ec4899',
-  '#f43f5e',
-  '#84cc16',
-  '#10b981',
-  '#38bdf8'
-];
-
-const CELL_STATES = ['empty', 'fruit', 'mark'];
-
-const createEmptyBoard = (size) =>
-  Array.from({ length: size }, () => Array.from({ length: size }, () => 'empty'));
-
-const shuffleArray = (input) => {
-  const array = [...input];
-  for (let index = array.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    [array[index], array[swapIndex]] = [array[swapIndex], array[index]];
-  }
-  return array;
-};
-
-const getDifficultySettings = (difficulty) =>
-  DIFFICULTIES[difficulty] || DIFFICULTIES[DEFAULT_DIFFICULTY];
-
-const chooseConfig = (difficulty) => {
-  const settings = getDifficultySettings(difficulty);
-  const pool = PUZZLE_LIBRARY.filter((config) =>
-    !settings.allowedSizes || settings.allowedSizes.includes(config.size)
-  );
-
-  const library = pool.length > 0 ? pool : PUZZLE_LIBRARY;
-
-  const weighted = library.flatMap((config) =>
-    Array.from({ length: config.weight }, () => config)
-  );
-  const choice = weighted[Math.floor(Math.random() * weighted.length)];
-  return choice;
-};
-
-const createPuzzle = (difficulty, attempt = 0) => {
-  const settings = getDifficultySettings(difficulty);
-  const config = chooseConfig(difficulty);
-  const { size } = config;
-  const overlay = config.overlays[Math.floor(Math.random() * config.overlays.length)];
-  const regionCells = new Map();
-
-  for (let row = 0; row < size; row += 1) {
-    for (let column = 0; column < size; column += 1) {
-      const regionId = overlay[row][column];
-      if (!regionCells.has(regionId)) {
-        regionCells.set(regionId, []);
-      }
-      regionCells.get(regionId).push([row, column]);
-    }
-  }
-
-  const solution = Array.from({ length: size }, () => Array.from({ length: size }, () => false));
-
-  const regions = [];
-  let colorIndex = 0;
-  const regionSizes = Array.from(regionCells.values(), (cells) => cells.length);
-  const largestRegionSize = regionSizes.reduce((max, current) => Math.max(max, current), 0);
-  const largeRegionCount = regionSizes.filter((size) => size >= 5).length;
-
-  for (const [regionId, cells] of regionCells.entries()) {
-    const maxRequirement = Math.min(cells.length, settings.requirement.max);
-    let minRequirement = Math.min(maxRequirement, settings.requirement.min);
-    if (difficulty === 'extreme') {
-      const adjustableMin = Math.max(1, maxRequirement - 1);
-      minRequirement = Math.min(minRequirement, adjustableMin);
-    }
-    const requirement = chooseRegionRequirement(difficulty, minRequirement, maxRequirement);
-    const chosenCells = shuffleArray(cells).slice(0, requirement);
-    chosenCells.forEach(([row, column]) => {
-      solution[row][column] = true;
-    });
-
-    const anchor = cells.reduce((best, cell) => {
-      if (!best) {
-        return cell;
-      }
-      if (cell[0] < best[0]) {
-        return cell;
-      }
-      if (cell[0] === best[0] && cell[1] < best[1]) {
-        return cell;
-      }
-      return best;
-    }, null);
-
-    const color = REGION_COLORS[colorIndex % REGION_COLORS.length];
-    colorIndex += 1;
-
-    regions.push({ id: regionId, requirement, anchor, color });
-  }
-
-  const rowTotals = solution.map((row) => row.filter(Boolean).length);
-  const columnTotals = Array.from({ length: size }, (_, column) =>
-    solution.reduce((sum, row) => sum + (row[column] ? 1 : 0), 0)
-  );
-
-  const hardMaxRowColumnTotal = Math.min(size, 6);
-  const rowLimitExceeded =
-    difficulty === 'hard'
-      ? rowTotals.some((total) => total > hardMaxRowColumnTotal)
-      : rowTotals.some((total) => total > size);
-  const columnLimitExceeded =
-    difficulty === 'hard'
-      ? columnTotals.some((total) => total > hardMaxRowColumnTotal)
-      : columnTotals.some((total) => total > size);
-
-  const softRowColumnLimit = Math.max(6, size);
-  const exceedsRowOrColumnLimit =
-    rowTotals.some((total) => total > softRowColumnLimit) ||
-    columnTotals.some((total) => total > softRowColumnLimit) ||
-    rowLimitExceeded ||
-    columnLimitExceeded;
-
-  const enforceMaxCounts = difficulty === 'hard' || difficulty === 'extreme';
-  const maxRowColumnTotal =
-    difficulty === 'hard' ? hardMaxRowColumnTotal : size;
-  const rowMaxCount = enforceMaxCounts
-    ? rowTotals.filter((total) => total === maxRowColumnTotal).length
-    : 0;
-  const columnMaxCount = enforceMaxCounts
-    ? columnTotals.filter((total) => total === maxRowColumnTotal).length
-    : 0;
-
-  const highRequirementCount = regions.filter((region) => region.requirement >= 4).length;
-  const requirementFiveCount = regions.filter((region) => region.requirement >= 5).length;
-  const smallRequirementCount = regions.filter((region) => region.requirement <= 2).length;
-
-  const minHighRequirement = 1;
-  const maxSmallRequirementFraction = difficulty === 'extreme' ? 0.95 : 0.8;
-  const maxRowMaxCount = 2;
-  const maxColumnMaxCount = 2;
-
-  const requiresHardRegeneration =
-    (difficulty === 'hard' || difficulty === 'extreme') &&
-    (highRequirementCount < minHighRequirement ||
-      largeRegionCount < 1 ||
-      (largestRegionSize >= 6 && requirementFiveCount < 1) ||
-      smallRequirementCount > Math.ceil(regions.length * maxSmallRequirementFraction) ||
-      rowMaxCount > maxRowMaxCount ||
-      columnMaxCount > maxColumnMaxCount);
-
-  if (exceedsRowOrColumnLimit || requiresHardRegeneration) {
-    if (attempt >= MAX_GENERATION_ATTEMPTS) {
-      throw new Error(
-        `Failed to generate a ${difficulty} puzzle within ${MAX_GENERATION_ATTEMPTS} attempts`
-      );
-    }
-    return createPuzzle(difficulty, attempt + 1);
-  }
-
-  const regionsById = regions.reduce((accumulator, region) => {
-    accumulator[String(region.id)] = region;
-    return accumulator;
-  }, {});
-
-  return {
-    size,
-    solution,
-    rowTotals,
-    columnTotals,
-    regionGrid: overlay,
-    regions,
-    regionsById
-  };
-};
+const getActiveColorPalette = () => getPaletteById(activeColorPaletteId);
 
 let storage = readStorage();
 if (typeof storage.controlsLocked !== 'boolean') {
   storage.controlsLocked = false;
+}
+if (typeof storage.colorPalette === 'string' && COLOR_PALETTE_MAP[storage.colorPalette]) {
+  activeColorPaletteId = storage.colorPalette;
+} else {
+  storage.colorPalette = activeColorPaletteId;
 }
 let currentEntry = null;
 
@@ -548,6 +42,7 @@ const state = {
   boardState: [],
   isSolved: false,
   controlsLocked: Boolean(storage.controlsLocked),
+  colorPalette: activeColorPaletteId,
   timer: {
     running: false,
     intervalId: null,
@@ -569,7 +64,11 @@ const difficultyButtons = Array.from(document.querySelectorAll('.difficulty-opti
 const extremeDifficultyButton = difficultyButtons.find(
   (button) => button.dataset.difficulty === 'extreme'
 );
-const footerElement = document.querySelector('.footer');
+const footerDescriptionElement = document.getElementById('footer-description');
+const colorPalettePicker = document.getElementById('color-palette-picker');
+const colorPaletteButton = document.getElementById('color-palette-button');
+const colorPaletteButtonLabel = document.getElementById('color-palette-button-label');
+const colorPaletteMenu = document.getElementById('color-palette-menu');
 const resetProgressButton = document.getElementById('reset-progress-button');
 const leaderboardButton = document.getElementById('leaderboard-button');
 const leaderboardOverlay = document.getElementById('leaderboard-overlay');
@@ -583,6 +82,247 @@ let lastFocusedElementBeforeLeaderboard = null;
 const columnHintElements = [];
 const rowHintElements = [];
 const cellElements = [];
+const colorPaletteOptionElements = new Map();
+let isColorPaletteMenuOpen = false;
+
+const updateColorPaletteButtonAppearance = () => {
+  if (!colorPaletteButton) {
+    return;
+  }
+  const preview = getPalettePreviewGradient(getActiveColorPalette());
+  colorPaletteButton.style.setProperty('--palette-preview', preview);
+};
+
+const updateColorPaletteButtonExpandedState = () => {
+  if (colorPaletteButton) {
+    colorPaletteButton.setAttribute('aria-expanded', String(isColorPaletteMenuOpen));
+  }
+};
+
+const updateColorPaletteButtonLabel = () => {
+  if (!colorPaletteButton) {
+    return;
+  }
+  const baseLabel = translate('actionColorPalette');
+  const palette = getActiveColorPalette();
+  const label = palette ? `${baseLabel} (${palette.name})` : baseLabel;
+  colorPaletteButton.setAttribute('aria-label', label);
+  colorPaletteButton.setAttribute('title', label);
+  if (colorPaletteButtonLabel) {
+    colorPaletteButtonLabel.textContent = baseLabel;
+  }
+};
+
+const updateColorPaletteMenuSelection = () => {
+  colorPaletteOptionElements.forEach((element, paletteId) => {
+    const isSelected = paletteId === activeColorPaletteId;
+    if (isSelected) {
+      element.dataset.selected = 'true';
+      element.setAttribute('tabindex', '0');
+    } else {
+      delete element.dataset.selected;
+      element.setAttribute('tabindex', '-1');
+    }
+    element.setAttribute('aria-checked', String(isSelected));
+  });
+};
+
+const buildColorPaletteMenu = () => {
+  if (!colorPaletteMenu) {
+    return;
+  }
+  colorPaletteMenu.innerHTML = '';
+  colorPaletteOptionElements.clear();
+  COLOR_PALETTES.forEach((palette) => {
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.className = 'color-palette-option';
+    option.dataset.paletteId = palette.id;
+    option.setAttribute('role', 'menuitemradio');
+    option.setAttribute('aria-label', palette.name);
+    option.title = palette.name;
+    option.style.setProperty('--palette-preview', getPalettePreviewGradient(palette));
+    option.setAttribute('tabindex', palette.id === activeColorPaletteId ? '0' : '-1');
+    option.setAttribute('aria-checked', palette.id === activeColorPaletteId ? 'true' : 'false');
+    if (palette.id === activeColorPaletteId) {
+      option.dataset.selected = 'true';
+    }
+    colorPaletteMenu.appendChild(option);
+    colorPaletteOptionElements.set(palette.id, option);
+  });
+};
+
+const applyActivePaletteToPuzzle = (puzzle) => {
+  if (!puzzle) {
+    return;
+  }
+  const colors = getPaletteColorsById(activeColorPaletteId);
+  const length = colors.length || 1;
+  puzzle.regions.forEach((region, index) => {
+    const color = colors[index % length];
+    region.color = color;
+    if (puzzle.regionsById) {
+      const key = String(region.id);
+      const mapped = puzzle.regionsById[key];
+      if (mapped && mapped !== region) {
+        mapped.color = color;
+      }
+    }
+  });
+};
+
+const applyPaletteToBoardElements = () => {
+  if (!state.puzzle || !cellElements.length) {
+    return;
+  }
+  const { size, regionGrid, regionsById } = state.puzzle;
+  for (let row = 0; row < size; row += 1) {
+    const rowElements = cellElements[row];
+    if (!rowElements) {
+      continue;
+    }
+    for (let column = 0; column < size; column += 1) {
+      const element = rowElements[column];
+      if (!element) {
+        continue;
+      }
+      const regionId = regionGrid[row][column];
+      const region = regionsById[String(regionId)];
+      if (region?.color) {
+        element.style.setProperty('--region-color', region.color);
+      }
+    }
+  }
+};
+
+const handleColorPaletteOutsideInteraction = (event) => {
+  if (!isColorPaletteMenuOpen) {
+    return;
+  }
+  const target = event.target;
+  if (colorPalettePicker && target instanceof Node && colorPalettePicker.contains(target)) {
+    return;
+  }
+  closeColorPaletteMenu();
+};
+
+const openColorPaletteMenu = () => {
+  if (!colorPaletteMenu || !colorPaletteButton || colorPaletteButton.disabled || isColorPaletteMenuOpen) {
+    return;
+  }
+  colorPaletteMenu.hidden = false;
+  isColorPaletteMenuOpen = true;
+  updateColorPaletteButtonExpandedState();
+  updateColorPaletteMenuSelection();
+  const selected = colorPaletteOptionElements.get(activeColorPaletteId);
+  const focusTarget = selected || colorPaletteMenu.querySelector('button');
+  window.requestAnimationFrame(() => {
+    if (focusTarget && typeof focusTarget.focus === 'function') {
+      focusTarget.focus();
+    }
+  });
+  document.addEventListener('pointerdown', handleColorPaletteOutsideInteraction, true);
+  document.addEventListener('focusin', handleColorPaletteOutsideInteraction);
+};
+
+const closeColorPaletteMenu = ({ focusButton = false } = {}) => {
+  if (!colorPaletteMenu || !isColorPaletteMenuOpen) {
+    return;
+  }
+  isColorPaletteMenuOpen = false;
+  colorPaletteMenu.hidden = true;
+  updateColorPaletteButtonExpandedState();
+  document.removeEventListener('pointerdown', handleColorPaletteOutsideInteraction, true);
+  document.removeEventListener('focusin', handleColorPaletteOutsideInteraction);
+  if (focusButton && colorPaletteButton && typeof colorPaletteButton.focus === 'function') {
+    colorPaletteButton.focus();
+  }
+};
+
+const focusPaletteOptionByIndex = (index) => {
+  if (index < 0 || index >= PALETTE_ORDER.length) {
+    return;
+  }
+  const paletteId = PALETTE_ORDER[index];
+  const element = colorPaletteOptionElements.get(paletteId);
+  if (element && typeof element.focus === 'function') {
+    element.focus();
+  }
+};
+
+const handleColorPaletteMenuKeyDown = (event) => {
+  if (!isColorPaletteMenuOpen) {
+    return;
+  }
+  const { key } = event;
+  if (key === 'Escape') {
+    event.preventDefault();
+    closeColorPaletteMenu({ focusButton: true });
+    return;
+  }
+  if (key === 'ArrowRight' || key === 'ArrowDown') {
+    event.preventDefault();
+    const current = document.activeElement;
+    let index = PALETTE_ORDER.findIndex(
+      (paletteId) => colorPaletteOptionElements.get(paletteId) === current
+    );
+    if (index === -1) {
+      index = PALETTE_ORDER.findIndex((paletteId) => paletteId === activeColorPaletteId);
+    }
+    const nextIndex = (index + 1) % PALETTE_ORDER.length;
+    focusPaletteOptionByIndex(nextIndex);
+    return;
+  }
+  if (key === 'ArrowLeft' || key === 'ArrowUp') {
+    event.preventDefault();
+    const current = document.activeElement;
+    let index = PALETTE_ORDER.findIndex(
+      (paletteId) => colorPaletteOptionElements.get(paletteId) === current
+    );
+    if (index === -1) {
+      index = PALETTE_ORDER.findIndex((paletteId) => paletteId === activeColorPaletteId);
+    }
+    const nextIndex = (index - 1 + PALETTE_ORDER.length) % PALETTE_ORDER.length;
+    focusPaletteOptionByIndex(nextIndex);
+    return;
+  }
+  if (key === 'Home') {
+    event.preventDefault();
+    focusPaletteOptionByIndex(0);
+    return;
+  }
+  if (key === 'End') {
+    event.preventDefault();
+    focusPaletteOptionByIndex(PALETTE_ORDER.length - 1);
+    return;
+  }
+  if (key === 'Tab') {
+    closeColorPaletteMenu();
+  }
+};
+
+const setColorPalette = (paletteId) => {
+  if (!COLOR_PALETTE_MAP[paletteId]) {
+    paletteId = DEFAULT_COLOR_PALETTE_ID;
+  }
+  if (activeColorPaletteId === paletteId) {
+    updateColorPaletteMenuSelection();
+    return;
+  }
+  activeColorPaletteId = paletteId;
+  state.colorPalette = paletteId;
+  storage.colorPalette = paletteId;
+  updateColorPaletteButtonAppearance();
+  updateColorPaletteButtonLabel();
+  updateColorPaletteMenuSelection();
+  applyActivePaletteToPuzzle(state.puzzle);
+  applyPaletteToBoardElements();
+  if (currentEntry) {
+    persistCurrentState();
+  } else {
+    writeStorage(storage);
+  }
+};
 
 const ensurePuzzlesStorage = () => {
   if (!storage.puzzles || typeof storage.puzzles !== 'object') {
@@ -702,9 +442,13 @@ const applyTranslations = () => {
     timerElement.setAttribute('aria-label', translate('timeSpent'));
   }
 
-  if (footerElement) {
-    footerElement.textContent = translate('footer');
+  if (footerDescriptionElement) {
+    footerDescriptionElement.textContent = translate('footer');
   }
+  if (colorPaletteMenu) {
+    colorPaletteMenu.setAttribute('aria-label', translate('colorPaletteMenuLabel'));
+  }
+  updateColorPaletteButtonLabel();
 
   if (resetProgressButton) {
     const label = translate('actionResetProgress');
@@ -714,7 +458,9 @@ const applyTranslations = () => {
 };
 
 const persistCurrentState = (additional = {}) => {
+  storage.colorPalette = activeColorPaletteId;
   if (!currentEntry) {
+    writeStorage(storage);
     return;
   }
   const puzzles = ensurePuzzlesStorage();
@@ -937,6 +683,13 @@ const updateControlsLockState = () => {
     resetProgressButton.disabled = locked;
   }
 
+  if (colorPaletteButton) {
+    colorPaletteButton.disabled = locked;
+    if (locked) {
+      closeColorPaletteMenu();
+    }
+  }
+
   if (lockControlsButton) {
     lockControlsButton.setAttribute('aria-pressed', String(locked));
     lockControlsButton.dataset.locked = locked ? 'true' : 'false';
@@ -971,11 +724,13 @@ const resetProgress = () => {
   }
   storage = readStorage();
   storage.controlsLocked = state.controlsLocked;
+  storage.colorPalette = activeColorPaletteId;
   currentEntry = null;
   state.difficulty = DEFAULT_DIFFICULTY;
   state.puzzle = null;
   state.boardState = [];
   state.isSolved = false;
+  state.colorPalette = activeColorPaletteId;
   state.timer.secondsElapsed = 0;
   state.timer.intervalId = null;
   state.timer.running = false;
@@ -1019,7 +774,8 @@ const loadPuzzle = ({ difficulty = state.difficulty, forceNew = false } = {}) =>
   let entry = puzzles[difficulty];
 
   if (!entry || entry.date !== todayKey || forceNew) {
-    const puzzle = createPuzzle(difficulty);
+    const paletteColors = getPaletteColorsById(activeColorPaletteId);
+    const puzzle = createPuzzle(difficulty, paletteColors);
     const boardState = createEmptyBoard(puzzle.size);
     entry = {
       date: todayKey,
@@ -1037,18 +793,21 @@ const loadPuzzle = ({ difficulty = state.difficulty, forceNew = false } = {}) =>
   puzzles[difficulty] = entry;
   storage.difficulty = difficulty;
   syncControlsLockToStorage();
-  writeStorage(storage);
 
   currentEntry = entry;
   state.difficulty = difficulty;
   setAppDifficultyAttribute(difficulty);
   state.puzzle = entry.puzzle;
+  applyActivePaletteToPuzzle(state.puzzle);
+  state.colorPalette = activeColorPaletteId;
   state.boardState = cloneBoard(entry.boardState);
   state.isSolved = Boolean(entry.solved);
   if (currentEntry && !Object.prototype.hasOwnProperty.call(currentEntry, 'status')) {
     currentEntry.status = null;
   }
   resetTimer(entry.secondsElapsed || 0);
+  storage.colorPalette = activeColorPaletteId;
+  writeStorage(storage);
 };
 
 const renderCurrentPuzzle = ({ announce = false, message, additionalState } = {}) => {
@@ -1078,6 +837,7 @@ const renderCurrentPuzzle = ({ announce = false, message, additionalState } = {}
   updateControlsLockState();
   updateExtremeAvailability();
   updateDifficultyButtons();
+  applyPaletteToBoardElements();
   const stateToPersist =
     additionalState || (announce && statusDetails ? { status: statusDetails } : undefined);
   persistCurrentState(stateToPersist);
@@ -1395,6 +1155,51 @@ const setDifficulty = (difficulty) => {
   });
 };
 
+buildColorPaletteMenu();
+updateColorPaletteButtonAppearance();
+updateColorPaletteMenuSelection();
+updateColorPaletteButtonExpandedState();
+
+if (colorPaletteButton) {
+  colorPaletteButton.addEventListener('click', () => {
+    if (isColorPaletteMenuOpen) {
+      closeColorPaletteMenu();
+    } else {
+      openColorPaletteMenu();
+    }
+  });
+  colorPaletteButton.addEventListener('keydown', (event) => {
+    if (
+      event.key === 'Enter' ||
+      event.key === ' ' ||
+      event.key === 'Space' ||
+      event.key === 'Spacebar' ||
+      event.key === 'ArrowDown'
+    ) {
+      event.preventDefault();
+      openColorPaletteMenu();
+    }
+    if (event.key === 'Escape' && isColorPaletteMenuOpen) {
+      event.preventDefault();
+      closeColorPaletteMenu();
+    }
+  });
+}
+
+if (colorPaletteMenu) {
+  colorPaletteMenu.addEventListener('click', (event) => {
+    const target = event.target instanceof Element ? event.target.closest('.color-palette-option') : null;
+    if (!target) {
+      return;
+    }
+    event.preventDefault();
+    const paletteId = target.dataset.paletteId;
+    setColorPalette(paletteId);
+    closeColorPaletteMenu({ focusButton: true });
+  });
+  colorPaletteMenu.addEventListener('keydown', handleColorPaletteMenuKeyDown);
+}
+
 boardContainer.addEventListener('click', (event) => {
   const target = event.target.closest('.cell');
   if (!target || !boardContainer.contains(target)) {
@@ -1468,9 +1273,16 @@ if (leaderboardOverlay) {
 }
 
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && isLeaderboardOpen()) {
-    event.preventDefault();
-    closeLeaderboard();
+  if (event.key === 'Escape') {
+    if (isLeaderboardOpen()) {
+      event.preventDefault();
+      closeLeaderboard();
+      return;
+    }
+    if (isColorPaletteMenuOpen) {
+      event.preventDefault();
+      closeColorPaletteMenu({ focusButton: true });
+    }
   }
 });
 
