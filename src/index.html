@@ -105,15 +105,42 @@
 
       <div class="status" id="status" aria-live="polite"></div>
 
-      <footer class="footer">Balance each shape badge while matching every row and column total.</footer>
-      <button
-        id="reset-progress-button"
-        class="reset-progress-button"
-        type="button"
-        aria-label="Reset local progress"
-      >
-        <span aria-hidden="true">&#8635;</span>
-      </button>
+      <footer class="footer">
+        <p id="footer-description" class="footer__description">
+          Balance each shape badge while matching every row and column total.
+        </p>
+        <div class="footer-controls">
+          <div id="color-palette-picker" class="color-palette-picker">
+            <button
+              id="color-palette-button"
+              class="color-palette-button"
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-controls="color-palette-menu"
+            >
+              <span id="color-palette-button-label" class="visually-hidden"
+                >Change region colors</span
+              >
+            </button>
+            <div
+              id="color-palette-menu"
+              class="color-palette-menu"
+              role="menu"
+              aria-orientation="horizontal"
+              hidden
+            ></div>
+          </div>
+          <button
+            id="reset-progress-button"
+            class="reset-progress-button"
+            type="button"
+            aria-label="Reset local progress"
+          >
+            <span aria-hidden="true">&#8635;</span>
+          </button>
+        </div>
+      </footer>
     </main>
 
     <script type="module" src="main.js"></script>
