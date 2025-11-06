@@ -234,6 +234,17 @@ const closeColorPaletteMenu = ({ focusButton = false } = {}) => {
   }
 };
 
+const toggleColorPaletteMenu = () => {
+  if (!colorPaletteMenu || !colorPaletteButton || colorPaletteButton.disabled) {
+    return;
+  }
+  if (isColorPaletteMenuOpen) {
+    closeColorPaletteMenu({ focusButton: true });
+  } else {
+    openColorPaletteMenu();
+  }
+};
+
 const focusPaletteOptionByIndex = (index) => {
   if (index < 0 || index >= PALETTE_ORDER.length) {
     return;
@@ -670,11 +681,8 @@ const updateControlsLockState = () => {
     resetProgressButton.disabled = locked;
   }
 
-  if (colorPaletteButton) {
-    colorPaletteButton.disabled = locked;
-    if (locked) {
-      closeColorPaletteMenu();
-    }
+  if (locked) {
+    closeColorPaletteMenu();
   }
 
   if (lockControlsButton) {
@@ -1148,12 +1156,9 @@ updateColorPaletteMenuSelection();
 closeColorPaletteMenu();
 
 if (colorPaletteButton) {
-  colorPaletteButton.addEventListener('click', () => {
-    if (isColorPaletteMenuOpen) {
-      closeColorPaletteMenu();
-    } else {
-      openColorPaletteMenu();
-    }
+  colorPaletteButton.addEventListener('click', (event) => {
+    event.preventDefault();
+    toggleColorPaletteMenu();
   });
   colorPaletteButton.addEventListener('keydown', (event) => {
     if (
