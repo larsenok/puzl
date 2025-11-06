@@ -1,14 +1,6 @@
 import { ACTIVE_LOCALE, translate } from './config/translations.js';
 import { DIFFICULTIES, DEFAULT_DIFFICULTY } from './config/difficulties.js';
-import {
-  COLOR_PALETTES,
-  COLOR_PALETTE_MAP,
-  DEFAULT_COLOR_PALETTE_ID,
-  PALETTE_ORDER,
-  getPaletteById,
-  getPaletteColorsById,
-  getPalettePreviewGradient
-} from './palette.js';
+import { DEFAULT_COLOR_PALETTE_ID, getPaletteColorsById } from './palette.js';
 import { CELL_STATES, createEmptyBoard, createPuzzle } from './puzzle.js';
 import { cloneBoard } from './utils/board.js';
 import {
@@ -21,18 +13,11 @@ import {
 
 const MAX_LEADERBOARD_ENTRIES = 20;
 
-let activeColorPaletteId = DEFAULT_COLOR_PALETTE_ID;
-
-const getActiveColorPalette = () => getPaletteById(activeColorPaletteId);
+const activeColorPaletteId = DEFAULT_COLOR_PALETTE_ID;
 
 let storage = readStorage();
 if (typeof storage.controlsLocked !== 'boolean') {
   storage.controlsLocked = false;
-}
-if (typeof storage.colorPalette === 'string' && COLOR_PALETTE_MAP[storage.colorPalette]) {
-  activeColorPaletteId = storage.colorPalette;
-} else {
-  storage.colorPalette = activeColorPaletteId;
 }
 let currentEntry = null;
 
@@ -42,7 +27,6 @@ const state = {
   boardState: [],
   isSolved: false,
   controlsLocked: Boolean(storage.controlsLocked),
-  colorPalette: activeColorPaletteId,
   timer: {
     running: false,
     intervalId: null,
@@ -65,10 +49,6 @@ const extremeDifficultyButton = difficultyButtons.find(
   (button) => button.dataset.difficulty === 'extreme'
 );
 const footerDescriptionElement = document.getElementById('footer-description');
-const colorPalettePicker = document.getElementById('color-palette-picker');
-const colorPaletteButton = document.getElementById('color-palette-button');
-const colorPaletteButtonLabel = document.getElementById('color-palette-button-label');
-const colorPaletteMenu = document.getElementById('color-palette-menu');
 const resetProgressButton = document.getElementById('reset-progress-button');
 const leaderboardButton = document.getElementById('leaderboard-button');
 const leaderboardOverlay = document.getElementById('leaderboard-overlay');
@@ -82,75 +62,6 @@ let lastFocusedElementBeforeLeaderboard = null;
 const columnHintElements = [];
 const rowHintElements = [];
 const cellElements = [];
-const colorPaletteOptionElements = new Map();
-let isColorPaletteMenuOpen = false;
-
-const updateColorPaletteButtonAppearance = () => {
-  if (!colorPaletteButton) {
-    return;
-  }
-  const preview = getPalettePreviewGradient(getActiveColorPalette());
-  colorPaletteButton.style.setProperty('--palette-preview', preview);
-};
-
-const updateColorPaletteButtonExpandedState = () => {
-  if (colorPaletteButton) {
-    colorPaletteButton.setAttribute('aria-expanded', String(isColorPaletteMenuOpen));
-  }
-};
-
-const updateColorPaletteButtonLabel = () => {
-  if (!colorPaletteButton) {
-    return;
-  }
-  const baseLabel = translate('actionColorPalette');
-  const palette = getActiveColorPalette();
-  const label = palette ? `${baseLabel} (${palette.name})` : baseLabel;
-  colorPaletteButton.setAttribute('aria-label', label);
-  colorPaletteButton.setAttribute('title', label);
-  if (colorPaletteButtonLabel) {
-    colorPaletteButtonLabel.textContent = baseLabel;
-  }
-};
-
-const updateColorPaletteMenuSelection = () => {
-  colorPaletteOptionElements.forEach((element, paletteId) => {
-    const isSelected = paletteId === activeColorPaletteId;
-    if (isSelected) {
-      element.dataset.selected = 'true';
-      element.setAttribute('tabindex', '0');
-    } else {
-      delete element.dataset.selected;
-      element.setAttribute('tabindex', '-1');
-    }
-    element.setAttribute('aria-checked', String(isSelected));
-  });
-};
-
-const buildColorPaletteMenu = () => {
-  if (!colorPaletteMenu) {
-    return;
-  }
-  colorPaletteMenu.innerHTML = '';
-  colorPaletteOptionElements.clear();
-  COLOR_PALETTES.forEach((palette) => {
-    const option = document.createElement('button');
-    option.type = 'button';
-    option.className = 'color-palette-option';
-    option.dataset.paletteId = palette.id;
-    option.setAttribute('role', 'menuitemradio');
-    option.setAttribute('aria-label', palette.name);
-    option.title = palette.name;
-    option.style.setProperty('--palette-preview', getPalettePreviewGradient(palette));
-    option.setAttribute('tabindex', palette.id === activeColorPaletteId ? '0' : '-1');
-    option.setAttribute('aria-checked', palette.id === activeColorPaletteId ? 'true' : 'false');
-    if (palette.id === activeColorPaletteId) {
-      option.dataset.selected = 'true';
-    }
-    colorPaletteMenu.appendChild(option);
-    colorPaletteOptionElements.set(palette.id, option);
-  });
-};
 
 const applyActivePaletteToPuzzle = (puzzle) => {
   if (!puzzle) {
@@ -195,132 +106,6 @@ const applyPaletteToBoardElements = () => {
   }
 };
 
-if (colorPaletteMenu) {
-  colorPaletteMenu.hidden = true;
-}
-
-const openColorPaletteMenu = () => {
-  if (!colorPaletteMenu || !colorPaletteButton || colorPaletteButton.disabled || isColorPaletteMenuOpen) {
-    return;
-  }
-  colorPaletteMenu.hidden = false;
-  isColorPaletteMenuOpen = true;
-  updateColorPaletteButtonExpandedState();
-  updateColorPaletteMenuSelection();
-  const selected = colorPaletteOptionElements.get(activeColorPaletteId);
-  const focusTarget = selected || colorPaletteMenu.querySelector('button');
-  window.requestAnimationFrame(() => {
-    if (focusTarget && typeof focusTarget.focus === 'function') {
-      focusTarget.focus();
-    }
-  });
-};
-
-const closeColorPaletteMenu = ({ focusButton = false } = {}) => {
-  if (!colorPaletteMenu) {
-    return;
-  }
-  const wasOpen = isColorPaletteMenuOpen;
-  isColorPaletteMenuOpen = false;
-  colorPaletteMenu.hidden = true;
-  updateColorPaletteButtonExpandedState();
-  if (
-    focusButton &&
-    wasOpen &&
-    colorPaletteButton &&
-    typeof colorPaletteButton.focus === 'function'
-  ) {
-    colorPaletteButton.focus();
-  }
-};
-
-const toggleColorPaletteMenu = () => {
-  if (!colorPaletteMenu || !colorPaletteButton || colorPaletteButton.disabled) {
-    return;
-  }
-  if (isColorPaletteMenuOpen) {
-    closeColorPaletteMenu({ focusButton: true });
-  } else {
-    openColorPaletteMenu();
-  }
-};
-
-const focusPaletteOptionByIndex = (index) => {
-  if (index < 0 || index >= PALETTE_ORDER.length) {
-    return;
-  }
-  const paletteId = PALETTE_ORDER[index];
-  const element = colorPaletteOptionElements.get(paletteId);
-  if (element && typeof element.focus === 'function') {
-    element.focus();
-  }
-};
-
-const handleColorPaletteMenuKeyDown = (event) => {
-  if (!isColorPaletteMenuOpen) {
-    return;
-  }
-  const { key } = event;
-  if (key === 'ArrowRight' || key === 'ArrowDown') {
-    event.preventDefault();
-    const current = document.activeElement;
-    let index = PALETTE_ORDER.findIndex(
-      (paletteId) => colorPaletteOptionElements.get(paletteId) === current
-    );
-    if (index === -1) {
-      index = PALETTE_ORDER.findIndex((paletteId) => paletteId === activeColorPaletteId);
-    }
-    const nextIndex = (index + 1) % PALETTE_ORDER.length;
-    focusPaletteOptionByIndex(nextIndex);
-    return;
-  }
-  if (key === 'ArrowLeft' || key === 'ArrowUp') {
-    event.preventDefault();
-    const current = document.activeElement;
-    let index = PALETTE_ORDER.findIndex(
-      (paletteId) => colorPaletteOptionElements.get(paletteId) === current
-    );
-    if (index === -1) {
-      index = PALETTE_ORDER.findIndex((paletteId) => paletteId === activeColorPaletteId);
-    }
-    const nextIndex = (index - 1 + PALETTE_ORDER.length) % PALETTE_ORDER.length;
-    focusPaletteOptionByIndex(nextIndex);
-    return;
-  }
-  if (key === 'Home') {
-    event.preventDefault();
-    focusPaletteOptionByIndex(0);
-    return;
-  }
-  if (key === 'End') {
-    event.preventDefault();
-    focusPaletteOptionByIndex(PALETTE_ORDER.length - 1);
-    return;
-  }
-};
-
-const setColorPalette = (paletteId) => {
-  if (!COLOR_PALETTE_MAP[paletteId]) {
-    paletteId = DEFAULT_COLOR_PALETTE_ID;
-  }
-  if (activeColorPaletteId === paletteId) {
-    updateColorPaletteMenuSelection();
-    return;
-  }
-  activeColorPaletteId = paletteId;
-  state.colorPalette = paletteId;
-  storage.colorPalette = paletteId;
-  updateColorPaletteButtonAppearance();
-  updateColorPaletteButtonLabel();
-  updateColorPaletteMenuSelection();
-  applyActivePaletteToPuzzle(state.puzzle);
-  applyPaletteToBoardElements();
-  if (currentEntry) {
-    persistCurrentState();
-  } else {
-    writeStorage(storage);
-  }
-};
 
 const ensurePuzzlesStorage = () => {
   if (!storage.puzzles || typeof storage.puzzles !== 'object') {
@@ -443,10 +228,6 @@ const applyTranslations = () => {
   if (footerDescriptionElement) {
     footerDescriptionElement.textContent = translate('footer');
   }
-  if (colorPaletteMenu) {
-    colorPaletteMenu.setAttribute('aria-label', translate('colorPaletteMenuLabel'));
-  }
-  updateColorPaletteButtonLabel();
 
   if (resetProgressButton) {
     const label = translate('actionResetProgress');
@@ -456,7 +237,6 @@ const applyTranslations = () => {
 };
 
 const persistCurrentState = (additional = {}) => {
-  storage.colorPalette = activeColorPaletteId;
   if (!currentEntry) {
     writeStorage(storage);
     return;
@@ -681,10 +461,6 @@ const updateControlsLockState = () => {
     resetProgressButton.disabled = locked;
   }
 
-  if (locked) {
-    closeColorPaletteMenu();
-  }
-
   if (lockControlsButton) {
     lockControlsButton.setAttribute('aria-pressed', String(locked));
     lockControlsButton.dataset.locked = locked ? 'true' : 'false';
@@ -719,13 +495,11 @@ const resetProgress = () => {
   }
   storage = readStorage();
   storage.controlsLocked = state.controlsLocked;
-  storage.colorPalette = activeColorPaletteId;
   currentEntry = null;
   state.difficulty = DEFAULT_DIFFICULTY;
   state.puzzle = null;
   state.boardState = [];
   state.isSolved = false;
-  state.colorPalette = activeColorPaletteId;
   state.timer.secondsElapsed = 0;
   state.timer.intervalId = null;
   state.timer.running = false;
@@ -794,14 +568,12 @@ const loadPuzzle = ({ difficulty = state.difficulty, forceNew = false } = {}) =>
   setAppDifficultyAttribute(difficulty);
   state.puzzle = entry.puzzle;
   applyActivePaletteToPuzzle(state.puzzle);
-  state.colorPalette = activeColorPaletteId;
   state.boardState = cloneBoard(entry.boardState);
   state.isSolved = Boolean(entry.solved);
   if (currentEntry && !Object.prototype.hasOwnProperty.call(currentEntry, 'status')) {
     currentEntry.status = null;
   }
   resetTimer(entry.secondsElapsed || 0);
-  storage.colorPalette = activeColorPaletteId;
   writeStorage(storage);
 };
 
@@ -1150,44 +922,6 @@ const setDifficulty = (difficulty) => {
   });
 };
 
-buildColorPaletteMenu();
-updateColorPaletteButtonAppearance();
-updateColorPaletteMenuSelection();
-closeColorPaletteMenu();
-
-if (colorPaletteButton) {
-  colorPaletteButton.addEventListener('click', (event) => {
-    event.preventDefault();
-    toggleColorPaletteMenu();
-  });
-  colorPaletteButton.addEventListener('keydown', (event) => {
-    if (
-      event.key === 'Enter' ||
-      event.key === ' ' ||
-      event.key === 'Space' ||
-      event.key === 'Spacebar' ||
-      event.key === 'ArrowDown'
-    ) {
-      event.preventDefault();
-      openColorPaletteMenu();
-    }
-  });
-}
-
-if (colorPaletteMenu) {
-  colorPaletteMenu.addEventListener('click', (event) => {
-    const target = event.target instanceof Element ? event.target.closest('.color-palette-option') : null;
-    if (!target) {
-      return;
-    }
-    event.preventDefault();
-    const paletteId = target.dataset.paletteId;
-    setColorPalette(paletteId);
-    closeColorPaletteMenu({ focusButton: true });
-  });
-  colorPaletteMenu.addEventListener('keydown', handleColorPaletteMenuKeyDown);
-}
-
 boardContainer.addEventListener('click', (event) => {
   const target = event.target.closest('.cell');
   if (!target || !boardContainer.contains(target)) {
@@ -1261,16 +995,9 @@ if (leaderboardOverlay) {
 }
 
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') {
-    if (isColorPaletteMenuOpen) {
-      event.preventDefault();
-      closeColorPaletteMenu({ focusButton: true });
-      return;
-    }
-    if (isLeaderboardOpen()) {
-      event.preventDefault();
-      closeLeaderboard();
-    }
+  if (event.key === 'Escape' && isLeaderboardOpen()) {
+    event.preventDefault();
+    closeLeaderboard();
   }
 });
 
