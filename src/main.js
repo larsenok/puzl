@@ -217,13 +217,19 @@ const openColorPaletteMenu = () => {
 };
 
 const closeColorPaletteMenu = ({ focusButton = false } = {}) => {
-  if (!colorPaletteMenu || !isColorPaletteMenuOpen) {
+  if (!colorPaletteMenu) {
     return;
   }
+  const wasOpen = isColorPaletteMenuOpen;
   isColorPaletteMenuOpen = false;
   colorPaletteMenu.hidden = true;
   updateColorPaletteButtonExpandedState();
-  if (focusButton && colorPaletteButton && typeof colorPaletteButton.focus === 'function') {
+  if (
+    focusButton &&
+    wasOpen &&
+    colorPaletteButton &&
+    typeof colorPaletteButton.focus === 'function'
+  ) {
     colorPaletteButton.focus();
   }
 };
@@ -1139,7 +1145,7 @@ const setDifficulty = (difficulty) => {
 buildColorPaletteMenu();
 updateColorPaletteButtonAppearance();
 updateColorPaletteMenuSelection();
-updateColorPaletteButtonExpandedState();
+closeColorPaletteMenu();
 
 if (colorPaletteButton) {
   colorPaletteButton.addEventListener('click', () => {
@@ -1172,6 +1178,7 @@ if (colorPaletteMenu) {
     event.preventDefault();
     const paletteId = target.dataset.paletteId;
     setColorPalette(paletteId);
+    closeColorPaletteMenu({ focusButton: true });
   });
   colorPaletteMenu.addEventListener('keydown', handleColorPaletteMenuKeyDown);
 }
@@ -1250,6 +1257,11 @@ if (leaderboardOverlay) {
 
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
+    if (isColorPaletteMenuOpen) {
+      event.preventDefault();
+      closeColorPaletteMenu({ focusButton: true });
+      return;
+    }
     if (isLeaderboardOpen()) {
       event.preventDefault();
       closeLeaderboard();
