@@ -195,16 +195,9 @@ const applyPaletteToBoardElements = () => {
   }
 };
 
-const handleColorPaletteOutsideInteraction = (event) => {
-  if (!isColorPaletteMenuOpen) {
-    return;
-  }
-  const target = event.target;
-  if (colorPalettePicker && target instanceof Node && colorPalettePicker.contains(target)) {
-    return;
-  }
-  closeColorPaletteMenu();
-};
+if (colorPaletteMenu) {
+  colorPaletteMenu.hidden = true;
+}
 
 const openColorPaletteMenu = () => {
   if (!colorPaletteMenu || !colorPaletteButton || colorPaletteButton.disabled || isColorPaletteMenuOpen) {
@@ -221,8 +214,6 @@ const openColorPaletteMenu = () => {
       focusTarget.focus();
     }
   });
-  document.addEventListener('pointerdown', handleColorPaletteOutsideInteraction, true);
-  document.addEventListener('focusin', handleColorPaletteOutsideInteraction);
 };
 
 const closeColorPaletteMenu = ({ focusButton = false } = {}) => {
@@ -232,8 +223,6 @@ const closeColorPaletteMenu = ({ focusButton = false } = {}) => {
   isColorPaletteMenuOpen = false;
   colorPaletteMenu.hidden = true;
   updateColorPaletteButtonExpandedState();
-  document.removeEventListener('pointerdown', handleColorPaletteOutsideInteraction, true);
-  document.removeEventListener('focusin', handleColorPaletteOutsideInteraction);
   if (focusButton && colorPaletteButton && typeof colorPaletteButton.focus === 'function') {
     colorPaletteButton.focus();
   }
@@ -255,11 +244,6 @@ const handleColorPaletteMenuKeyDown = (event) => {
     return;
   }
   const { key } = event;
-  if (key === 'Escape') {
-    event.preventDefault();
-    closeColorPaletteMenu({ focusButton: true });
-    return;
-  }
   if (key === 'ArrowRight' || key === 'ArrowDown') {
     event.preventDefault();
     const current = document.activeElement;
@@ -295,9 +279,6 @@ const handleColorPaletteMenuKeyDown = (event) => {
     event.preventDefault();
     focusPaletteOptionByIndex(PALETTE_ORDER.length - 1);
     return;
-  }
-  if (key === 'Tab') {
-    closeColorPaletteMenu();
   }
 };
 
@@ -1179,10 +1160,6 @@ if (colorPaletteButton) {
       event.preventDefault();
       openColorPaletteMenu();
     }
-    if (event.key === 'Escape' && isColorPaletteMenuOpen) {
-      event.preventDefault();
-      closeColorPaletteMenu();
-    }
   });
 }
 
@@ -1195,7 +1172,6 @@ if (colorPaletteMenu) {
     event.preventDefault();
     const paletteId = target.dataset.paletteId;
     setColorPalette(paletteId);
-    closeColorPaletteMenu({ focusButton: true });
   });
   colorPaletteMenu.addEventListener('keydown', handleColorPaletteMenuKeyDown);
 }
@@ -1277,11 +1253,6 @@ document.addEventListener('keydown', (event) => {
     if (isLeaderboardOpen()) {
       event.preventDefault();
       closeLeaderboard();
-      return;
-    }
-    if (isColorPaletteMenuOpen) {
-      event.preventDefault();
-      closeColorPaletteMenu({ focusButton: true });
     }
   }
 });
