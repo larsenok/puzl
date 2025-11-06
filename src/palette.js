@@ -61,7 +61,7 @@ export const COLOR_PALETTES = [
   }
 ];
 
-export const DEFAULT_COLOR_PALETTE_ID = 'classic';
+export const DEFAULT_COLOR_PALETTE_ID = 'contrast';
 
 export const COLOR_PALETTE_MAP = COLOR_PALETTES.reduce((accumulator, palette) => {
   accumulator[palette.id] = palette;
