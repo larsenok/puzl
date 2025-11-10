@@ -10,8 +10,9 @@ import {
   readStorage,
   writeStorage
 } from './storage.js';
-
-const MAX_LEADERBOARD_ENTRIES = 20;
+import { formatTime } from './app/time.js';
+import { createLeaderboardManager } from './app/leaderboard.js';
+import { createPostScoreController } from './app/postScore.js';
 const SUPABASE_URL = 'SUPABASE_URL_PLACEHOLDER';
 const SUPABASE_ANON_KEY = 'SUPABASE_ANON_KEY_PLACEHOLDER';
 const SUPABASE_LEADERBOARD_TABLE = 'SUPABASE_LEADERBOARD_TABLE_PLACEHOLDER';
@@ -81,8 +82,8 @@ const postScoreTitleElement = document.getElementById('post-score-title');
 const postScoreDescriptionElement = document.getElementById('post-score-description');
 const postScoreScoreLabelElement = document.getElementById('post-score-score-label');
 
-let lastFocusedElementBeforeLeaderboard = null;
-let lastFocusedElementBeforePostScore = null;
+let leaderboardController = null;
+let postScoreController = null;
 
 const columnHintElements = [];
 const rowHintElements = [];
@@ -137,102 +138,6 @@ const ensurePuzzlesStorage = () => {
     storage.puzzles = {};
   }
   return storage.puzzles;
-};
-
-const ensureLeaderboardStorage = () => {
-  if (!Array.isArray(storage.leaderboard)) {
-    storage.leaderboard = [];
-  }
-  return storage.leaderboard;
-};
-
-const hasSupabaseConfiguration = () => {
-  const validUrl = typeof SUPABASE_URL === 'string' && !SUPABASE_URL.includes('PLACEHOLDER');
-  const validKey =
-    typeof SUPABASE_ANON_KEY === 'string' && !SUPABASE_ANON_KEY.includes('PLACEHOLDER');
-  const validTable =
-    typeof SUPABASE_LEADERBOARD_TABLE === 'string' &&
-    !SUPABASE_LEADERBOARD_TABLE.includes('PLACEHOLDER');
-  return Boolean(validUrl && validKey && validTable);
-};
-
-const fetchGlobalLeaderboardEntries = async () => {
-  if (!hasSupabaseConfiguration()) {
-    return [];
-  }
-
-  const url = `${SUPABASE_URL}/rest/v1/${SUPABASE_LEADERBOARD_TABLE}` +
-    `?select=initials,seconds,difficulty,created_at&order=seconds.asc&limit=${MAX_LEADERBOARD_ENTRIES}`;
-
-  const response = await fetch(url, {
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      Accept: 'application/json'
-    }
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch global leaderboard: ${response.status}`);
-  }
-
-  const data = await response.json();
-  if (!Array.isArray(data)) {
-    return [];
-  }
-
-  return data
-    .map((entry) => ({
-      initials: (entry.initials || '').toString().slice(0, 3),
-      seconds: Number.isFinite(Number(entry.seconds)) ? Number(entry.seconds) : null,
-      difficulty: entry.difficulty || DEFAULT_DIFFICULTY,
-      createdAt: entry.created_at || entry.createdAt || null
-    }))
-    .filter((entry) => entry.initials)
-    .sort((a, b) => {
-      const aSeconds = Number.isFinite(a.seconds) ? a.seconds : Number.MAX_SAFE_INTEGER;
-      const bSeconds = Number.isFinite(b.seconds) ? b.seconds : Number.MAX_SAFE_INTEGER;
-      if (aSeconds === bSeconds) {
-        return (a.createdAt || '').localeCompare(b.createdAt || '');
-      }
-      return aSeconds - bSeconds;
-    });
-};
-
-const submitScoreToGlobalLeaderboard = async ({ initials, seconds, difficulty }) => {
-  if (!hasSupabaseConfiguration()) {
-    console.info('Supabase configuration missing. Skipping global submission.', {
-      initials,
-      seconds,
-      difficulty
-    });
-    return { success: false, skipped: true };
-  }
-
-  const payload = {
-    initials,
-    seconds,
-    difficulty,
-    created_at: new Date().toISOString()
-  };
-
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_LEADERBOARD_TABLE}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Prefer: 'return=representation',
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`
-    },
-    body: JSON.stringify(payload)
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to submit score: ${response.status}`);
-  }
-
-  const result = await response.json();
-  return { success: true, data: result };
 };
 
 const markExtremeUnlocked = () => {
@@ -302,52 +207,12 @@ const applyTranslations = () => {
     checkButton.textContent = translate('actionCheck');
   }
 
-  if (postScoreButton) {
-    postScoreButton.textContent = translate('actionPostScore');
-    postScoreButton.setAttribute('aria-label', translate('postScoreButtonLabel'));
-  }
-
   if (clearButton) {
     clearButton.textContent = translate('actionClear');
   }
 
   if (testButton) {
     testButton.textContent = translate('actionNewBoard');
-  }
-
-  if (leaderboardButton) {
-    const label = translate('actionLeaderboard');
-    leaderboardButton.setAttribute('aria-label', label);
-    leaderboardButton.setAttribute('title', label);
-  }
-
-  if (leaderboardTitleElement) {
-    leaderboardTitleElement.textContent = translate('leaderboardTitle');
-  }
-
-  if (leaderboardEmptyState) {
-    leaderboardEmptyState.textContent = translate('leaderboardEmpty');
-  }
-
-  leaderboardTabs.forEach((tab) => {
-    const { view } = tab.dataset;
-    if (view === 'local') {
-      tab.textContent = translate('leaderboardTabLocal');
-    } else if (view === 'global') {
-      tab.textContent = translate('leaderboardTabGlobal');
-    }
-  });
-
-  if (leaderboardGlobalLoading) {
-    leaderboardGlobalLoading.textContent = translate('leaderboardLoading');
-  }
-
-  if (leaderboardGlobalEmptyState) {
-    leaderboardGlobalEmptyState.textContent = translate('leaderboardGlobalConfigure');
-  }
-
-  if (leaderboardCloseButton) {
-    leaderboardCloseButton.setAttribute('aria-label', translate('actionCloseLeaderboard'));
   }
 
   if (lockControlsButton) {
@@ -365,36 +230,15 @@ const applyTranslations = () => {
     footerDescriptionElement.textContent = translate('footer');
   }
 
-  if (postScoreTitleElement) {
-    postScoreTitleElement.textContent = translate('postScoreTitle');
-  }
-
-  if (postScoreDescriptionElement) {
-    postScoreDescriptionElement.textContent = translate('postScoreDescription');
-  }
-
-  if (postScoreScoreLabelElement) {
-    postScoreScoreLabelElement.textContent = translate('postScoreScoreLabel');
-  }
-
-  if (postScoreSubmitButton) {
-    postScoreSubmitButton.textContent = translate('postScoreSend');
-  }
-
-  if (postScoreCancelButton) {
-    postScoreCancelButton.textContent = translate('postScoreAbort');
-  }
-
-  if (postScoreInput) {
-    postScoreInput.setAttribute('aria-label', translate('postScoreInitialsLabel'));
-    postScoreInput.setAttribute('placeholder', translate('postScoreInitialsLabel'));
-  }
 
   if (resetProgressButton) {
     const label = translate('actionResetProgress');
     resetProgressButton.setAttribute('aria-label', label);
     resetProgressButton.setAttribute('title', label);
   }
+
+  leaderboardController?.applyTranslations();
+  postScoreController?.applyTranslations();
 };
 
 const persistCurrentState = (additional = {}) => {
@@ -417,432 +261,22 @@ const persistCurrentState = (additional = {}) => {
   writeStorage(storage);
 };
 
-const formatTime = (seconds) => {
-  const totalSeconds = Math.max(0, Number.isFinite(seconds) ? Math.floor(seconds) : 0);
-  const minutes = Math.floor(totalSeconds / 60);
-  const remainingSeconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
-};
-
-const getDifficultyLabel = (difficulty) => {
-  const config = DIFFICULTIES[difficulty];
-  if (config?.labelKey) {
-    return translate(config.labelKey);
-  }
-  if (typeof difficulty === 'string' && difficulty.length > 0) {
-    return difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
-  }
-  return translate('difficultyLabel');
-};
-
-const getLeaderboardEntries = () => {
-  const entries = ensureLeaderboardStorage();
-  return entries
-    .filter((entry) => entry && typeof entry === 'object')
-    .slice()
-    .sort((a, b) => {
-      const aSeconds = Number.isFinite(a.seconds) ? a.seconds : Number.MAX_SAFE_INTEGER;
-      const bSeconds = Number.isFinite(b.seconds) ? b.seconds : Number.MAX_SAFE_INTEGER;
-      if (aSeconds === bSeconds) {
-        return (a.solvedAt || '').localeCompare(b.solvedAt || '');
-      }
-      return aSeconds - bSeconds;
-    });
-};
-
-const renderLocalLeaderboard = (isActive) => {
-  if (!leaderboardList || !leaderboardEmptyState) {
-    return;
-  }
-
-  const entries = getLeaderboardEntries();
-  leaderboardList.innerHTML = '';
-
-  if (!entries.length) {
-    leaderboardEmptyState.textContent = translate('leaderboardEmpty');
-    leaderboardEmptyState.hidden = !isActive;
-    leaderboardList.hidden = true;
-    return;
-  }
-
-  leaderboardEmptyState.hidden = true;
-
-  entries.forEach((entry, index) => {
-    const item = document.createElement('li');
-    item.className = 'leaderboard-list__item';
-
-    const rank = document.createElement('span');
-    rank.className = 'leaderboard-list__rank';
-    rank.textContent = String(index + 1);
-    item.appendChild(rank);
-
-    const details = document.createElement('div');
-    details.className = 'leaderboard-list__details';
-
-    const difficulty = document.createElement('span');
-    difficulty.className = 'leaderboard-list__difficulty';
-    difficulty.textContent = getDifficultyLabel(entry.difficulty);
-
-    const time = document.createElement('span');
-    time.className = 'leaderboard-list__time';
-    time.textContent = formatTime(entry.seconds);
-
-    details.appendChild(difficulty);
-    details.appendChild(time);
-    item.appendChild(details);
-
-    leaderboardList.appendChild(item);
-  });
-
-  leaderboardList.hidden = !isActive;
-};
-
-const renderGlobalLeaderboard = (isActive) => {
-  if (!leaderboardGlobalList || !leaderboardGlobalEmptyState || !leaderboardGlobalLoading) {
-    return;
-  }
-
-  if (!isActive) {
-    leaderboardGlobalList.hidden = true;
-    leaderboardGlobalEmptyState.hidden = true;
-    leaderboardGlobalLoading.hidden = true;
-    return;
-  }
-
-  if (!hasSupabaseConfiguration()) {
-    leaderboardGlobalLoading.hidden = true;
-    leaderboardGlobalList.hidden = true;
-    leaderboardGlobalEmptyState.textContent = translate('leaderboardGlobalConfigure');
-    leaderboardGlobalEmptyState.hidden = false;
-    return;
-  }
-
-  if (state.globalLeaderboardLoading) {
-    leaderboardGlobalLoading.hidden = false;
-    leaderboardGlobalList.hidden = true;
-    leaderboardGlobalEmptyState.hidden = true;
-    return;
-  }
-
-  leaderboardGlobalLoading.hidden = true;
-
-  if (state.globalLeaderboardError) {
-    leaderboardGlobalEmptyState.textContent = translate('leaderboardGlobalError');
-    leaderboardGlobalEmptyState.hidden = false;
-    leaderboardGlobalList.hidden = true;
-    return;
-  }
-
-  const entries = Array.isArray(state.globalLeaderboard) ? state.globalLeaderboard : [];
-  leaderboardGlobalList.innerHTML = '';
-
-  if (!entries.length) {
-    leaderboardGlobalEmptyState.textContent = translate('leaderboardGlobalEmpty');
-    leaderboardGlobalEmptyState.hidden = false;
-    leaderboardGlobalList.hidden = true;
-    return;
-  }
-
-  leaderboardGlobalEmptyState.hidden = true;
-  leaderboardGlobalList.hidden = false;
-
-  entries.forEach((entry, index) => {
-    const item = document.createElement('li');
-    item.className = 'leaderboard-list__item';
-
-    const rank = document.createElement('span');
-    rank.className = 'leaderboard-list__rank';
-    rank.textContent = String(index + 1);
-    item.appendChild(rank);
-
-    const details = document.createElement('div');
-    details.className = 'leaderboard-list__details leaderboard-list__details--global';
-
-    const identity = document.createElement('div');
-    identity.className = 'leaderboard-list__identity';
-
-    const name = document.createElement('span');
-    name.className = 'leaderboard-list__name';
-    name.textContent = (entry.initials || '---').toString().toUpperCase();
-
-    const difficulty = document.createElement('span');
-    difficulty.className = 'leaderboard-list__difficulty';
-    difficulty.textContent = getDifficultyLabel(entry.difficulty);
-
-    identity.appendChild(name);
-    identity.appendChild(difficulty);
-
-    const time = document.createElement('span');
-    time.className = 'leaderboard-list__time';
-    time.textContent = formatTime(entry.seconds);
-
-    details.appendChild(identity);
-    details.appendChild(time);
-    item.appendChild(details);
-
-    leaderboardGlobalList.appendChild(item);
-  });
-};
-
-const renderLeaderboard = () => {
-  const view = state.leaderboardView === 'global' ? 'global' : 'local';
-
-  leaderboardTabs.forEach((tab) => {
-    const isActive = tab.dataset.view === view;
-    tab.classList.toggle('is-active', isActive);
-    tab.setAttribute('aria-selected', String(isActive));
-    tab.setAttribute('tabindex', isActive ? '0' : '-1');
-  });
-
-  renderLocalLeaderboard(view === 'local');
-  renderGlobalLeaderboard(view === 'global');
-};
-
-const loadGlobalLeaderboard = async ({ force = false } = {}) => {
-  if (!hasSupabaseConfiguration()) {
-    state.globalLeaderboard = [];
-    state.globalLeaderboardLoaded = false;
-    state.globalLeaderboardError = null;
-    state.globalLeaderboardLoading = false;
-    renderGlobalLeaderboard(state.leaderboardView === 'global');
-    return;
-  }
-
-  if (state.globalLeaderboardLoading) {
-    return;
-  }
-
-  if (state.globalLeaderboardLoaded && !force) {
-    renderGlobalLeaderboard(state.leaderboardView === 'global');
-    return;
-  }
-
-  state.globalLeaderboardLoading = true;
-  state.globalLeaderboardError = null;
-  renderGlobalLeaderboard(state.leaderboardView === 'global');
-
-  try {
-    const entries = await fetchGlobalLeaderboardEntries();
-    state.globalLeaderboard = entries;
-    state.globalLeaderboardLoaded = true;
-  } catch (error) {
-    console.error('Failed to load global leaderboard', error);
-    state.globalLeaderboardError = error;
-  } finally {
-    state.globalLeaderboardLoading = false;
-    renderGlobalLeaderboard(state.leaderboardView === 'global');
-  }
-};
-
-const setLeaderboardView = (view) => {
-  if (view !== 'local' && view !== 'global') {
-    return;
-  }
-  state.leaderboardView = view;
-  renderLeaderboard();
-  if (view === 'global') {
-    loadGlobalLeaderboard();
-  }
-};
-
 const recordLeaderboardEntry = () => {
   if (!currentEntry) {
     return;
   }
 
-  const leaderboard = ensureLeaderboardStorage();
   const boardId = currentEntry.createdAt || `${state.difficulty}-${currentEntry.date || getTimestamp()}`;
   const seconds = state.timer.secondsElapsed;
   const solvedAt = getTimestamp();
 
-  const newEntry = {
+  leaderboardController?.recordEntry({
     boardId,
     difficulty: state.difficulty,
     seconds,
     solvedAt,
     date: currentEntry.date
-  };
-
-  const existingIndex = leaderboard.findIndex((entry) => entry.boardId === boardId);
-
-  if (existingIndex >= 0) {
-    const existing = leaderboard[existingIndex];
-    if (!Number.isFinite(existing.seconds) || seconds < existing.seconds) {
-      leaderboard[existingIndex] = newEntry;
-    } else {
-      leaderboard[existingIndex] = { ...existing, solvedAt };
-    }
-  } else {
-    leaderboard.push(newEntry);
-  }
-
-  leaderboard.sort((a, b) => {
-    const aSeconds = Number.isFinite(a.seconds) ? a.seconds : Number.MAX_SAFE_INTEGER;
-    const bSeconds = Number.isFinite(b.seconds) ? b.seconds : Number.MAX_SAFE_INTEGER;
-    if (aSeconds === bSeconds) {
-      return (a.solvedAt || '').localeCompare(b.solvedAt || '');
-    }
-    return aSeconds - bSeconds;
   });
-
-  if (leaderboard.length > MAX_LEADERBOARD_ENTRIES) {
-    leaderboard.length = MAX_LEADERBOARD_ENTRIES;
-  }
-
-  writeStorage(storage);
-  renderLeaderboard();
-};
-
-const isLeaderboardOpen = () => Boolean(leaderboardOverlay && !leaderboardOverlay.hidden);
-
-const openLeaderboard = () => {
-  if (!leaderboardOverlay) {
-    return;
-  }
-  renderLeaderboard();
-  if (state.leaderboardView === 'global') {
-    loadGlobalLeaderboard();
-  }
-  lastFocusedElementBeforeLeaderboard =
-    document.activeElement && typeof document.activeElement.focus === 'function'
-      ? document.activeElement
-      : null;
-  leaderboardOverlay.hidden = false;
-  leaderboardOverlay.setAttribute('data-open', 'true');
-  if (leaderboardCloseButton) {
-    window.setTimeout(() => {
-      leaderboardCloseButton.focus();
-    }, 0);
-  }
-};
-
-const closeLeaderboard = () => {
-  if (!leaderboardOverlay) {
-    return;
-  }
-  leaderboardOverlay.hidden = true;
-  leaderboardOverlay.removeAttribute('data-open');
-  if (lastFocusedElementBeforeLeaderboard && typeof lastFocusedElementBeforeLeaderboard.focus === 'function') {
-    lastFocusedElementBeforeLeaderboard.focus();
-  }
-  lastFocusedElementBeforeLeaderboard = null;
-};
-
-const isPostScoreOpen = () => Boolean(postScoreOverlay && !postScoreOverlay.hidden);
-
-const normalizeInitials = (value = '') => {
-  if (typeof value !== 'string') {
-    return '';
-  }
-  try {
-    const letters = Array.from(value).filter((char) => /\p{L}/u.test(char)).slice(0, 3);
-    return letters.join('').toLocaleUpperCase(ACTIVE_LOCALE || undefined);
-  } catch (error) {
-    const sanitized = value.replace(/[^A-Za-z]/g, '').slice(0, 3);
-    return sanitized.toLocaleUpperCase(ACTIVE_LOCALE || undefined);
-  }
-};
-
-const openPostScoreModal = () => {
-  if (!postScoreOverlay || !state.isSolved) {
-    return;
-  }
-  state.postScoreSubmitting = false;
-  renderPostScoreModalState();
-  if (postScoreScoreElement) {
-    postScoreScoreElement.textContent = formatTime(state.timer.secondsElapsed);
-  }
-  if (postScoreInput) {
-    const storedInitials = (storage.lastInitials || '').toString().slice(0, 3);
-    postScoreInput.value = storedInitials;
-    postScoreInput.setCustomValidity('');
-  }
-  lastFocusedElementBeforePostScore =
-    document.activeElement && typeof document.activeElement.focus === 'function'
-      ? document.activeElement
-      : null;
-  postScoreOverlay.hidden = false;
-  postScoreOverlay.setAttribute('data-open', 'true');
-  window.setTimeout(() => {
-    if (postScoreInput) {
-      postScoreInput.focus();
-      postScoreInput.select();
-    }
-  }, 0);
-};
-
-const closePostScoreModal = () => {
-  if (!postScoreOverlay) {
-    return;
-  }
-  postScoreOverlay.hidden = true;
-  postScoreOverlay.removeAttribute('data-open');
-  state.postScoreSubmitting = false;
-  renderPostScoreModalState();
-  if (lastFocusedElementBeforePostScore &&
-    typeof lastFocusedElementBeforePostScore.focus === 'function') {
-    lastFocusedElementBeforePostScore.focus();
-  }
-  lastFocusedElementBeforePostScore = null;
-};
-
-const handlePostScoreSubmit = async (event) => {
-  event.preventDefault();
-  if (!state.isSolved || !postScoreInput) {
-    return;
-  }
-
-  const normalized = normalizeInitials(postScoreInput.value);
-  postScoreInput.value = normalized;
-
-  if (normalized.length !== 3) {
-    postScoreInput.setCustomValidity(translate('postScoreInitialsError'));
-    postScoreInput.reportValidity();
-    return;
-  }
-
-  postScoreInput.setCustomValidity('');
-  if (postScoreScoreElement) {
-    postScoreScoreElement.textContent = formatTime(state.timer.secondsElapsed);
-  }
-
-  state.postScoreSubmitting = true;
-  renderPostScoreModalState();
-
-  try {
-    const result = await submitScoreToGlobalLeaderboard({
-      initials: normalized,
-      seconds: state.timer.secondsElapsed,
-      difficulty: state.difficulty
-    });
-
-    storage.lastInitials = normalized;
-    writeStorage(storage);
-
-    if (result?.skipped) {
-      updateStatus('notice', translate('leaderboardGlobalConfigure'));
-    } else {
-      updateStatus('success', translate('postScoreSubmitted'));
-      state.globalLeaderboardLoaded = false;
-      state.globalLeaderboardError = null;
-      if (state.leaderboardView === 'global') {
-        loadGlobalLeaderboard({ force: true });
-      }
-    }
-
-    closePostScoreModal();
-  } catch (error) {
-    console.error('Failed to submit score to global leaderboard', error);
-    state.postScoreSubmitting = false;
-    renderPostScoreModalState();
-    updateStatus('alert', translate('postScoreSubmitError'));
-    window.setTimeout(() => {
-      if (postScoreInput) {
-        postScoreInput.focus();
-        postScoreInput.select();
-      }
-    }, 0);
-  }
 };
 
 const updateTimerLockState = () => {
@@ -872,38 +306,6 @@ const syncControlsLockToStorage = () => {
 const getControlsLockLabel = () =>
   translate(state.controlsLocked ? 'actionUnlockControls' : 'actionLockControls');
 
-const updatePostScoreButtonState = () => {
-  if (!postScoreButton) {
-    return;
-  }
-  const shouldShow = Boolean(state.isSolved);
-  postScoreButton.hidden = !shouldShow;
-  const shouldDisable = !shouldShow || state.controlsLocked || state.postScoreSubmitting;
-  postScoreButton.disabled = shouldDisable;
-  if (shouldDisable) {
-    postScoreButton.setAttribute('aria-disabled', 'true');
-  } else {
-    postScoreButton.removeAttribute('aria-disabled');
-  }
-};
-
-const renderPostScoreModalState = () => {
-  if (postScoreSubmitButton) {
-    postScoreSubmitButton.disabled = state.postScoreSubmitting;
-  }
-  if (postScoreCancelButton) {
-    postScoreCancelButton.disabled = state.postScoreSubmitting;
-  }
-  if (postScoreOverlay) {
-    if (state.postScoreSubmitting) {
-      postScoreOverlay.setAttribute('data-loading', 'true');
-    } else {
-      postScoreOverlay.removeAttribute('data-loading');
-    }
-  }
-  updatePostScoreButtonState();
-};
-
 const updateControlsLockState = () => {
   const locked = Boolean(state.controlsLocked);
 
@@ -932,7 +334,7 @@ const updateControlsLockState = () => {
     lockControlsButton.setAttribute('title', label);
   }
 
-  updatePostScoreButtonState();
+  postScoreController?.updateButtonState();
 };
 
 const setControlsLocked = (locked) => {
@@ -964,7 +366,7 @@ const resetProgress = () => {
   state.puzzle = null;
   state.boardState = [];
   state.isSolved = false;
-  updatePostScoreButtonState();
+  postScoreController?.updateButtonState();
   state.timer.secondsElapsed = 0;
   state.timer.intervalId = null;
   state.timer.running = false;
@@ -980,7 +382,7 @@ const resetProgress = () => {
     }
   });
   updateExtremeAvailability();
-  renderLeaderboard();
+  leaderboardController?.render();
 };
 
 const resetTimer = (seconds = 0) => {
@@ -1039,7 +441,7 @@ const loadPuzzle = ({ difficulty = state.difficulty, forceNew = false } = {}) =>
     currentEntry.status = null;
   }
   resetTimer(entry.secondsElapsed || 0);
-  updatePostScoreButtonState();
+  postScoreController?.updateButtonState();
   writeStorage(storage);
 };
 
@@ -1073,7 +475,7 @@ const renderCurrentPuzzle = ({ announce = false, message, additionalState } = {}
   applyPaletteToBoardElements();
   const stateToPersist =
     additionalState || (announce && statusDetails ? { status: statusDetails } : undefined);
-  updatePostScoreButtonState();
+  postScoreController?.updateButtonState();
   persistCurrentState(stateToPersist);
 };
 
@@ -1182,7 +584,7 @@ const cycleCell = (row, column) => {
   if (state.isSolved) {
     state.isSolved = false;
     updateTimerLockState();
-    updatePostScoreButtonState();
+    postScoreController?.updateButtonState();
   }
   persistCurrentState({ solved: false, solvedAt: null, status: null });
 };
@@ -1201,7 +603,7 @@ const resetBoard = () => {
   updateStatus('notice', clearedMessage);
   state.isSolved = false;
   updateTimerLockState();
-  updatePostScoreButtonState();
+  postScoreController?.updateButtonState();
   persistCurrentState({
     solved: false,
     solvedAt: null,
@@ -1319,7 +721,7 @@ const checkSolution = () => {
     stopTimer();
     state.isSolved = true;
     updateTimerLockState();
-    updatePostScoreButtonState();
+    postScoreController?.updateButtonState();
     const solvedMessage = translate('statusSolved');
     updateStatus('success', solvedMessage);
     if (!alreadySolved) {
@@ -1338,7 +740,7 @@ const checkSolution = () => {
     updateStatus('alert', keepGoingMessage);
     state.isSolved = false;
     updateTimerLockState();
-    updatePostScoreButtonState();
+    postScoreController?.updateButtonState();
     persistCurrentState({
       solved: false,
       solvedAt: null,
@@ -1421,51 +823,6 @@ difficultyButtons.forEach((button) => {
   });
 });
 
-leaderboardTabs.forEach((tab) => {
-  tab.addEventListener('click', () => {
-    const { view } = tab.dataset;
-    setLeaderboardView(view === 'global' ? 'global' : 'local');
-  });
-});
-
-if (postScoreButton) {
-  postScoreButton.addEventListener('click', () => {
-    if (state.controlsLocked || !state.isSolved || state.postScoreSubmitting) {
-      return;
-    }
-    openPostScoreModal();
-  });
-}
-
-if (postScoreCancelButton) {
-  postScoreCancelButton.addEventListener('click', () => {
-    if (state.postScoreSubmitting) {
-      return;
-    }
-    closePostScoreModal();
-  });
-}
-
-if (postScoreForm) {
-  postScoreForm.addEventListener('submit', handlePostScoreSubmit);
-}
-
-if (postScoreInput) {
-  postScoreInput.addEventListener('input', () => {
-    const normalized = normalizeInitials(postScoreInput.value);
-    postScoreInput.value = normalized;
-    postScoreInput.setCustomValidity('');
-  });
-}
-
-if (postScoreOverlay) {
-  postScoreOverlay.addEventListener('click', (event) => {
-    if (event.target === postScoreOverlay && !state.postScoreSubmitting) {
-      closePostScoreModal();
-    }
-  });
-}
-
 if (lockControlsButton) {
   lockControlsButton.addEventListener('click', () => {
     setControlsLocked(!state.controlsLocked);
@@ -1490,39 +847,72 @@ if (resetProgressButton) {
   });
 }
 
-if (leaderboardButton) {
-  leaderboardButton.addEventListener('click', () => {
-    openLeaderboard();
-  });
-}
+leaderboardController = createLeaderboardManager({
+  state,
+  translate,
+  difficulties: DIFFICULTIES,
+  formatTime,
+  getStorage: () => storage,
+  writeStorage,
+  supabase: {
+    url: SUPABASE_URL,
+    anonKey: SUPABASE_ANON_KEY,
+    table: SUPABASE_LEADERBOARD_TABLE
+  },
+  elements: {
+    button: leaderboardButton,
+    overlay: leaderboardOverlay,
+    list: leaderboardList,
+    emptyState: leaderboardEmptyState,
+    tabs: leaderboardTabs,
+    globalList: leaderboardGlobalList,
+    globalEmptyState: leaderboardGlobalEmptyState,
+    globalLoading: leaderboardGlobalLoading,
+    closeButton: leaderboardCloseButton,
+    titleElement: leaderboardTitleElement
+  }
+});
 
-if (leaderboardCloseButton) {
-  leaderboardCloseButton.addEventListener('click', () => {
-    closeLeaderboard();
-  });
-}
+postScoreController = createPostScoreController({
+  state,
+  translate,
+  formatTime,
+  getStorage: () => storage,
+  writeStorage,
+  submitScore: leaderboardController.submitScoreToGlobalLeaderboard,
+  updateStatus,
+  onGlobalLeaderboardRefresh: (options) =>
+    leaderboardController.loadGlobalLeaderboard(options),
+  locale: ACTIVE_LOCALE,
+  elements: {
+    button: postScoreButton,
+    overlay: postScoreOverlay,
+    form: postScoreForm,
+    input: postScoreInput,
+    scoreElement: postScoreScoreElement,
+    submitButton: postScoreSubmitButton,
+    cancelButton: postScoreCancelButton,
+    titleElement: postScoreTitleElement,
+    descriptionElement: postScoreDescriptionElement,
+    scoreLabelElement: postScoreScoreLabelElement
+  }
+});
 
-if (leaderboardOverlay) {
-  leaderboardOverlay.addEventListener('click', (event) => {
-    if (event.target === leaderboardOverlay) {
-      closeLeaderboard();
-    }
-  });
-}
+postScoreController.updateButtonState();
 
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
-    if (isPostScoreOpen()) {
+    if (postScoreController?.isOpen()) {
       if (state.postScoreSubmitting) {
         return;
       }
       event.preventDefault();
-      closePostScoreModal();
+      postScoreController.close();
       return;
     }
-    if (isLeaderboardOpen()) {
+    if (leaderboardController?.isOpen()) {
       event.preventDefault();
-      closeLeaderboard();
+      leaderboardController.close();
     }
   }
 });
@@ -1536,7 +926,7 @@ const initializeApp = () => {
   }
   loadPuzzle({ difficulty: state.difficulty, forceNew: false });
   renderCurrentPuzzle({ announce: false });
-  setLeaderboardView(state.leaderboardView);
+  leaderboardController?.setView(state.leaderboardView);
 };
 
 initializeApp();
