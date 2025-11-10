@@ -11,6 +11,7 @@ export const TRANSLATIONS = {
     actionClear: 'Clear',
     actionNewBoard: 'New board',
     actionLeaderboard: 'Leaderboard',
+    actionPostScore: 'Post score',
     actionLockControls: 'Lock controls',
     actionUnlockControls: 'Unlock controls',
     actionResetProgress: 'Reset local progress',
@@ -26,12 +27,28 @@ export const TRANSLATIONS = {
     statusProgressCleared: 'Progress cleared. Fresh boards await.',
     leaderboardTitle: 'Leaderboard',
     leaderboardEmpty: 'Solve a board to see it here.',
+    leaderboardTabLocal: 'Local',
+    leaderboardTabGlobal: 'Global',
+    leaderboardLoading: 'Loading…',
+    leaderboardGlobalEmpty: 'No global scores yet.',
+    leaderboardGlobalConfigure: 'Connect Supabase to load the global leaderboard.',
+    leaderboardGlobalError: 'Could not load the global leaderboard. Try again later.',
     actionCloseLeaderboard: 'Close leaderboard',
     difficultySet: 'Difficulty set to {difficulty}',
     footer: 'Balance each shape badge while matching every row and column total.',
     colorPaletteMenuLabel: 'Region color options',
     cellAria:
-      'Row {row}, column {column}. Part of a shape needing {requirement} apples.'
+      'Row {row}, column {column}. Part of a shape needing {requirement} apples.',
+    postScoreTitle: 'Post score',
+    postScoreDescription: 'Enter your initials to send your time to the global leaderboard.',
+    postScoreInitialsLabel: 'Initials',
+    postScoreScoreLabel: 'Time',
+    postScoreSend: 'Send',
+    postScoreAbort: 'Abort',
+    postScoreInitialsError: 'Enter exactly three letters.',
+    postScoreSubmitted: 'Score posted to the global leaderboard.',
+    postScoreSubmitError: 'Could not send the score. Please try again.',
+    postScoreButtonLabel: 'Post score'
   },
   nb: {
     difficultyLabel: 'Vanskelighetsgrad',
@@ -45,6 +62,7 @@ export const TRANSLATIONS = {
     actionClear: 'Tøm',
     actionNewBoard: 'Nytt brett',
     actionLeaderboard: 'Toppliste',
+    actionPostScore: 'Del poengsum',
     actionLockControls: 'Lås handlinger',
     actionUnlockControls: 'Lås opp handlinger',
     actionResetProgress: 'Tilbakestill lokal fremdrift',
@@ -59,6 +77,12 @@ export const TRANSLATIONS = {
     statusKeepGoing: 'Fortsett',
     leaderboardTitle: 'Toppliste',
     leaderboardEmpty: 'Løs et brett for å se det her.',
+    leaderboardTabLocal: 'Lokal',
+    leaderboardTabGlobal: 'Global',
+    leaderboardLoading: 'Laster…',
+    leaderboardGlobalEmpty: 'Ingen globale poengsummer ennå.',
+    leaderboardGlobalConfigure: 'Koble til Supabase for å laste den globale topplisten.',
+    leaderboardGlobalError: 'Kunne ikke laste den globale topplisten. Prøv igjen senere.',
     actionCloseLeaderboard: 'Lukk topplisten',
     difficultySet: 'Vanskelighetsgrad satt til {difficulty}',
     statusProgressCleared: 'Fremdrift slettet. Klar for nye brett.',
@@ -66,7 +90,17 @@ export const TRANSLATIONS = {
       'Match hver rad- og kolonneverdi mens hvert område får riktig antall merker.',
     colorPaletteMenuLabel: 'Fargevalg for regioner',
     cellAria:
-      'Rad {row}, kolonne {column}. Del av en form som trenger {requirement} epler.'
+      'Rad {row}, kolonne {column}. Del av en form som trenger {requirement} epler.',
+    postScoreTitle: 'Del poengsum',
+    postScoreDescription: 'Skriv inn initialene dine for å sende tiden til den globale topplisten.',
+    postScoreInitialsLabel: 'Initialer',
+    postScoreScoreLabel: 'Tid',
+    postScoreSend: 'Send',
+    postScoreAbort: 'Avbryt',
+    postScoreInitialsError: 'Skriv inn nøyaktig tre bokstaver.',
+    postScoreSubmitted: 'Poengsummen ble sendt til den globale topplisten.',
+    postScoreSubmitError: 'Kunne ikke sende poengsummen. Prøv igjen.',
+    postScoreButtonLabel: 'Del poengsum'
   }
 };
 
