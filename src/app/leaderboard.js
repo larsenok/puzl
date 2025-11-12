@@ -283,18 +283,37 @@ export const createLeaderboardManager = ({
     });
   };
 
+  const canUseGlobalLeaderboard = () => supabaseHelpers.hasConfiguration();
+
   const renderLeaderboard = () => {
-    const view = state.leaderboardView === 'global' ? 'global' : 'local';
+    const globalAvailable = canUseGlobalLeaderboard();
+
+    if (!globalAvailable && state.leaderboardView === 'global') {
+      state.leaderboardView = 'local';
+    }
+
+    const view = state.leaderboardView === 'global' && globalAvailable ? 'global' : 'local';
 
     tabs.forEach((tab) => {
-      const isActive = tab.dataset.view === view;
-      tab.classList.toggle('is-active', isActive);
-      tab.setAttribute('aria-selected', String(isActive));
-      tab.setAttribute('tabindex', isActive ? '0' : '-1');
+      const tabView = tab.dataset.view === 'global' ? 'global' : 'local';
+      const isActive = tabView === view;
+      const shouldHide = tabView === 'global' && !globalAvailable;
+
+      tab.classList.toggle('is-active', isActive && !shouldHide);
+      tab.setAttribute('aria-selected', String(isActive && !shouldHide));
+      tab.setAttribute('tabindex', shouldHide ? '-1' : isActive ? '0' : '-1');
+
+      if (shouldHide) {
+        tab.hidden = true;
+        tab.setAttribute('aria-hidden', 'true');
+      } else {
+        tab.hidden = false;
+        tab.removeAttribute('aria-hidden');
+      }
     });
 
     renderLocalLeaderboard(view === 'local');
-    renderGlobalLeaderboard(view === 'global');
+    renderGlobalLeaderboard(view === 'global' && globalAvailable);
   };
 
   const loadGlobalLeaderboard = async ({ force = false } = {}) => {
@@ -335,6 +354,9 @@ export const createLeaderboardManager = ({
 
   const setLeaderboardView = (view) => {
     if (view !== 'local' && view !== 'global') {
+      return;
+    }
+    if (view === 'global' && !canUseGlobalLeaderboard()) {
       return;
     }
     state.leaderboardView = view;
