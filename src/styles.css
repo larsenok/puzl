@@ -390,8 +390,8 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: calc(44px * 1.15);
+  height: calc(44px * 1.15);
   border-radius: 10px;
   border: 1px solid rgba(15, 23, 42, 0.12);
   background-color: #f8fafc;
@@ -416,8 +416,8 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: calc(44px * 1.15);
+  height: calc(44px * 1.15);
   border-radius: 10px;
   border: 1px solid rgba(15, 23, 42, 0.12);
   background-color: #f8fafc;
@@ -444,8 +444,8 @@ body {
 }
 
 .leaderboard-button__icon {
-  width: 20px;
-  height: 20px;
+  width: calc(20px * 1.15);
+  height: calc(20px * 1.15);
 }
 
 .leaderboard-overlay {
@@ -791,7 +791,7 @@ body {
 }
 
 .lock-toggle-button__icon {
-  font-size: 18px;
+  font-size: calc(18px * 1.15);
   line-height: 1;
 }
 
