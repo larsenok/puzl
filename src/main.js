@@ -404,6 +404,21 @@ const startTimer = () => {
   persistCurrentState();
 };
 
+const hasBoardProgress = () =>
+  state.boardState.some((row) => row.some((cell) => cell !== 'empty'));
+
+const resumeTimerIfNeeded = () => {
+  if (state.timer.running) {
+    return;
+  }
+  if (state.isSolved || currentEntry?.solved) {
+    return;
+  }
+  if (state.timer.secondsElapsed > 0 || hasBoardProgress()) {
+    startTimer();
+  }
+};
+
 const loadPuzzle = ({ difficulty = state.difficulty, forceNew = false } = {}) => {
   const puzzles = ensurePuzzlesStorage();
   const todayKey = getTodayKey();
@@ -477,6 +492,7 @@ const renderCurrentPuzzle = ({ announce = false, message, additionalState } = {}
     additionalState || (announce && statusDetails ? { status: statusDetails } : undefined);
   postScoreController?.updateButtonState();
   persistCurrentState(stateToPersist);
+  resumeTimerIfNeeded();
 };
 
 const setBoardSizeVariable = (size) => {
