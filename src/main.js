@@ -18,10 +18,14 @@ const SUPABASE_ANON_KEY = 'SUPABASE_ANON_KEY_PLACEHOLDER';
 const SUPABASE_LEADERBOARD_TABLE = 'SUPABASE_LEADERBOARD_TABLE_PLACEHOLDER';
 
 const activeColorPaletteId = DEFAULT_COLOR_PALETTE_ID;
+const REGION_FILL_OPACITY = 0.6;
 
 let storage = readStorage();
 if (typeof storage.controlsLocked !== 'boolean') {
   storage.controlsLocked = false;
+}
+if (typeof storage.regionFillEnabled !== 'boolean') {
+  storage.regionFillEnabled = false;
 }
 let currentEntry = null;
 
@@ -31,6 +35,7 @@ const state = {
   boardState: [],
   isSolved: false,
   controlsLocked: Boolean(storage.controlsLocked),
+  regionFillEnabled: Boolean(storage.regionFillEnabled),
   timer: {
     running: false,
     intervalId: null,
@@ -54,6 +59,7 @@ const clearButton = document.getElementById('clear-button');
 const timerElement = document.getElementById('timer-display');
 const testButton = document.getElementById('test-new-button');
 const lockControlsButton = document.getElementById('lock-controls-button');
+const regionFillToggleButton = document.getElementById('region-fill-toggle-button');
 const postScoreButton = document.getElementById('post-score-button');
 const difficultyButtons = Array.from(document.querySelectorAll('.difficulty-option'));
 const extremeDifficultyButton = difficultyButtons.find(
@@ -88,6 +94,48 @@ let postScoreController = null;
 const columnHintElements = [];
 const rowHintElements = [];
 const cellElements = [];
+
+const computeRegionFillColor = (color, opacity = REGION_FILL_OPACITY) => {
+  if (typeof color !== 'string') {
+    return 'transparent';
+  }
+
+  const trimmed = color.trim();
+
+  if (trimmed.startsWith('#')) {
+    let hex = trimmed.slice(1);
+    if (hex.length === 3 || hex.length === 4) {
+      hex = hex
+        .split('')
+        .map((value) => value + value)
+        .join('');
+    }
+    if (hex.length === 6 || hex.length === 8) {
+      const hasAlpha = hex.length === 8;
+      const r = Number.parseInt(hex.slice(0, 2), 16);
+      const g = Number.parseInt(hex.slice(2, 4), 16);
+      const b = Number.parseInt(hex.slice(4, 6), 16);
+      const alpha = hasAlpha ? Number.parseInt(hex.slice(6, 8), 16) / 255 : 1;
+      const combinedAlpha = Math.max(0, Math.min(1, alpha * opacity));
+      return `rgba(${r}, ${g}, ${b}, ${combinedAlpha})`;
+    }
+  }
+
+  const rgbaMatch = trimmed.match(/^rgba?\(([^)]+)\)$/i);
+  if (rgbaMatch) {
+    const parts = rgbaMatch[1].split(',').map((value) => value.trim());
+    if (parts.length >= 3) {
+      const r = Number.parseFloat(parts[0]);
+      const g = Number.parseFloat(parts[1]);
+      const b = Number.parseFloat(parts[2]);
+      const alpha = parts.length === 4 ? Number.parseFloat(parts[3]) || 0 : 1;
+      const combinedAlpha = Math.max(0, Math.min(1, alpha * opacity));
+      return `rgba(${r}, ${g}, ${b}, ${combinedAlpha})`;
+    }
+  }
+
+  return trimmed;
+};
 
 const applyActivePaletteToPuzzle = (puzzle) => {
   if (!puzzle) {
@@ -127,6 +175,10 @@ const applyPaletteToBoardElements = () => {
       const region = regionsById[String(regionId)];
       if (region?.color) {
         element.style.setProperty('--region-color', region.color);
+        element.style.setProperty(
+          '--region-fill-color',
+          computeRegionFillColor(region.color, REGION_FILL_OPACITY)
+        );
       }
     }
   }
@@ -214,6 +266,8 @@ const applyTranslations = () => {
   if (testButton) {
     testButton.textContent = translate('actionNewBoard');
   }
+
+  updateRegionFillState();
 
   if (lockControlsButton) {
     const labelKey = state.controlsLocked ? 'actionUnlockControls' : 'actionLockControls';
@@ -305,6 +359,30 @@ const syncControlsLockToStorage = () => {
 
 const getControlsLockLabel = () =>
   translate(state.controlsLocked ? 'actionUnlockControls' : 'actionLockControls');
+
+const getRegionFillToggleLabel = () =>
+  translate(state.regionFillEnabled ? 'actionHideRegionColors' : 'actionShowRegionColors');
+
+const updateRegionFillState = ({ persist = false } = {}) => {
+  const enabled = Boolean(state.regionFillEnabled);
+
+  if (appRoot) {
+    appRoot.dataset.regionFill = enabled ? 'true' : 'false';
+  }
+
+  if (regionFillToggleButton) {
+    regionFillToggleButton.setAttribute('aria-pressed', String(enabled));
+    regionFillToggleButton.dataset.active = enabled ? 'true' : 'false';
+    const label = getRegionFillToggleLabel();
+    regionFillToggleButton.setAttribute('aria-label', label);
+    regionFillToggleButton.setAttribute('title', label);
+  }
+
+  if (persist) {
+    storage.regionFillEnabled = enabled;
+    writeStorage(storage);
+  }
+};
 
 const updateControlsLockState = () => {
   const locked = Boolean(state.controlsLocked);
@@ -675,6 +753,10 @@ const createBoardStructure = () => {
       button.dataset.state = 'empty';
       button.dataset.region = regionId;
       button.style.setProperty('--region-color', region.color);
+      button.style.setProperty(
+        '--region-fill-color',
+        computeRegionFillColor(region.color, REGION_FILL_OPACITY)
+      );
       button.setAttribute(
         'aria-label',
         translate('cellAria', {
@@ -845,6 +927,13 @@ if (lockControlsButton) {
   });
 }
 
+if (regionFillToggleButton) {
+  regionFillToggleButton.addEventListener('click', () => {
+    state.regionFillEnabled = !state.regionFillEnabled;
+    updateRegionFillState({ persist: true });
+  });
+}
+
 if (testButton) {
   testButton.addEventListener('click', () => {
     if (state.controlsLocked) {
@@ -936,6 +1025,7 @@ document.addEventListener('keydown', (event) => {
 const initializeApp = () => {
   applyTranslations();
   updateControlsLockState();
+  updateRegionFillState();
   const storedDifficulty = storage.difficulty;
   if (storedDifficulty && DIFFICULTIES[storedDifficulty]) {
     state.difficulty = storedDifficulty;
