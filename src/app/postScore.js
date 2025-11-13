@@ -26,6 +26,7 @@ export const createPostScoreController = ({
   updateStatus,
   onGlobalLeaderboardRefresh = () => {},
   locale,
+  canSubmitToGlobalLeaderboard = () => true,
   elements
 }) => {
   const {
@@ -106,10 +107,16 @@ export const createPostScoreController = ({
       return;
     }
 
-    const shouldShow = Boolean(state.isSolved);
+    const canSubmit =
+      typeof canSubmitToGlobalLeaderboard === 'function'
+        ? canSubmitToGlobalLeaderboard()
+        : Boolean(canSubmitToGlobalLeaderboard);
+
+    const shouldShow = Boolean(state.isSolved && canSubmit);
     button.hidden = !shouldShow;
 
-    const shouldDisable = !shouldShow || state.controlsLocked || state.postScoreSubmitting;
+    const shouldDisable =
+      !shouldShow || state.controlsLocked || state.postScoreSubmitting || !canSubmit;
     button.disabled = shouldDisable;
 
     if (shouldDisable) {
@@ -156,7 +163,12 @@ export const createPostScoreController = ({
   };
 
   const openModal = () => {
-    if (!overlay || !state.isSolved) {
+    const canSubmit =
+      typeof canSubmitToGlobalLeaderboard === 'function'
+        ? canSubmitToGlobalLeaderboard()
+        : Boolean(canSubmitToGlobalLeaderboard);
+
+    if (!overlay || !state.isSolved || !canSubmit) {
       return;
     }
 
@@ -257,7 +269,12 @@ export const createPostScoreController = ({
   const attachEventListeners = () => {
     if (button) {
       button.addEventListener('click', () => {
-        if (state.controlsLocked || !state.isSolved || state.postScoreSubmitting) {
+        const canSubmit =
+          typeof canSubmitToGlobalLeaderboard === 'function'
+            ? canSubmitToGlobalLeaderboard()
+            : Boolean(canSubmitToGlobalLeaderboard);
+
+        if (state.controlsLocked || !state.isSolved || state.postScoreSubmitting || !canSubmit) {
           return;
         }
         openModal();
