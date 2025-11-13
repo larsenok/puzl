@@ -1004,6 +1004,8 @@ postScoreController = createPostScoreController({
   onGlobalLeaderboardRefresh: (options) =>
     leaderboardController.loadGlobalLeaderboard(options),
   locale: ACTIVE_LOCALE,
+  canSubmitToGlobalLeaderboard: () =>
+    Boolean(leaderboardController?.hasSupabaseConfiguration?.()),
   elements: {
     button: postScoreButton,
     overlay: postScoreOverlay,
