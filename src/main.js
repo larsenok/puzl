@@ -18,14 +18,14 @@ const SUPABASE_ANON_KEY = 'SUPABASE_ANON_KEY_PLACEHOLDER';
 const SUPABASE_LEADERBOARD_TABLE = 'SUPABASE_LEADERBOARD_TABLE_PLACEHOLDER';
 
 const activeColorPaletteId = DEFAULT_COLOR_PALETTE_ID;
-const REGION_FILL_OPACITY = 0.6;
+const REGION_FILL_OPACITY = 0.3;
 
 let storage = readStorage();
 if (typeof storage.controlsLocked !== 'boolean') {
   storage.controlsLocked = false;
 }
 if (typeof storage.regionFillEnabled !== 'boolean') {
-  storage.regionFillEnabled = false;
+  storage.regionFillEnabled = true;
 }
 let currentEntry = null;
 
@@ -631,13 +631,17 @@ const updateStatus = (type, text) => {
 const updateCell = (row, column) => {
   const element = cellElements[row][column];
   const stateValue = state.boardState[row][column];
+  const content = element._contentElement || element.querySelector('.cell__content');
   element.dataset.state = stateValue;
+  if (!content) {
+    return;
+  }
   if (stateValue === 'fruit') {
-    element.textContent = '★';
+    content.textContent = '★';
   } else if (stateValue === 'mark') {
-    element.textContent = '×';
+    content.textContent = '×';
   } else {
-    element.textContent = '';
+    content.textContent = '';
   }
 };
 
@@ -757,6 +761,11 @@ const createBoardStructure = () => {
         '--region-fill-color',
         computeRegionFillColor(region.color, REGION_FILL_OPACITY)
       );
+      const content = document.createElement('span');
+      content.className = 'cell__content';
+      content.setAttribute('aria-hidden', 'true');
+      button.appendChild(content);
+      button._contentElement = content;
       button.setAttribute(
         'aria-label',
         translate('cellAria', {
