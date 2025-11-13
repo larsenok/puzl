@@ -1,3 +1,5 @@
+import { computeDifficultyScore } from '../utils/score.js';
+
 const normalizeInitials = (value = '', locale) => {
   if (typeof value !== 'string') {
     return '';
@@ -16,6 +18,8 @@ export const createPostScoreController = ({
   state,
   translate,
   formatTime,
+  formatScoreValue,
+  difficulties = {},
   getStorage,
   writeStorage,
   submitScore,
@@ -39,6 +43,29 @@ export const createPostScoreController = ({
 
   let lastFocusedElement = null;
 
+  const updateScoreDisplay = () => {
+    if (!scoreElement) {
+      return;
+    }
+
+    const { score, parSeconds } = computeDifficultyScore({
+      difficulties,
+      difficulty: state.difficulty,
+      seconds: state.timer.secondsElapsed
+    });
+
+    const parDisplay = Number.isFinite(parSeconds) ? formatTime(parSeconds) : '--:--';
+    const formattedScore =
+      typeof formatScoreValue === 'function'
+        ? formatScoreValue(score)
+        : String(Math.max(0, Math.round(Number.isFinite(score) ? score : 0)));
+
+    scoreElement.textContent = translate('postScoreScoreValue', {
+      score: formattedScore,
+      par: parDisplay
+    });
+  };
+
   const applyTranslations = () => {
     if (button) {
       button.textContent = translate('actionPostScore');
@@ -56,6 +83,8 @@ export const createPostScoreController = ({
     if (scoreLabelElement) {
       scoreLabelElement.textContent = translate('postScoreScoreLabel');
     }
+
+    updateScoreDisplay();
 
     if (submitButton) {
       submitButton.textContent = translate('postScoreSend');
@@ -135,7 +164,7 @@ export const createPostScoreController = ({
     renderModalState();
 
     if (scoreElement) {
-      scoreElement.textContent = formatTime(state.timer.secondsElapsed);
+      updateScoreDisplay();
     }
 
     if (input) {
@@ -182,7 +211,7 @@ export const createPostScoreController = ({
     input.setCustomValidity('');
 
     if (scoreElement) {
-      scoreElement.textContent = formatTime(state.timer.secondsElapsed);
+      updateScoreDisplay();
     }
 
     state.postScoreSubmitting = true;
