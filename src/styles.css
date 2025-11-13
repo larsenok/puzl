@@ -322,26 +322,26 @@ body {
 }
 
 .cell[data-state='fruit'] .cell__content {
-  font-size: 28px;
+  font-size: calc(28px * 0.9);
   text-shadow: 0 1px 1px rgba(15, 23, 42, 0.15);
 }
 
 .app[data-difficulty='extreme'] .cell[data-state='fruit'] .cell__content {
-  font-size: calc(28px * 0.9);
+  font-size: calc(28px * 0.9 * 0.9);
 }
 
 .cell[data-state='mark'] {
   background-color: #d1d5db;
-  color: #1f2937;
+  color: #4b5563;
 }
 
 .cell[data-state='mark'] .cell__content {
-  font-size: 26px;
+  font-size: calc(26px * 0.9);
   font-weight: 700;
 }
 
 .app[data-difficulty='extreme'] .cell[data-state='mark'] .cell__content {
-  font-size: calc(26px * 0.9);
+  font-size: calc(26px * 0.9 * 0.9);
 }
 
 .cell[data-requirement]::after {
