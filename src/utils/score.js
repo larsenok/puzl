@@ -21,6 +21,9 @@ export const getDifficultyWeight = (difficulties = {}, difficulty) => {
 export const computeDifficultyScore = ({ difficulties = {}, difficulty, seconds }) => {
   const parSeconds = getParSeconds(difficulties, difficulty);
   const weight = getDifficultyWeight(difficulties, difficulty);
+  // Square the difficulty weight so higher difficulties get a significantly
+  // larger bonus when comparing runs across categories.
+  const weightMultiplier = weight * weight;
   const normalizedSeconds = toFiniteNumber(seconds, null);
 
   if (!normalizedSeconds || normalizedSeconds <= 0) {
@@ -28,7 +31,7 @@ export const computeDifficultyScore = ({ difficulties = {}, difficulty, seconds 
   }
 
   const baseRatio = parSeconds ? parSeconds / normalizedSeconds : 1 / normalizedSeconds;
-  const rawScore = Math.max(0, baseRatio * weight * SCORE_SCALE);
+  const rawScore = Math.max(0, baseRatio * weightMultiplier * SCORE_SCALE);
 
   return {
     score: Math.round(rawScore),
