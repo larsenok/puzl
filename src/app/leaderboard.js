@@ -1,3 +1,5 @@
+import { computeDifficultyScore } from '../utils/score.js';
+
 const MAX_LEADERBOARD_ENTRIES = 20;
 
 const createSupabaseHelpers = ({ url, anonKey, table }) => {
@@ -94,8 +96,9 @@ const createSupabaseHelpers = ({ url, anonKey, table }) => {
 export const createLeaderboardManager = ({
   state,
   translate,
-  difficulties,
+  difficulties = {},
   formatTime,
+  formatScoreValue,
   getStorage,
   writeStorage,
   supabase,
@@ -125,18 +128,59 @@ export const createLeaderboardManager = ({
     return storage.leaderboard;
   };
 
+  const normalizeEntry = (entry) => {
+    if (!entry || typeof entry !== 'object') {
+      return null;
+    }
+
+    const numericSeconds = Number(entry.seconds);
+    const normalizedSeconds = Number.isFinite(numericSeconds) ? numericSeconds : null;
+    const { score, parSeconds } = computeDifficultyScore({
+      difficulties,
+      difficulty: entry.difficulty,
+      seconds: normalizedSeconds
+    });
+
+    return {
+      ...entry,
+      seconds: normalizedSeconds,
+      score,
+      parSeconds
+    };
+  };
+
+  const compareEntries = (a, b) => {
+    const aScore = Number.isFinite(a?.score) ? a.score : Number.NEGATIVE_INFINITY;
+    const bScore = Number.isFinite(b?.score) ? b.score : Number.NEGATIVE_INFINITY;
+
+    if (aScore !== bScore) {
+      return bScore - aScore;
+    }
+
+    const aSeconds = Number.isFinite(a?.seconds) ? a.seconds : Number.MAX_SAFE_INTEGER;
+    const bSeconds = Number.isFinite(b?.seconds) ? b.seconds : Number.MAX_SAFE_INTEGER;
+
+    if (aSeconds !== bSeconds) {
+      return aSeconds - bSeconds;
+    }
+
+    return (a?.solvedAt || '').localeCompare(b?.solvedAt || '');
+  };
+
+  const formatScoreDisplay = (value) => {
+    if (typeof formatScoreValue === 'function') {
+      return formatScoreValue(value);
+    }
+    const numeric = Number.isFinite(value) ? value : 0;
+    return String(Math.max(0, Math.round(numeric)));
+  };
+
   const getLeaderboardEntries = () =>
     ensureLeaderboardStorage()
       .filter((entry) => entry && typeof entry === 'object')
-      .slice()
-      .sort((a, b) => {
-        const aSeconds = Number.isFinite(a.seconds) ? a.seconds : Number.MAX_SAFE_INTEGER;
-        const bSeconds = Number.isFinite(b.seconds) ? b.seconds : Number.MAX_SAFE_INTEGER;
-        if (aSeconds === bSeconds) {
-          return (a.solvedAt || '').localeCompare(b.solvedAt || '');
-        }
-        return aSeconds - bSeconds;
-      });
+      .map((entry) => normalizeEntry(entry))
+      .filter(Boolean)
+      .sort(compareEntries);
 
   const getDifficultyLabel = (difficulty) => {
     const config = difficulties[difficulty];
@@ -182,12 +226,33 @@ export const createLeaderboardManager = ({
       difficulty.className = 'leaderboard-list__difficulty';
       difficulty.textContent = getDifficultyLabel(entry.difficulty);
 
+      const metrics = document.createElement('div');
+      metrics.className = 'leaderboard-list__metrics';
+
+      const score = document.createElement('span');
+      score.className = 'leaderboard-list__score';
+      score.textContent = translate('leaderboardScoreValue', {
+        score: formatScoreDisplay(entry.score)
+      });
+
       const time = document.createElement('span');
       time.className = 'leaderboard-list__time';
       time.textContent = formatTime(entry.seconds);
 
+      metrics.appendChild(score);
+      metrics.appendChild(time);
+
+      if (Number.isFinite(entry.parSeconds)) {
+        const par = document.createElement('span');
+        par.className = 'leaderboard-list__par';
+        par.textContent = translate('leaderboardParValue', {
+          par: formatTime(entry.parSeconds)
+        });
+        metrics.appendChild(par);
+      }
+
       details.appendChild(difficulty);
-      details.appendChild(time);
+      details.appendChild(metrics);
       item.appendChild(details);
 
       list.appendChild(item);
@@ -232,7 +297,10 @@ export const createLeaderboardManager = ({
       return;
     }
 
-    const entries = Array.isArray(state.globalLeaderboard) ? state.globalLeaderboard : [];
+    const entries = Array.isArray(state.globalLeaderboard)
+      ? state.globalLeaderboard.map((entry) => normalizeEntry(entry)).filter(Boolean)
+      : [];
+    entries.sort(compareEntries);
     globalList.innerHTML = '';
 
     if (!entries.length) {
@@ -271,12 +339,33 @@ export const createLeaderboardManager = ({
       identity.appendChild(name);
       identity.appendChild(difficulty);
 
+      const metrics = document.createElement('div');
+      metrics.className = 'leaderboard-list__metrics';
+
+      const score = document.createElement('span');
+      score.className = 'leaderboard-list__score';
+      score.textContent = translate('leaderboardScoreValue', {
+        score: formatScoreDisplay(entry.score)
+      });
+
       const time = document.createElement('span');
       time.className = 'leaderboard-list__time';
       time.textContent = formatTime(entry.seconds);
 
+      metrics.appendChild(score);
+      metrics.appendChild(time);
+
+      if (Number.isFinite(entry.parSeconds)) {
+        const par = document.createElement('span');
+        par.className = 'leaderboard-list__par';
+        par.textContent = translate('leaderboardParValue', {
+          par: formatTime(entry.parSeconds)
+        });
+        metrics.appendChild(par);
+      }
+
       details.appendChild(identity);
-      details.appendChild(time);
+      details.appendChild(metrics);
       item.appendChild(details);
 
       globalList.appendChild(item);
@@ -341,7 +430,10 @@ export const createLeaderboardManager = ({
 
     try {
       const entries = await supabaseHelpers.fetchEntries();
-      state.globalLeaderboard = entries;
+      state.globalLeaderboard = entries
+        .map((entry) => normalizeEntry(entry))
+        .filter(Boolean)
+        .sort(compareEntries);
       state.globalLeaderboardLoaded = true;
     } catch (error) {
       console.error('Failed to load global leaderboard', error);
@@ -372,32 +464,39 @@ export const createLeaderboardManager = ({
     }
 
     const leaderboard = ensureLeaderboardStorage();
-    const newEntry = { boardId, difficulty, seconds, solvedAt, date };
+    const normalizedNewEntry = normalizeEntry({
+      boardId,
+      difficulty,
+      seconds,
+      solvedAt,
+      date
+    });
+
+    if (!normalizedNewEntry) {
+      return;
+    }
     const existingIndex = leaderboard.findIndex((entry) => entry.boardId === boardId);
 
     if (existingIndex >= 0) {
-      const existing = leaderboard[existingIndex];
-      if (!Number.isFinite(existing.seconds) || seconds < existing.seconds) {
-        leaderboard[existingIndex] = newEntry;
+      const existing = normalizeEntry(leaderboard[existingIndex]);
+      if (!existing || !Number.isFinite(existing.seconds) || seconds < existing.seconds) {
+        leaderboard[existingIndex] = normalizedNewEntry;
       } else {
         leaderboard[existingIndex] = { ...existing, solvedAt };
       }
     } else {
-      leaderboard.push(newEntry);
+      leaderboard.push(normalizedNewEntry);
     }
 
-    leaderboard.sort((a, b) => {
-      const aSeconds = Number.isFinite(a.seconds) ? a.seconds : Number.MAX_SAFE_INTEGER;
-      const bSeconds = Number.isFinite(b.seconds) ? b.seconds : Number.MAX_SAFE_INTEGER;
-      if (aSeconds === bSeconds) {
-        return (a.solvedAt || '').localeCompare(b.solvedAt || '');
-      }
-      return aSeconds - bSeconds;
+    const normalizedEntries = leaderboard
+      .map((entry) => normalizeEntry(entry))
+      .filter(Boolean)
+      .sort(compareEntries);
+
+    leaderboard.length = 0;
+    normalizedEntries.slice(0, MAX_LEADERBOARD_ENTRIES).forEach((entry) => {
+      leaderboard.push(entry);
     });
-
-    if (leaderboard.length > MAX_LEADERBOARD_ENTRIES) {
-      leaderboard.length = MAX_LEADERBOARD_ENTRIES;
-    }
 
     writeStorage(getStorage());
     renderLeaderboard();

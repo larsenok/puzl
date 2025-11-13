@@ -13,6 +13,7 @@ import {
 import { formatTime } from './app/time.js';
 import { createLeaderboardManager } from './app/leaderboard.js';
 import { createPostScoreController } from './app/postScore.js';
+import { formatScore } from './utils/score.js';
 const SUPABASE_URL = 'SUPABASE_URL_PLACEHOLDER';
 const SUPABASE_ANON_KEY = 'SUPABASE_ANON_KEY_PLACEHOLDER';
 const SUPABASE_LEADERBOARD_TABLE = 'SUPABASE_LEADERBOARD_TABLE_PLACEHOLDER';
@@ -48,6 +49,8 @@ const state = {
   globalLeaderboardError: null,
   postScoreSubmitting: false
 };
+
+const formatScoreValue = (value) => formatScore(value, ACTIVE_LOCALE);
 
 const appRoot = document.querySelector('.app');
 const difficultyToggleElement = document.querySelector('.difficulty-toggle');
@@ -957,6 +960,7 @@ leaderboardController = createLeaderboardManager({
   translate,
   difficulties: DIFFICULTIES,
   formatTime,
+  formatScoreValue,
   getStorage: () => storage,
   writeStorage,
   supabase: {
@@ -982,6 +986,8 @@ postScoreController = createPostScoreController({
   state,
   translate,
   formatTime,
+  formatScoreValue,
+  difficulties: DIFFICULTIES,
   getStorage: () => storage,
   writeStorage,
   submitScore: leaderboardController.submitScoreToGlobalLeaderboard,
