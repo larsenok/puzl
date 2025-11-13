@@ -127,8 +127,16 @@ body {
 }
 
 .region-fill-toggle-button__icon {
-  width: 18px;
-  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(18px * 1.1);
+  line-height: 1;
+}
+
+.region-fill-toggle-button__icon::before {
+  content: '🎨';
+  display: block;
 }
 
 .difficulty-toggle {
@@ -310,7 +318,7 @@ body {
 
 .cell[data-state='fruit'] {
   background-color: #f8fafc;
-  color: #c2410c;
+  color: #111827;
 }
 
 .cell[data-state='fruit'] .cell__content {
@@ -319,13 +327,13 @@ body {
 }
 
 .cell[data-state='mark'] {
-  background-color: #e2e8f0;
-  color: #475569;
+  background-color: #d1d5db;
+  color: #1f2937;
 }
 
 .cell[data-state='mark'] .cell__content {
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 26px;
+  font-weight: 700;
 }
 
 .cell[data-requirement]::after {
