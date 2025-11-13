@@ -242,15 +242,6 @@ export const createLeaderboardManager = ({
       metrics.appendChild(score);
       metrics.appendChild(time);
 
-      if (Number.isFinite(entry.parSeconds)) {
-        const par = document.createElement('span');
-        par.className = 'leaderboard-list__par';
-        par.textContent = translate('leaderboardParValue', {
-          par: formatTime(entry.parSeconds)
-        });
-        metrics.appendChild(par);
-      }
-
       details.appendChild(difficulty);
       details.appendChild(metrics);
       item.appendChild(details);
@@ -354,15 +345,6 @@ export const createLeaderboardManager = ({
 
       metrics.appendChild(score);
       metrics.appendChild(time);
-
-      if (Number.isFinite(entry.parSeconds)) {
-        const par = document.createElement('span');
-        par.className = 'leaderboard-list__par';
-        par.textContent = translate('leaderboardParValue', {
-          par: formatTime(entry.parSeconds)
-        });
-        metrics.appendChild(par);
-      }
 
       details.appendChild(identity);
       details.appendChild(metrics);
