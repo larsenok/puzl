@@ -623,6 +623,15 @@ body {
   padding-right: 4px;
 }
 
+.leaderboard-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
 .leaderboard-tabs {
   display: inline-flex;
   align-self: center;
@@ -630,6 +639,38 @@ body {
   border-radius: 999px;
   padding: 3px;
   gap: 4px;
+}
+
+.leaderboard-post-button {
+  border: none;
+  background-color: #2563eb;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.2);
+}
+
+.leaderboard-post-button:hover:not(:disabled) {
+  background-color: #1d4ed8;
+}
+
+.leaderboard-post-button:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.45);
+  outline-offset: 2px;
+}
+
+.leaderboard-post-button:disabled,
+.leaderboard-post-button[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
 }
 
 .leaderboard-tab {

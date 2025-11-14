@@ -64,14 +64,6 @@
       <div class="actions">
         <button id="clear-button" class="action-button">Clear</button>
         <button id="check-button" class="action-button">Check</button>
-        <button
-          id="post-score-button"
-          class="action-button action-button--highlight"
-          type="button"
-          hidden
-        >
-          Post score
-        </button>
         <div id="timer-display" class="timer-display" aria-live="polite" aria-label="Time spent">
           00:00
         </div>
@@ -211,24 +203,34 @@
           </button>
         </div>
         <div class="leaderboard-modal__body">
-          <div class="leaderboard-tabs" role="tablist">
+          <div class="leaderboard-controls">
+            <div class="leaderboard-tabs" role="tablist">
+              <button
+                type="button"
+                class="leaderboard-tab is-active"
+                data-view="local"
+                role="tab"
+                aria-selected="true"
+              >
+                Local
+              </button>
+              <button
+                type="button"
+                class="leaderboard-tab"
+                data-view="global"
+                role="tab"
+                aria-selected="false"
+              >
+                Global
+              </button>
+            </div>
             <button
+              id="leaderboard-post-best-button"
+              class="leaderboard-post-button"
               type="button"
-              class="leaderboard-tab is-active"
-              data-view="local"
-              role="tab"
-              aria-selected="true"
+              hidden
             >
-              Local
-            </button>
-            <button
-              type="button"
-              class="leaderboard-tab"
-              data-view="global"
-              role="tab"
-              aria-selected="false"
-            >
-              Global
+              Post best
             </button>
           </div>
           <p id="leaderboard-empty-state" class="leaderboard-empty">No completed boards yet.</p>

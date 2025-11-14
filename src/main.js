@@ -30,6 +30,20 @@ if (typeof storage.regionFillEnabled !== 'boolean') {
 }
 let currentEntry = null;
 
+const getLastPostedGlobalScore = () => {
+  const value = Number(storage.globalLeaderboardLastPostedScore);
+  return Number.isFinite(value) ? value : null;
+};
+
+const setLastPostedGlobalScore = (value) => {
+  if (Number.isFinite(value)) {
+    storage.globalLeaderboardLastPostedScore = Number(value);
+  } else {
+    delete storage.globalLeaderboardLastPostedScore;
+  }
+  writeStorage(storage);
+};
+
 const state = {
   difficulty: DEFAULT_DIFFICULTY,
   puzzle: null,
@@ -63,7 +77,7 @@ const timerElement = document.getElementById('timer-display');
 const testButton = document.getElementById('test-new-button');
 const lockControlsButton = document.getElementById('lock-controls-button');
 const regionFillToggleButton = document.getElementById('region-fill-toggle-button');
-const postScoreButton = document.getElementById('post-score-button');
+const leaderboardPostBestButton = document.getElementById('leaderboard-post-best-button');
 const difficultyButtons = Array.from(document.querySelectorAll('.difficulty-option'));
 const extremeDifficultyButton = difficultyButtons.find(
   (button) => button.dataset.difficulty === 'extreme'
@@ -334,33 +348,7 @@ const recordLeaderboardEntry = () => {
     solvedAt,
     date: currentEntry.date
   });
-};
-
-const submitGlobalLeaderboardRecord = async ({ seconds, difficulty }) => {
-  if (
-    !leaderboardController?.hasSupabaseConfiguration?.() ||
-    typeof leaderboardController.submitScoreToGlobalLeaderboard !== 'function'
-  ) {
-    return;
-  }
-
-  const storedInitials = (storage.lastInitials || '').toString().slice(0, 3).toUpperCase();
-  if (storedInitials.length !== 3) {
-    return;
-  }
-
-  try {
-    await leaderboardController.submitScoreToGlobalLeaderboard({
-      initials: storedInitials,
-      seconds,
-      difficulty
-    });
-    state.globalLeaderboardLoaded = false;
-    state.globalLeaderboardError = null;
-    leaderboardController.loadGlobalLeaderboard({ force: true });
-  } catch (error) {
-    console.error('Failed to submit score to global leaderboard automatically', error);
-  }
+  postScoreController?.updateButtonState();
 };
 
 const updateTimerLockState = () => {
@@ -462,6 +450,8 @@ const stopTimer = () => {
 
 const resetProgress = () => {
   stopTimer();
+  const lastPostedScore = storage.globalLeaderboardLastPostedScore;
+  const lastFetchDate = storage.globalLeaderboardLastFetchDate;
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch (error) {
@@ -469,6 +459,12 @@ const resetProgress = () => {
   }
   storage = readStorage();
   storage.controlsLocked = state.controlsLocked;
+  if (Number.isFinite(Number(lastPostedScore))) {
+    storage.globalLeaderboardLastPostedScore = Number(lastPostedScore);
+  }
+  if (typeof lastFetchDate === 'string') {
+    storage.globalLeaderboardLastFetchDate = lastFetchDate;
+  }
   currentEntry = null;
   state.difficulty = DEFAULT_DIFFICULTY;
   state.puzzle = null;
@@ -855,7 +851,6 @@ const checkSolution = () => {
 
   if (rowsMatch && columnsMatch && regionsMatch) {
     const alreadySolved = Boolean(currentEntry?.solved);
-    const secondsElapsed = state.timer.secondsElapsed;
     stopTimer();
     state.isSolved = true;
     updateTimerLockState();
@@ -864,10 +859,6 @@ const checkSolution = () => {
     updateStatus('success', solvedMessage);
     if (!alreadySolved) {
       recordLeaderboardEntry();
-      submitGlobalLeaderboardRecord({
-        seconds: secondsElapsed,
-        difficulty: state.difficulty
-      });
     }
     persistCurrentState({
       solved: true,
@@ -1038,8 +1029,12 @@ postScoreController = createPostScoreController({
   locale: ACTIVE_LOCALE,
   canSubmitToGlobalLeaderboard: () =>
     Boolean(leaderboardController?.hasSupabaseConfiguration?.()),
+  getBestLocalEntry: () => leaderboardController?.getBestLocalEntry?.() || null,
+  hasAnyCompletedBoards: () => leaderboardController?.hasAnyCompletedBoards?.() || false,
+  getLastPostedScore: () => getLastPostedGlobalScore(),
+  setLastPostedScore: (value) => setLastPostedGlobalScore(value),
   elements: {
-    button: postScoreButton,
+    button: leaderboardPostBestButton,
     overlay: postScoreOverlay,
     form: postScoreForm,
     input: postScoreInput,

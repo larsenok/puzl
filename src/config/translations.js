@@ -12,6 +12,7 @@ export const TRANSLATIONS = {
     actionNewBoard: 'New board',
     actionLeaderboard: 'Leaderboard',
     actionPostScore: 'Post score',
+    actionPostBest: 'Post best',
     actionLockControls: 'Lock controls',
     actionUnlockControls: 'Unlock controls',
     actionShowRegionColors: 'Show region colors',
@@ -43,17 +44,19 @@ export const TRANSLATIONS = {
     colorPaletteMenuLabel: 'Region color options',
     cellAria:
       'Row {row}, column {column}. Part of a shape needing {requirement} apples.',
-    postScoreTitle: 'Post score',
-    postScoreDescription: 'Enter your initials to send your score to the global leaderboard.',
+    postScoreTitle: 'Post best score',
+    postScoreDescription:
+      'Enter three letters to send your top run to the global leaderboard.',
     postScoreInitialsLabel: 'Initials',
     postScoreScoreLabel: 'Score',
-    postScoreScoreValue: '{score} pts · Par {par}',
+    postScoreScoreValue: '{score} pts · {time} · Par {par}',
     postScoreSend: 'Send',
     postScoreAbort: 'Abort',
     postScoreInitialsError: 'Enter exactly three letters.',
     postScoreSubmitted: 'Score posted to the global leaderboard.',
     postScoreSubmitError: 'Could not send the score. Please try again.',
-    postScoreButtonLabel: 'Post score'
+    postScoreButtonLabel: 'Post best score',
+    postScoreNeedsHigherScore: 'Beat your best score to post again.'
   },
   nb: {
     difficultyLabel: 'Vanskelighetsgrad',
@@ -68,6 +71,7 @@ export const TRANSLATIONS = {
     actionNewBoard: 'Nytt brett',
     actionLeaderboard: 'Toppliste',
     actionPostScore: 'Del poengsum',
+    actionPostBest: 'Del beste',
     actionLockControls: 'Lås handlinger',
     actionUnlockControls: 'Lås opp handlinger',
     actionShowRegionColors: 'Vis regionfarger',
@@ -100,17 +104,19 @@ export const TRANSLATIONS = {
     colorPaletteMenuLabel: 'Fargevalg for regioner',
     cellAria:
       'Rad {row}, kolonne {column}. Del av en form som trenger {requirement} epler.',
-    postScoreTitle: 'Del poengsum',
-    postScoreDescription: 'Skriv inn initialene dine for å sende poengsummen til den globale topplisten.',
+    postScoreTitle: 'Del beste poengsum',
+    postScoreDescription:
+      'Skriv inn tre bokstaver for å sende din beste runde til den globale topplisten.',
     postScoreInitialsLabel: 'Initialer',
     postScoreScoreLabel: 'Poengsum',
-    postScoreScoreValue: '{score} poeng · Par {par}',
+    postScoreScoreValue: '{score} poeng · {time} · Par {par}',
     postScoreSend: 'Send',
     postScoreAbort: 'Avbryt',
     postScoreInitialsError: 'Skriv inn nøyaktig tre bokstaver.',
     postScoreSubmitted: 'Poengsummen ble sendt til den globale topplisten.',
     postScoreSubmitError: 'Kunne ikke sende poengsummen. Prøv igjen.',
-    postScoreButtonLabel: 'Del poengsum'
+    postScoreButtonLabel: 'Del beste poengsum',
+    postScoreNeedsHigherScore: 'Slå din beste poengsum for å sende på nytt.'
   }
 };
 

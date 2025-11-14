@@ -27,6 +27,10 @@ export const createPostScoreController = ({
   onGlobalLeaderboardRefresh = () => {},
   locale,
   canSubmitToGlobalLeaderboard = () => true,
+  getBestLocalEntry = () => null,
+  hasAnyCompletedBoards = () => false,
+  getLastPostedScore = () => null,
+  setLastPostedScore = () => {},
   elements
 }) => {
   const {
@@ -43,33 +47,102 @@ export const createPostScoreController = ({
   } = elements;
 
   let lastFocusedElement = null;
+  let submissionEntry = null;
+
+  const readBestEntry = () => {
+    if (typeof getBestLocalEntry === 'function') {
+      const entry = getBestLocalEntry();
+      if (entry && typeof entry === 'object') {
+        return entry;
+      }
+    }
+    return null;
+  };
+
+  const hasCompletedBoards = () =>
+    typeof hasAnyCompletedBoards === 'function'
+      ? hasAnyCompletedBoards()
+      : Boolean(readBestEntry());
+
+  const readLastPostedScore = () => {
+    if (typeof getLastPostedScore === 'function') {
+      const value = getLastPostedScore();
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? numeric : null;
+    }
+    return null;
+  };
+
+  const storeLastPostedScore = (score) => {
+    if (typeof setLastPostedScore === 'function') {
+      if (Number.isFinite(score)) {
+        setLastPostedScore(score);
+      } else {
+        setLastPostedScore(null);
+      }
+    }
+  };
+
+  const resolveSubmissionEntry = () => submissionEntry || readBestEntry();
+
+  const computeEntryScore = (entry) => {
+    if (!entry) {
+      return null;
+    }
+    if (Number.isFinite(entry.score)) {
+      return entry.score;
+    }
+    const { score } = computeDifficultyScore({
+      difficulties,
+      difficulty: entry.difficulty,
+      seconds: entry.seconds
+    });
+    return Number.isFinite(score) ? score : null;
+  };
 
   const updateScoreDisplay = () => {
     if (!scoreElement) {
       return;
     }
 
+    const entry = resolveSubmissionEntry();
+
+    if (!entry) {
+      const fallbackScore =
+        typeof formatScoreValue === 'function'
+          ? formatScoreValue(0)
+          : String(0);
+      scoreElement.textContent = translate('postScoreScoreValue', {
+        score: fallbackScore,
+        time: '--:--',
+        par: '--:--'
+      });
+      return;
+    }
+
     const { score, parSeconds } = computeDifficultyScore({
       difficulties,
-      difficulty: state.difficulty,
-      seconds: state.timer.secondsElapsed
+      difficulty: entry.difficulty,
+      seconds: entry.seconds
     });
 
-    const parDisplay = Number.isFinite(parSeconds) ? formatTime(parSeconds) : '--:--';
     const formattedScore =
       typeof formatScoreValue === 'function'
         ? formatScoreValue(score)
         : String(Math.max(0, Math.round(Number.isFinite(score) ? score : 0)));
+    const timeDisplay = Number.isFinite(entry.seconds) ? formatTime(entry.seconds) : '--:--';
+    const parDisplay = Number.isFinite(parSeconds) ? formatTime(parSeconds) : '--:--';
 
     scoreElement.textContent = translate('postScoreScoreValue', {
       score: formattedScore,
+      time: timeDisplay,
       par: parDisplay
     });
   };
 
   const applyTranslations = () => {
     if (button) {
-      button.textContent = translate('actionPostScore');
+      button.textContent = translate('actionPostBest');
       button.setAttribute('aria-label', translate('postScoreButtonLabel'));
     }
 
@@ -112,17 +185,27 @@ export const createPostScoreController = ({
         ? canSubmitToGlobalLeaderboard()
         : Boolean(canSubmitToGlobalLeaderboard);
 
-    const shouldShow = Boolean(state.isSolved && canSubmit);
+    const bestEntry = readBestEntry();
+    const hasBoards = hasCompletedBoards();
+    const lastPostedScore = readLastPostedScore();
+    const bestScore = computeEntryScore(bestEntry);
+
+    const improved =
+      hasBoards &&
+      Number.isFinite(bestScore) &&
+      (!Number.isFinite(lastPostedScore) || bestScore > lastPostedScore);
+
+    const shouldShow = Boolean(hasBoards && canSubmit);
     button.hidden = !shouldShow;
 
-    const shouldDisable =
-      !shouldShow || state.controlsLocked || state.postScoreSubmitting || !canSubmit;
+    const shouldDisable = !shouldShow || state.postScoreSubmitting || !improved;
     button.disabled = shouldDisable;
+    button.setAttribute('aria-disabled', shouldDisable ? 'true' : 'false');
 
-    if (shouldDisable) {
-      button.setAttribute('aria-disabled', 'true');
+    if (!improved && shouldShow) {
+      button.setAttribute('title', translate('postScoreNeedsHigherScore'));
     } else {
-      button.removeAttribute('aria-disabled');
+      button.removeAttribute('title');
     }
   };
 
@@ -154,6 +237,7 @@ export const createPostScoreController = ({
     overlay.hidden = true;
     overlay.removeAttribute('data-open');
     state.postScoreSubmitting = false;
+    submissionEntry = null;
     renderModalState();
 
     if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
@@ -168,10 +252,28 @@ export const createPostScoreController = ({
         ? canSubmitToGlobalLeaderboard()
         : Boolean(canSubmitToGlobalLeaderboard);
 
-    if (!overlay || !state.isSolved || !canSubmit) {
+    if (!overlay || !canSubmit) {
       return;
     }
 
+    const bestEntry = readBestEntry();
+    const hasBoards = hasCompletedBoards();
+
+    if (!bestEntry || !hasBoards) {
+      return;
+    }
+
+    const lastPostedScore = readLastPostedScore();
+    const bestScore = computeEntryScore(bestEntry);
+    const improved =
+      Number.isFinite(bestScore) &&
+      (!Number.isFinite(lastPostedScore) || bestScore > lastPostedScore);
+
+    if (!improved) {
+      return;
+    }
+
+    submissionEntry = bestEntry;
     state.postScoreSubmitting = false;
     renderModalState();
 
@@ -207,7 +309,13 @@ export const createPostScoreController = ({
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!state.isSolved || !input) {
+    if (!input) {
+      return;
+    }
+
+    const entry = resolveSubmissionEntry();
+
+    if (!entry) {
       return;
     }
 
@@ -232,8 +340,8 @@ export const createPostScoreController = ({
     try {
       const result = await submitScore({
         initials: normalized,
-        seconds: state.timer.secondsElapsed,
-        difficulty: state.difficulty
+        seconds: entry.seconds,
+        difficulty: entry.difficulty
       });
 
       const storage = getStorage();
@@ -243,12 +351,12 @@ export const createPostScoreController = ({
       if (result?.skipped) {
         updateStatus('notice', translate('leaderboardGlobalConfigure'));
       } else {
+        const postedScore = computeEntryScore(entry);
+        storeLastPostedScore(postedScore);
         updateStatus('success', translate('postScoreSubmitted'));
         state.globalLeaderboardLoaded = false;
         state.globalLeaderboardError = null;
-        if (state.leaderboardView === 'global') {
-          onGlobalLeaderboardRefresh({ force: true });
-        }
+        onGlobalLeaderboardRefresh({ force: true });
       }
 
       closeModal();
@@ -269,12 +377,7 @@ export const createPostScoreController = ({
   const attachEventListeners = () => {
     if (button) {
       button.addEventListener('click', () => {
-        const canSubmit =
-          typeof canSubmitToGlobalLeaderboard === 'function'
-            ? canSubmitToGlobalLeaderboard()
-            : Boolean(canSubmitToGlobalLeaderboard);
-
-        if (state.controlsLocked || !state.isSolved || state.postScoreSubmitting || !canSubmit) {
+        if (state.postScoreSubmitting || button.disabled) {
           return;
         }
         openModal();

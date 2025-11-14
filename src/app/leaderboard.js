@@ -1,4 +1,5 @@
 import { computeDifficultyScore } from '../utils/score.js';
+import { getTodayKey } from '../storage.js';
 
 const MAX_LEADERBOARD_ENTRIES = 20;
 
@@ -181,6 +182,13 @@ export const createLeaderboardManager = ({
       .map((entry) => normalizeEntry(entry))
       .filter(Boolean)
       .sort(compareEntries);
+
+  const getBestLocalEntry = () => {
+    const [best] = getLeaderboardEntries();
+    return best || null;
+  };
+
+  const hasAnyCompletedBoards = () => getLeaderboardEntries().length > 0;
 
   const getDifficultyLabel = (difficulty) => {
     const config = difficulties[difficulty];
@@ -403,7 +411,11 @@ export const createLeaderboardManager = ({
       return;
     }
 
-    if (state.globalLeaderboardLoaded && !force) {
+    const storage = getStorage();
+    const todayKey = getTodayKey();
+    const fetchedToday = storage.globalLeaderboardLastFetchDate === todayKey;
+
+    if (state.globalLeaderboardLoaded && !force && fetchedToday) {
       renderGlobalLeaderboard(state.leaderboardView === 'global');
       return;
     }
@@ -419,6 +431,8 @@ export const createLeaderboardManager = ({
         .filter((entry) => entry && entry.initials && !entry.boardId)
         .sort(compareEntries);
       state.globalLeaderboardLoaded = true;
+      storage.globalLeaderboardLastFetchDate = todayKey;
+      writeStorage(storage);
     } catch (error) {
       console.error('Failed to load global leaderboard', error);
       state.globalLeaderboardError = error;
@@ -605,6 +619,9 @@ export const createLeaderboardManager = ({
     isOpen: isLeaderboardOpen,
     loadGlobalLeaderboard,
     submitScoreToGlobalLeaderboard: supabaseHelpers.submitScore,
-    hasSupabaseConfiguration: supabaseHelpers.hasConfiguration
+    hasSupabaseConfiguration: supabaseHelpers.hasConfiguration,
+    getLocalEntries: getLeaderboardEntries,
+    getBestLocalEntry,
+    hasAnyCompletedBoards
   };
 };
