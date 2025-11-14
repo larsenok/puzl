@@ -92,6 +92,9 @@ const leaderboardTabs = Array.from(document.querySelectorAll('.leaderboard-tab')
 const leaderboardGlobalList = document.getElementById('leaderboard-global-list');
 const leaderboardGlobalEmptyState = document.getElementById('leaderboard-global-empty-state');
 const leaderboardGlobalLoading = document.getElementById('leaderboard-global-loading');
+const leaderboardGlobalRefreshButton = document.getElementById(
+  'leaderboard-global-refresh-button'
+);
 const leaderboardCloseButton = document.getElementById('leaderboard-close-button');
 const leaderboardTitleElement = document.getElementById('leaderboard-title');
 
@@ -102,7 +105,6 @@ const postScoreScoreElement = document.getElementById('post-score-value');
 const postScoreSubmitButton = document.getElementById('post-score-submit-button');
 const postScoreCancelButton = document.getElementById('post-score-cancel-button');
 const postScoreTitleElement = document.getElementById('post-score-title');
-const postScoreDescriptionElement = document.getElementById('post-score-description');
 const postScoreScoreLabelElement = document.getElementById('post-score-score-label');
 
 let leaderboardController = null;
@@ -452,6 +454,7 @@ const resetProgress = () => {
   stopTimer();
   const lastPostedScore = storage.globalLeaderboardLastPostedScore;
   const lastFetchDate = storage.globalLeaderboardLastFetchDate;
+  const cachedGlobalLeaderboard = storage.globalLeaderboardCache;
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch (error) {
@@ -464,6 +467,9 @@ const resetProgress = () => {
   }
   if (typeof lastFetchDate === 'string') {
     storage.globalLeaderboardLastFetchDate = lastFetchDate;
+  }
+  if (cachedGlobalLeaderboard && typeof cachedGlobalLeaderboard === 'object') {
+    storage.globalLeaderboardCache = cachedGlobalLeaderboard;
   }
   currentEntry = null;
   state.difficulty = DEFAULT_DIFFICULTY;
@@ -1009,6 +1015,7 @@ leaderboardController = createLeaderboardManager({
     globalList: leaderboardGlobalList,
     globalEmptyState: leaderboardGlobalEmptyState,
     globalLoading: leaderboardGlobalLoading,
+    globalRefreshButton: leaderboardGlobalRefreshButton,
     closeButton: leaderboardCloseButton,
     titleElement: leaderboardTitleElement
   }
@@ -1042,7 +1049,6 @@ postScoreController = createPostScoreController({
     submitButton: postScoreSubmitButton,
     cancelButton: postScoreCancelButton,
     titleElement: postScoreTitleElement,
-    descriptionElement: postScoreDescriptionElement,
     scoreLabelElement: postScoreScoreLabelElement
   }
 });

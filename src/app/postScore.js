@@ -42,7 +42,6 @@ export const createPostScoreController = ({
     submitButton,
     cancelButton,
     titleElement,
-    descriptionElement,
     scoreLabelElement
   } = elements;
 
@@ -114,13 +113,12 @@ export const createPostScoreController = ({
           : String(0);
       scoreElement.textContent = translate('postScoreScoreValue', {
         score: fallbackScore,
-        time: '--:--',
-        par: '--:--'
+        time: '--:--'
       });
       return;
     }
 
-    const { score, parSeconds } = computeDifficultyScore({
+    const { score } = computeDifficultyScore({
       difficulties,
       difficulty: entry.difficulty,
       seconds: entry.seconds
@@ -131,12 +129,10 @@ export const createPostScoreController = ({
         ? formatScoreValue(score)
         : String(Math.max(0, Math.round(Number.isFinite(score) ? score : 0)));
     const timeDisplay = Number.isFinite(entry.seconds) ? formatTime(entry.seconds) : '--:--';
-    const parDisplay = Number.isFinite(parSeconds) ? formatTime(parSeconds) : '--:--';
 
     scoreElement.textContent = translate('postScoreScoreValue', {
       score: formattedScore,
-      time: timeDisplay,
-      par: parDisplay
+      time: timeDisplay
     });
   };
 
@@ -148,10 +144,6 @@ export const createPostScoreController = ({
 
     if (titleElement) {
       titleElement.textContent = translate('postScoreTitle');
-    }
-
-    if (descriptionElement) {
-      descriptionElement.textContent = translate('postScoreDescription');
     }
 
     if (scoreLabelElement) {
@@ -169,9 +161,9 @@ export const createPostScoreController = ({
     }
 
     if (input) {
-      const label = translate('postScoreInitialsLabel');
-      input.setAttribute('aria-label', label);
-      input.setAttribute('placeholder', label);
+      const ariaLabel = translate('postScoreInputLabel');
+      input.setAttribute('aria-label', ariaLabel);
+      input.setAttribute('placeholder', translate('postScoreInputPlaceholder'));
     }
   };
 

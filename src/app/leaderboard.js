@@ -114,12 +114,43 @@ export const createLeaderboardManager = ({
     globalList,
     globalEmptyState,
     globalLoading,
+    globalRefreshButton,
     closeButton,
     titleElement
   } = elements;
 
   const supabaseHelpers = createSupabaseHelpers(supabase);
   let lastFocusedElement = null;
+
+  const hydrateGlobalLeaderboardFromCache = () => {
+    if (!supabaseHelpers.hasConfiguration()) {
+      return;
+    }
+
+    const storage = getStorage();
+    const cache = storage.globalLeaderboardCache;
+
+    if (!cache || !Array.isArray(cache.entries)) {
+      return;
+    }
+
+    const hydratedEntries = cache.entries
+      .map((entry) =>
+        normalizeEntry({
+          initials: (entry.initials || '').toString().slice(0, 3),
+          seconds: Number.isFinite(Number(entry.seconds)) ? Number(entry.seconds) : null,
+          difficulty: entry.difficulty,
+          createdAt: entry.createdAt || entry.created_at || null
+        })
+      )
+      .filter((entry) => entry && entry.initials && !entry.boardId);
+
+    hydratedEntries.sort(compareEntries);
+    state.globalLeaderboard = hydratedEntries;
+
+    const todayKey = getTodayKey();
+    state.globalLeaderboardLoaded = storage.globalLeaderboardLastFetchDate === todayKey;
+  };
 
   const ensureLeaderboardStorage = () => {
     const storage = getStorage();
@@ -265,6 +296,19 @@ export const createLeaderboardManager = ({
       return;
     }
 
+    const canShowRefresh = Boolean(isActive && supabaseHelpers.hasConfiguration());
+
+    if (globalRefreshButton) {
+      if (canShowRefresh) {
+        globalRefreshButton.hidden = false;
+        globalRefreshButton.disabled = state.globalLeaderboardLoading;
+        globalRefreshButton.removeAttribute('aria-hidden');
+      } else {
+        globalRefreshButton.hidden = true;
+        globalRefreshButton.setAttribute('aria-hidden', 'true');
+      }
+    }
+
     if (!isActive) {
       globalList.hidden = true;
       globalEmptyState.hidden = true;
@@ -398,11 +442,15 @@ export const createLeaderboardManager = ({
   };
 
   const loadGlobalLeaderboard = async ({ force = false } = {}) => {
+    const storage = getStorage();
+
     if (!supabaseHelpers.hasConfiguration()) {
       state.globalLeaderboard = [];
       state.globalLeaderboardLoaded = false;
       state.globalLeaderboardError = null;
       state.globalLeaderboardLoading = false;
+      delete storage.globalLeaderboardCache;
+      writeStorage(storage);
       renderGlobalLeaderboard(state.leaderboardView === 'global');
       return;
     }
@@ -411,11 +459,16 @@ export const createLeaderboardManager = ({
       return;
     }
 
-    const storage = getStorage();
     const todayKey = getTodayKey();
     const fetchedToday = storage.globalLeaderboardLastFetchDate === todayKey;
 
     if (state.globalLeaderboardLoaded && !force && fetchedToday) {
+      renderGlobalLeaderboard(state.leaderboardView === 'global');
+      return;
+    }
+
+    if (!force && fetchedToday && Array.isArray(storage.globalLeaderboardCache?.entries)) {
+      hydrateGlobalLeaderboardFromCache();
       renderGlobalLeaderboard(state.leaderboardView === 'global');
       return;
     }
@@ -432,6 +485,15 @@ export const createLeaderboardManager = ({
         .sort(compareEntries);
       state.globalLeaderboardLoaded = true;
       storage.globalLeaderboardLastFetchDate = todayKey;
+      storage.globalLeaderboardCache = {
+        date: todayKey,
+        entries: state.globalLeaderboard.map((entry) => ({
+          initials: entry.initials,
+          seconds: entry.seconds,
+          difficulty: entry.difficulty,
+          createdAt: entry.createdAt || null
+        }))
+      };
       writeStorage(storage);
     } catch (error) {
       console.error('Failed to load global leaderboard', error);
@@ -568,6 +630,15 @@ export const createLeaderboardManager = ({
         }
       });
     }
+
+    if (globalRefreshButton) {
+      globalRefreshButton.addEventListener('click', () => {
+        if (state.globalLeaderboardLoading) {
+          return;
+        }
+        loadGlobalLeaderboard({ force: true });
+      });
+    }
   };
 
   const applyTranslations = () => {
@@ -602,11 +673,29 @@ export const createLeaderboardManager = ({
       globalEmptyState.textContent = translate('leaderboardGlobalConfigure');
     }
 
+    if (globalRefreshButton) {
+      globalRefreshButton.setAttribute(
+        'aria-label',
+        translate('leaderboardGlobalRefreshAriaLabel')
+      );
+      const label = translate('leaderboardGlobalRefresh');
+      const labelElement = globalRefreshButton.querySelector(
+        '.leaderboard-refresh-button__label'
+      );
+      if (labelElement) {
+        labelElement.textContent = label;
+      } else {
+        globalRefreshButton.textContent = label;
+      }
+      globalRefreshButton.setAttribute('title', label);
+    }
+
     if (closeButton) {
       closeButton.setAttribute('aria-label', translate('actionCloseLeaderboard'));
     }
   };
 
+  hydrateGlobalLeaderboardFromCache();
   attachEventListeners();
 
   return {

@@ -143,14 +143,9 @@
         role="dialog"
         aria-modal="true"
         aria-labelledby="post-score-title"
-        aria-describedby="post-score-description"
       >
         <h2 id="post-score-title" class="post-score-modal__title">Post score</h2>
-        <p id="post-score-description" class="post-score-modal__description">
-          Enter your initials to send your score to the global leaderboard.
-        </p>
         <form id="post-score-form" class="post-score-form">
-          <label class="post-score-form__label" for="post-score-initials">Initials</label>
           <input
             id="post-score-initials"
             class="post-score-form__input"
@@ -160,25 +155,27 @@
             autocomplete="off"
             inputmode="text"
             required
+            placeholder="write name"
+            aria-label="Player name"
           />
           <div class="post-score-form__score">
             <span id="post-score-score-label" class="post-score-form__score-label">Score</span>
-            <span id="post-score-value" class="post-score-form__score-value">0 pts · Par 00:00</span>
+            <span id="post-score-value" class="post-score-form__score-value">0 pts · 00:00</span>
           </div>
           <div class="post-score-form__actions">
-            <button
-              id="post-score-submit-button"
-              class="post-score-form__button post-score-form__button--primary"
-              type="submit"
-            >
-              Send
-            </button>
             <button
               id="post-score-cancel-button"
               class="post-score-form__button"
               type="button"
             >
               Abort
+            </button>
+            <button
+              id="post-score-submit-button"
+              class="post-score-form__button post-score-form__button--primary"
+              type="submit"
+            >
+              Post
             </button>
           </div>
         </form>
@@ -246,6 +243,30 @@
             class="leaderboard-list leaderboard-list--global"
             hidden
           ></ol>
+          <button
+            id="leaderboard-global-refresh-button"
+            class="leaderboard-refresh-button"
+            type="button"
+            hidden
+          >
+            <svg
+              class="leaderboard-refresh-button__icon"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M20 5v5h-5m5-5a9 9 0 1 0 2.12 8.527M4 19v-5h5M4 19a9 9 0 0 0 2.12-8.527"
+              />
+            </svg>
+            <span class="leaderboard-refresh-button__label">Update</span>
+          </button>
         </div>
       </div>
     </div>
