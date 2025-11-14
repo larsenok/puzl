@@ -289,7 +289,9 @@ export const createLeaderboardManager = ({
     }
 
     const entries = Array.isArray(state.globalLeaderboard)
-      ? state.globalLeaderboard.map((entry) => normalizeEntry(entry)).filter(Boolean)
+      ? state.globalLeaderboard
+          .map((entry) => normalizeEntry(entry))
+          .filter((entry) => entry && entry.initials && !entry.boardId)
       : [];
     entries.sort(compareEntries);
     globalList.innerHTML = '';
@@ -414,7 +416,7 @@ export const createLeaderboardManager = ({
       const entries = await supabaseHelpers.fetchEntries();
       state.globalLeaderboard = entries
         .map((entry) => normalizeEntry(entry))
-        .filter(Boolean)
+        .filter((entry) => entry && entry.initials && !entry.boardId)
         .sort(compareEntries);
       state.globalLeaderboardLoaded = true;
     } catch (error) {
