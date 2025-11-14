@@ -14,9 +14,9 @@ import { formatTime } from './app/time.js';
 import { createLeaderboardManager } from './app/leaderboard.js';
 import { createPostScoreController } from './app/postScore.js';
 import { formatScore } from './utils/score.js';
-const SUPABASE_URL = 'SUPABASE_URL_PLACEHOLDER';
-const SUPABASE_ANON_KEY = 'SUPABASE_ANON_KEY_PLACEHOLDER';
-const SUPABASE_LEADERBOARD_TABLE = 'SUPABASE_LEADERBOARD_TABLE_PLACEHOLDER';
+const SUPABASE_URL = 'https://kbmtgjpvzssvyvbacxzi.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtibXRnanB2enNzdnl2YmFjeHppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxMjgyMjksImV4cCI6MjA3ODcwNDIyOX0.lUhYyiRyziuMZJDfnKfwmWjwlP0scMJ_Xiam827fnxg';
+const SUPABASE_LEADERBOARD_TABLE = 'leaderboard';
 
 const activeColorPaletteId = DEFAULT_COLOR_PALETTE_ID;
 const REGION_FILL_OPACITY = 0.3;
