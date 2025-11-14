@@ -140,10 +140,11 @@ export const createLeaderboardManager = ({
           initials: (entry.initials || '').toString().slice(0, 3),
           seconds: Number.isFinite(Number(entry.seconds)) ? Number(entry.seconds) : null,
           difficulty: entry.difficulty,
-          createdAt: entry.createdAt || entry.created_at || null
+          createdAt: entry.createdAt || entry.created_at || null,
+          uploaded: true
         })
       )
-      .filter((entry) => entry && entry.initials && !entry.boardId);
+      .filter((entry) => entry && entry.initials && entry.uploaded);
 
     hydratedEntries.sort(compareEntries);
     state.globalLeaderboard = hydratedEntries;
@@ -343,7 +344,7 @@ export const createLeaderboardManager = ({
     const entries = Array.isArray(state.globalLeaderboard)
       ? state.globalLeaderboard
           .map((entry) => normalizeEntry(entry))
-          .filter((entry) => entry && entry.initials && !entry.boardId)
+          .filter((entry) => entry && entry.initials && entry.uploaded)
       : [];
     entries.sort(compareEntries);
     globalList.innerHTML = '';
@@ -480,8 +481,8 @@ export const createLeaderboardManager = ({
     try {
       const entries = await supabaseHelpers.fetchEntries();
       state.globalLeaderboard = entries
-        .map((entry) => normalizeEntry(entry))
-        .filter((entry) => entry && entry.initials && !entry.boardId)
+        .map((entry) => normalizeEntry({ ...entry, uploaded: true }))
+        .filter((entry) => entry && entry.initials && entry.uploaded)
         .sort(compareEntries);
       state.globalLeaderboardLoaded = true;
       storage.globalLeaderboardLastFetchDate = todayKey;
@@ -491,7 +492,8 @@ export const createLeaderboardManager = ({
           initials: entry.initials,
           seconds: entry.seconds,
           difficulty: entry.difficulty,
-          createdAt: entry.createdAt || null
+          createdAt: entry.createdAt || null,
+          uploaded: true
         }))
       };
       writeStorage(storage);
@@ -529,7 +531,8 @@ export const createLeaderboardManager = ({
       difficulty,
       seconds,
       solvedAt,
-      date
+      date,
+      uploaded: false
     });
 
     if (!normalizedNewEntry) {
