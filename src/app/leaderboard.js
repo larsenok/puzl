@@ -208,12 +208,27 @@ export const createLeaderboardManager = ({
     return String(Math.max(0, Math.round(numeric)));
   };
 
+  const sortLeaderboardEntries = (entries = []) =>
+    entries.filter(Boolean).sort(compareEntries);
+
+  const readStoredLeaderboardEntries = () =>
+    sortLeaderboardEntries(
+      ensureLeaderboardStorage()
+        .filter((entry) => entry && typeof entry === 'object')
+        .map((entry) => normalizeEntry(entry))
+    );
+
+  const persistLeaderboardEntries = (entries) => {
+    const leaderboard = ensureLeaderboardStorage();
+    leaderboard.length = 0;
+    entries.slice(0, MAX_LEADERBOARD_ENTRIES).forEach((entry) => {
+      leaderboard.push(entry);
+    });
+    writeStorage(getStorage());
+  };
+
   const getLeaderboardEntries = () =>
-    ensureLeaderboardStorage()
-      .filter((entry) => entry && typeof entry === 'object')
-      .map((entry) => normalizeEntry(entry))
-      .filter(Boolean)
-      .sort(compareEntries);
+    readStoredLeaderboardEntries().filter((entry) => entry.uploaded !== true);
 
   const getBestLocalEntry = () => {
     const [best] = getLeaderboardEntries();
@@ -551,17 +566,46 @@ export const createLeaderboardManager = ({
       leaderboard.push(normalizedNewEntry);
     }
 
-    const normalizedEntries = leaderboard
-      .map((entry) => normalizeEntry(entry))
-      .filter(Boolean)
-      .sort(compareEntries);
+    const normalizedEntries = readStoredLeaderboardEntries();
+    persistLeaderboardEntries(normalizedEntries);
+    renderLeaderboard();
+  };
 
-    leaderboard.length = 0;
-    normalizedEntries.slice(0, MAX_LEADERBOARD_ENTRIES).forEach((entry) => {
-      leaderboard.push(entry);
-    });
+  const markLeaderboardEntryAsUploaded = ({ boardId, initials }) => {
+    if (!boardId) {
+      return;
+    }
 
-    writeStorage(getStorage());
+    const leaderboard = ensureLeaderboardStorage();
+    const index = leaderboard.findIndex(
+      (entry) => entry && typeof entry === 'object' && entry.boardId === boardId
+    );
+
+    if (index < 0) {
+      return;
+    }
+
+    const existing = normalizeEntry(leaderboard[index]);
+    if (!existing) {
+      return;
+    }
+
+    let normalizedInitials = existing.initials || null;
+    if (typeof initials === 'string') {
+      const trimmed = initials.trim().slice(0, 3);
+      if (trimmed) {
+        normalizedInitials = trimmed.toUpperCase();
+      }
+    }
+
+    leaderboard[index] = {
+      ...existing,
+      initials: normalizedInitials,
+      uploaded: true
+    };
+
+    const normalizedEntries = readStoredLeaderboardEntries();
+    persistLeaderboardEntries(normalizedEntries);
     renderLeaderboard();
   };
 
@@ -714,6 +758,7 @@ export const createLeaderboardManager = ({
     hasSupabaseConfiguration: supabaseHelpers.hasConfiguration,
     getLocalEntries: getLeaderboardEntries,
     getBestLocalEntry,
-    hasAnyCompletedBoards
+    hasAnyCompletedBoards,
+    markEntryAsUploaded: markLeaderboardEntryAsUploaded
   };
 };

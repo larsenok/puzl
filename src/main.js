@@ -420,10 +420,6 @@ const updateControlsLockState = () => {
     clearButton.disabled = locked;
   }
 
-  if (resetProgressButton) {
-    resetProgressButton.disabled = locked;
-  }
-
   if (lockControlsButton) {
     lockControlsButton.setAttribute('aria-pressed', String(locked));
     lockControlsButton.dataset.locked = locked ? 'true' : 'false';
@@ -986,9 +982,6 @@ if (testButton) {
 
 if (resetProgressButton) {
   resetProgressButton.addEventListener('click', () => {
-    if (state.controlsLocked) {
-      return;
-    }
     const confirmed = window.confirm('deletes local data. are you sure?');
     if (!confirmed) {
       return;
@@ -1037,6 +1030,7 @@ postScoreController = createPostScoreController({
   updateStatus,
   onGlobalLeaderboardRefresh: (options) =>
     leaderboardController.loadGlobalLeaderboard(options),
+  markEntryUploaded: (details) => leaderboardController.markEntryAsUploaded(details),
   locale: ACTIVE_LOCALE,
   canSubmitToGlobalLeaderboard: () =>
     Boolean(leaderboardController?.hasSupabaseConfiguration?.()),

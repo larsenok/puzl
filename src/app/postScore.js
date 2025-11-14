@@ -25,6 +25,7 @@ export const createPostScoreController = ({
   submitScore,
   updateStatus,
   onGlobalLeaderboardRefresh = () => {},
+  markEntryUploaded = () => {},
   locale,
   canSubmitToGlobalLeaderboard = () => true,
   getBestLocalEntry = () => null,
@@ -345,6 +346,19 @@ export const createPostScoreController = ({
       } else {
         const postedScore = computeEntryScore(entry);
         storeLastPostedScore(postedScore);
+        if (typeof markEntryUploaded === 'function') {
+          try {
+            markEntryUploaded({
+              boardId: entry.boardId,
+              initials: normalized,
+              difficulty: entry.difficulty,
+              seconds: entry.seconds,
+              solvedAt: entry.solvedAt
+            });
+          } catch (markError) {
+            console.error('Failed to mark leaderboard entry as uploaded', markError);
+          }
+        }
         updateStatus('success', translate('postScoreSubmitted'));
         state.globalLeaderboardLoaded = false;
         state.globalLeaderboardError = null;
