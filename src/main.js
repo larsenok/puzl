@@ -989,6 +989,10 @@ if (resetProgressButton) {
     if (state.controlsLocked) {
       return;
     }
+    const confirmed = window.confirm('deletes local data. are you sure?');
+    if (!confirmed) {
+      return;
+    }
     resetProgress();
   });
 }

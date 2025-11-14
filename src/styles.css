@@ -628,9 +628,9 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   margin-top: 4px;
-  padding: 10px 16px;
+  padding: 10px 11px;
   border-radius: 12px;
   border: 1px solid rgba(15, 23, 42, 0.12);
   background-color: #f8fafc;
@@ -640,6 +640,11 @@ body {
   font-size: 14px;
   cursor: pointer;
   transition: background-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+
+.leaderboard-refresh-button__icon {
+  font-size: 18px;
+  line-height: 1;
 }
 
 .leaderboard-refresh-button:hover:not(:disabled) {
@@ -714,7 +719,7 @@ body {
   font: inherit;
   font-weight: 600;
   font-size: 12px;
-  padding: 5px 12px;
+  padding: 5px 16px;
   border-radius: 999px;
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
