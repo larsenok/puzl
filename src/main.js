@@ -336,6 +336,33 @@ const recordLeaderboardEntry = () => {
   });
 };
 
+const submitGlobalLeaderboardRecord = async ({ seconds, difficulty }) => {
+  if (
+    !leaderboardController?.hasSupabaseConfiguration?.() ||
+    typeof leaderboardController.submitScoreToGlobalLeaderboard !== 'function'
+  ) {
+    return;
+  }
+
+  const storedInitials = (storage.lastInitials || '').toString().slice(0, 3).toUpperCase();
+  if (storedInitials.length !== 3) {
+    return;
+  }
+
+  try {
+    await leaderboardController.submitScoreToGlobalLeaderboard({
+      initials: storedInitials,
+      seconds,
+      difficulty
+    });
+    state.globalLeaderboardLoaded = false;
+    state.globalLeaderboardError = null;
+    leaderboardController.loadGlobalLeaderboard({ force: true });
+  } catch (error) {
+    console.error('Failed to submit score to global leaderboard automatically', error);
+  }
+};
+
 const updateTimerLockState = () => {
   if (!timerElement) {
     return;
@@ -828,6 +855,7 @@ const checkSolution = () => {
 
   if (rowsMatch && columnsMatch && regionsMatch) {
     const alreadySolved = Boolean(currentEntry?.solved);
+    const secondsElapsed = state.timer.secondsElapsed;
     stopTimer();
     state.isSolved = true;
     updateTimerLockState();
@@ -836,6 +864,10 @@ const checkSolution = () => {
     updateStatus('success', solvedMessage);
     if (!alreadySolved) {
       recordLeaderboardEntry();
+      submitGlobalLeaderboardRecord({
+        seconds: secondsElapsed,
+        difficulty: state.difficulty
+      });
     }
     persistCurrentState({
       solved: true,
