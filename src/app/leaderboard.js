@@ -161,6 +161,35 @@ export const createLeaderboardManager = ({
     return storage.leaderboard;
   };
 
+  const normalizeUploadedFlag = (value) => {
+    if (value === true) {
+      return true;
+    }
+
+    if (value === false || value === null || typeof value === 'undefined') {
+      return false;
+    }
+
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      if (!normalized) {
+        return false;
+      }
+      if (normalized === 'true' || normalized === '1' || normalized === 'yes') {
+        return true;
+      }
+      if (normalized === 'false' || normalized === '0' || normalized === 'no') {
+        return false;
+      }
+    }
+
+    if (typeof value === 'number') {
+      return value === 1;
+    }
+
+    return Boolean(value);
+  };
+
   const normalizeEntry = (entry) => {
     if (!entry || typeof entry !== 'object') {
       return null;
@@ -168,6 +197,7 @@ export const createLeaderboardManager = ({
 
     const numericSeconds = Number(entry.seconds);
     const normalizedSeconds = Number.isFinite(numericSeconds) ? numericSeconds : null;
+    const uploaded = normalizeUploadedFlag(entry.uploaded);
     const { score, parSeconds } = computeDifficultyScore({
       difficulties,
       difficulty: entry.difficulty,
@@ -178,7 +208,8 @@ export const createLeaderboardManager = ({
       ...entry,
       seconds: normalizedSeconds,
       score,
-      parSeconds
+      parSeconds,
+      uploaded
     };
   };
 
