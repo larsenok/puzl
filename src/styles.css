@@ -623,6 +623,40 @@ body {
   padding-right: 4px;
 }
 
+.leaderboard-refresh-button {
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background-color: #f8fafc;
+  color: #0f172a;
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+
+.leaderboard-refresh-button:hover:not(:disabled) {
+  background-color: #e2e8f0;
+}
+
+.leaderboard-refresh-button:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.45);
+  outline-offset: 2px;
+}
+
+.leaderboard-refresh-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  background-color: #e2e8f0;
+}
+
 .leaderboard-controls {
   display: flex;
   align-items: center;
@@ -807,10 +841,10 @@ body {
   background-color: #ffffff;
   border-radius: 18px;
   box-shadow: 0 20px 45px rgba(15, 23, 42, 0.18);
-  padding: 22px 24px 24px;
+  padding: 18px 22px 22px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .post-score-modal__title {
@@ -820,22 +854,10 @@ body {
   color: #0f172a;
 }
 
-.post-score-modal__description {
-  margin: 0;
-  font-size: 14px;
-  color: #475569;
-}
-
 .post-score-form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-}
-
-.post-score-form__label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1f2937;
+  gap: 12px;
 }
 
 .post-score-form__input {
@@ -845,13 +867,29 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.3em;
   text-align: center;
-  padding: 10px 12px;
+  padding: 8px 12px 12px;
   border-radius: 12px;
   border: 1px solid rgba(15, 23, 42, 0.18);
   background-color: #f8fafc;
   color: #0f172a;
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.post-score-form__input::placeholder {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #94a3b8;
+}
+
+.post-score-form__input::-webkit-input-placeholder {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #94a3b8;
 }
 
 .post-score-form__input:focus-visible {
@@ -865,7 +903,7 @@ body {
   justify-content: space-between;
   background-color: #f1f5f9;
   border-radius: 12px;
-  padding: 12px 16px;
+  padding: 10px 14px;
 }
 
 .post-score-form__score-label {
@@ -883,7 +921,7 @@ body {
 
 .post-score-form__actions {
   display: flex;
-  gap: 10px;
+  gap: 12px;
 }
 
 .post-score-form__button {
