@@ -279,8 +279,75 @@ export const createLeaderboardManager = ({
     return translate('difficultyLabel');
   };
 
+  const createLeaderboardListItem = ({ entry, index, isGlobal }) => {
+    const item = document.createElement('li');
+    item.className = 'leaderboard-list__item';
+
+    const rank = document.createElement('span');
+    rank.className = 'leaderboard-list__rank';
+    rank.textContent = String(index + 1);
+    item.appendChild(rank);
+
+    const details = document.createElement('div');
+    details.className = 'leaderboard-list__details';
+    if (isGlobal) {
+      details.classList.add('leaderboard-list__details--global');
+    }
+
+    if (isGlobal) {
+      const identity = document.createElement('div');
+      identity.className = 'leaderboard-list__identity';
+
+      const name = document.createElement('span');
+      name.className = 'leaderboard-list__name';
+      name.textContent = (entry.initials || '---').toString().toUpperCase();
+
+      const difficulty = document.createElement('span');
+      difficulty.className = 'leaderboard-list__difficulty';
+      difficulty.textContent = getDifficultyLabel(entry.difficulty);
+
+      identity.appendChild(name);
+      identity.appendChild(difficulty);
+      details.appendChild(identity);
+    } else {
+      const difficulty = document.createElement('span');
+      difficulty.className = 'leaderboard-list__difficulty';
+      difficulty.textContent = getDifficultyLabel(entry.difficulty);
+      details.appendChild(difficulty);
+    }
+
+    const metrics = document.createElement('div');
+    metrics.className = 'leaderboard-list__metrics';
+
+    const score = document.createElement('span');
+    score.className = 'leaderboard-list__score';
+    score.textContent = translate('leaderboardScoreValue', {
+      score: formatScoreDisplay(entry.score)
+    });
+
+    const time = document.createElement('span');
+    time.className = 'leaderboard-list__time';
+    time.textContent = formatTime(entry.seconds);
+
+    metrics.appendChild(score);
+    metrics.appendChild(time);
+
+    details.appendChild(metrics);
+
+    item.appendChild(details);
+
+    return item;
+  };
+
   const renderLocalLeaderboard = (isActive) => {
     if (!list || !emptyState) {
+      return;
+    }
+
+    if (!isActive) {
+      list.innerHTML = '';
+      list.hidden = true;
+      emptyState.hidden = true;
       return;
     }
 
@@ -289,53 +356,23 @@ export const createLeaderboardManager = ({
 
     if (!entries.length) {
       emptyState.textContent = translate('leaderboardEmpty');
-      emptyState.hidden = !isActive;
+      emptyState.hidden = false;
       list.hidden = true;
       return;
     }
 
     emptyState.hidden = true;
+    list.hidden = false;
 
     entries.forEach((entry, index) => {
-      const item = document.createElement('li');
-      item.className = 'leaderboard-list__item';
-
-      const rank = document.createElement('span');
-      rank.className = 'leaderboard-list__rank';
-      rank.textContent = String(index + 1);
-      item.appendChild(rank);
-
-      const details = document.createElement('div');
-      details.className = 'leaderboard-list__details';
-
-      const difficulty = document.createElement('span');
-      difficulty.className = 'leaderboard-list__difficulty';
-      difficulty.textContent = getDifficultyLabel(entry.difficulty);
-
-      const metrics = document.createElement('div');
-      metrics.className = 'leaderboard-list__metrics';
-
-      const score = document.createElement('span');
-      score.className = 'leaderboard-list__score';
-      score.textContent = translate('leaderboardScoreValue', {
-        score: formatScoreDisplay(entry.score)
-      });
-
-      const time = document.createElement('span');
-      time.className = 'leaderboard-list__time';
-      time.textContent = formatTime(entry.seconds);
-
-      metrics.appendChild(score);
-      metrics.appendChild(time);
-
-      details.appendChild(difficulty);
-      details.appendChild(metrics);
-      item.appendChild(details);
-
-      list.appendChild(item);
+      list.appendChild(
+        createLeaderboardListItem({
+          entry,
+          index,
+          isGlobal: false
+        })
+      );
     });
-
-    list.hidden = !isActive;
   };
 
   const renderGlobalLeaderboard = (isActive) => {
@@ -387,11 +424,13 @@ export const createLeaderboardManager = ({
       return;
     }
 
-    const entries = Array.isArray(state.globalLeaderboard)
+    const entries = (Array.isArray(state.globalLeaderboard)
       ? state.globalLeaderboard
-          .map((entry) => normalizeEntry(entry))
-          .filter((entry) => entry && entry.initials && entry.uploaded)
-      : [];
+      : []
+    )
+      .map((entry) => normalizeEntry(entry))
+      .filter((entry) => entry && entry.initials && entry.uploaded);
+
     entries.sort(compareEntries);
     globalList.innerHTML = '';
 
@@ -406,52 +445,13 @@ export const createLeaderboardManager = ({
     globalList.hidden = false;
 
     entries.forEach((entry, index) => {
-      const item = document.createElement('li');
-      item.className = 'leaderboard-list__item';
-
-      const rank = document.createElement('span');
-      rank.className = 'leaderboard-list__rank';
-      rank.textContent = String(index + 1);
-      item.appendChild(rank);
-
-      const details = document.createElement('div');
-      details.className = 'leaderboard-list__details leaderboard-list__details--global';
-
-      const identity = document.createElement('div');
-      identity.className = 'leaderboard-list__identity';
-
-      const name = document.createElement('span');
-      name.className = 'leaderboard-list__name';
-      name.textContent = (entry.initials || '---').toString().toUpperCase();
-
-      const difficulty = document.createElement('span');
-      difficulty.className = 'leaderboard-list__difficulty';
-      difficulty.textContent = getDifficultyLabel(entry.difficulty);
-
-      identity.appendChild(name);
-      identity.appendChild(difficulty);
-
-      const metrics = document.createElement('div');
-      metrics.className = 'leaderboard-list__metrics';
-
-      const score = document.createElement('span');
-      score.className = 'leaderboard-list__score';
-      score.textContent = translate('leaderboardScoreValue', {
-        score: formatScoreDisplay(entry.score)
-      });
-
-      const time = document.createElement('span');
-      time.className = 'leaderboard-list__time';
-      time.textContent = formatTime(entry.seconds);
-
-      metrics.appendChild(score);
-      metrics.appendChild(time);
-
-      details.appendChild(identity);
-      details.appendChild(metrics);
-      item.appendChild(details);
-
-      globalList.appendChild(item);
+      globalList.appendChild(
+        createLeaderboardListItem({
+          entry,
+          index,
+          isGlobal: true
+        })
+      );
     });
   };
 

@@ -1,4 +1,7 @@
 const SCORE_SCALE = 1000;
+const EXTREME_TIME_BONUS_MAX_MULTIPLIER = 1.25;
+const EXTREME_TIME_BONUS_MIN_SECONDS = 60;
+const EXTREME_TIME_BONUS_MAX_SECONDS = 90;
 
 const toFiniteNumber = (value, fallback = null) => {
   const numeric = Number(value);
@@ -18,6 +21,25 @@ export const getDifficultyWeight = (difficulties = {}, difficulty) => {
   return Number(weight);
 };
 
+const getExtremeTimeBonusMultiplier = (seconds) => {
+  if (!Number.isFinite(seconds)) {
+    return 1;
+  }
+
+  if (seconds <= EXTREME_TIME_BONUS_MIN_SECONDS) {
+    return EXTREME_TIME_BONUS_MAX_MULTIPLIER;
+  }
+
+  if (seconds >= EXTREME_TIME_BONUS_MAX_SECONDS) {
+    return 1;
+  }
+
+  const rangeSeconds = EXTREME_TIME_BONUS_MAX_SECONDS - EXTREME_TIME_BONUS_MIN_SECONDS;
+  const bonusSpan = EXTREME_TIME_BONUS_MAX_MULTIPLIER - 1;
+  const progress = (seconds - EXTREME_TIME_BONUS_MIN_SECONDS) / rangeSeconds;
+  return EXTREME_TIME_BONUS_MAX_MULTIPLIER - bonusSpan * progress;
+};
+
 export const computeDifficultyScore = ({ difficulties = {}, difficulty, seconds }) => {
   const parSeconds = getParSeconds(difficulties, difficulty);
   const weight = getDifficultyWeight(difficulties, difficulty);
@@ -31,7 +53,11 @@ export const computeDifficultyScore = ({ difficulties = {}, difficulty, seconds 
   }
 
   const baseRatio = parSeconds ? parSeconds / normalizedSeconds : 1 / normalizedSeconds;
-  const rawScore = Math.max(0, baseRatio * weightMultiplier * SCORE_SCALE);
+  const timeBonusMultiplier =
+    difficulty === 'extreme'
+      ? getExtremeTimeBonusMultiplier(normalizedSeconds)
+      : 1;
+  const rawScore = Math.max(0, baseRatio * weightMultiplier * timeBonusMultiplier * SCORE_SCALE);
 
   return {
     score: Math.round(rawScore),
