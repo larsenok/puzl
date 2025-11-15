@@ -254,7 +254,13 @@ export const createLeaderboardManager = ({
     leaderboard.length = 0;
     entries
       .map((entry) => normalizeEntry(entry))
-      .filter((entry) => entry && entry.uploaded !== true)
+      .filter(
+        (entry) =>
+          entry &&
+          entry.uploaded !== true &&
+          typeof entry.boardId === 'string' &&
+          entry.boardId.trim().length > 0
+      )
       .slice(0, MAX_LEADERBOARD_ENTRIES)
       .forEach((entry) => {
         leaderboard.push(entry);
@@ -263,7 +269,10 @@ export const createLeaderboardManager = ({
   };
 
   const getLeaderboardEntries = () =>
-    readStoredLeaderboardEntries().filter((entry) => entry.uploaded !== true);
+    readStoredLeaderboardEntries().filter(
+      (entry) =>
+        entry.uploaded !== true && typeof entry?.boardId === 'string' && entry.boardId.trim().length > 0
+    );
 
   const getBestLocalEntry = () => {
     const [best] = getLeaderboardEntries();
@@ -487,6 +496,18 @@ export const createLeaderboardManager = ({
         tab.removeAttribute('aria-hidden');
       }
     });
+
+    if (globalRefreshButton) {
+      const shouldShowRefresh = view === 'global' && globalAvailable;
+      if (shouldShowRefresh) {
+        globalRefreshButton.hidden = false;
+        globalRefreshButton.removeAttribute('aria-hidden');
+        globalRefreshButton.disabled = state.globalLeaderboardLoading;
+      } else {
+        globalRefreshButton.hidden = true;
+        globalRefreshButton.setAttribute('aria-hidden', 'true');
+      }
+    }
 
     renderLocalLeaderboard(view === 'local');
     renderGlobalLeaderboard(view === 'global' && globalAvailable);
