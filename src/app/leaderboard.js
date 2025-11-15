@@ -255,11 +255,7 @@ export const createLeaderboardManager = ({
     entries
       .map((entry) => normalizeEntry(entry))
       .filter(
-        (entry) =>
-          entry &&
-          entry.uploaded !== true &&
-          typeof entry.boardId === 'string' &&
-          entry.boardId.trim().length > 0
+        (entry) => entry && typeof entry.boardId === 'string' && entry.boardId.trim().length > 0
       )
       .slice(0, MAX_LEADERBOARD_ENTRIES)
       .forEach((entry) => {
@@ -270,8 +266,7 @@ export const createLeaderboardManager = ({
 
   const getLeaderboardEntries = () =>
     readStoredLeaderboardEntries().filter(
-      (entry) =>
-        entry.uploaded !== true && typeof entry?.boardId === 'string' && entry.boardId.trim().length > 0
+      (entry) => typeof entry?.boardId === 'string' && entry.boardId.trim().length > 0
     );
 
   const getBestLocalEntry = () => {
@@ -408,32 +403,44 @@ export const createLeaderboardManager = ({
 
     if (!isActive) {
       globalList.hidden = true;
+      globalList.setAttribute('aria-hidden', 'true');
       globalEmptyState.hidden = true;
+      globalEmptyState.setAttribute('aria-hidden', 'true');
       globalLoading.hidden = true;
+      globalLoading.setAttribute('aria-hidden', 'true');
       return;
     }
 
     if (!supabaseHelpers.hasConfiguration()) {
       globalLoading.hidden = true;
+      globalLoading.setAttribute('aria-hidden', 'true');
       globalList.hidden = true;
+      globalList.setAttribute('aria-hidden', 'true');
       globalEmptyState.textContent = translate('leaderboardGlobalConfigure');
       globalEmptyState.hidden = false;
+      globalEmptyState.removeAttribute('aria-hidden');
       return;
     }
 
     if (state.globalLeaderboardLoading) {
       globalLoading.hidden = false;
+      globalLoading.removeAttribute('aria-hidden');
       globalList.hidden = true;
+      globalList.setAttribute('aria-hidden', 'true');
       globalEmptyState.hidden = true;
+      globalEmptyState.setAttribute('aria-hidden', 'true');
       return;
     }
 
     globalLoading.hidden = true;
+    globalLoading.setAttribute('aria-hidden', 'true');
 
     if (state.globalLeaderboardError) {
       globalEmptyState.textContent = translate('leaderboardGlobalError');
       globalEmptyState.hidden = false;
+      globalEmptyState.removeAttribute('aria-hidden');
       globalList.hidden = true;
+      globalList.setAttribute('aria-hidden', 'true');
       return;
     }
 
@@ -450,12 +457,16 @@ export const createLeaderboardManager = ({
     if (!entries.length) {
       globalEmptyState.textContent = translate('leaderboardGlobalEmpty');
       globalEmptyState.hidden = false;
+      globalEmptyState.removeAttribute('aria-hidden');
       globalList.hidden = true;
+      globalList.setAttribute('aria-hidden', 'true');
       return;
     }
 
     globalEmptyState.hidden = true;
+    globalEmptyState.setAttribute('aria-hidden', 'true');
     globalList.hidden = false;
+    globalList.removeAttribute('aria-hidden');
 
     entries.forEach((entry, index) => {
       globalList.appendChild(
