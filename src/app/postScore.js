@@ -30,8 +30,8 @@ export const createPostScoreController = ({
   canSubmitToGlobalLeaderboard = () => true,
   getBestLocalEntry = () => null,
   hasAnyCompletedBoards = () => false,
-  getLastPostedScore = () => null,
-  setLastPostedScore = () => {},
+  hasPostedEntry = () => false,
+  markEntryPosted = () => {},
   elements
 }) => {
   const {
@@ -63,25 +63,6 @@ export const createPostScoreController = ({
     typeof hasAnyCompletedBoards === 'function'
       ? hasAnyCompletedBoards()
       : Boolean(readBestEntry());
-
-  const readLastPostedScore = () => {
-    if (typeof getLastPostedScore === 'function') {
-      const value = getLastPostedScore();
-      const numeric = Number(value);
-      return Number.isFinite(numeric) ? numeric : null;
-    }
-    return null;
-  };
-
-  const storeLastPostedScore = (score) => {
-    if (typeof setLastPostedScore === 'function') {
-      if (Number.isFinite(score)) {
-        setLastPostedScore(score);
-      } else {
-        setLastPostedScore(null);
-      }
-    }
-  };
 
   const resolveSubmissionEntry = () => submissionEntry || readBestEntry();
 
@@ -178,28 +159,15 @@ export const createPostScoreController = ({
         ? canSubmitToGlobalLeaderboard()
         : Boolean(canSubmitToGlobalLeaderboard);
 
-    const bestEntry = readBestEntry();
     const hasBoards = hasCompletedBoards();
-    const lastPostedScore = readLastPostedScore();
-    const bestScore = computeEntryScore(bestEntry);
-
-    const improved =
-      hasBoards &&
-      Number.isFinite(bestScore) &&
-      (!Number.isFinite(lastPostedScore) || bestScore > lastPostedScore);
-
     const shouldShow = Boolean(hasBoards && canSubmit);
     button.hidden = !shouldShow;
 
-    const shouldDisable = !shouldShow || state.postScoreSubmitting || !improved;
+    const shouldDisable = !shouldShow || state.postScoreSubmitting;
     button.disabled = shouldDisable;
     button.setAttribute('aria-disabled', shouldDisable ? 'true' : 'false');
 
-    if (!improved && shouldShow) {
-      button.setAttribute('title', translate('postScoreNeedsHigherScore'));
-    } else {
-      button.removeAttribute('title');
-    }
+    button.removeAttribute('title');
   };
 
   const renderModalState = () => {
@@ -256,16 +224,6 @@ export const createPostScoreController = ({
       return;
     }
 
-    const lastPostedScore = readLastPostedScore();
-    const bestScore = computeEntryScore(bestEntry);
-    const improved =
-      Number.isFinite(bestScore) &&
-      (!Number.isFinite(lastPostedScore) || bestScore > lastPostedScore);
-
-    if (!improved) {
-      return;
-    }
-
     submissionEntry = bestEntry;
     state.postScoreSubmitting = false;
     renderModalState();
@@ -312,6 +270,21 @@ export const createPostScoreController = ({
       return;
     }
 
+    const alreadyPosted =
+      typeof hasPostedEntry === 'function'
+        ? hasPostedEntry({
+            boardId: entry.boardId,
+            difficulty: entry.difficulty,
+            seconds: entry.seconds,
+            solvedAt: entry.solvedAt
+          })
+        : false;
+
+    if (alreadyPosted) {
+      console.info('Skipping global submission for duplicate entry.');
+      return;
+    }
+
     const normalized = normalizeInitials(input.value, locale);
     input.value = normalized;
 
@@ -345,7 +318,6 @@ export const createPostScoreController = ({
         updateStatus('notice', translate('leaderboardGlobalConfigure'));
       } else {
         const postedScore = computeEntryScore(entry);
-        storeLastPostedScore(postedScore);
         if (typeof markEntryUploaded === 'function') {
           try {
             markEntryUploaded({
@@ -357,6 +329,19 @@ export const createPostScoreController = ({
             });
           } catch (markError) {
             console.error('Failed to mark leaderboard entry as uploaded', markError);
+          }
+        }
+        if (typeof markEntryPosted === 'function') {
+          try {
+            markEntryPosted({
+              boardId: entry.boardId,
+              difficulty: entry.difficulty,
+              seconds: entry.seconds,
+              solvedAt: entry.solvedAt,
+              score: postedScore
+            });
+          } catch (postError) {
+            console.error('Failed to record posted leaderboard entry', postError);
           }
         }
         updateStatus('success', translate('postScoreSubmitted'));

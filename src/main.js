@@ -30,17 +30,123 @@ if (typeof storage.regionFillEnabled !== 'boolean') {
 }
 let currentEntry = null;
 
-const getLastPostedGlobalScore = () => {
-  const value = Number(storage.globalLeaderboardLastPostedScore);
-  return Number.isFinite(value) ? value : null;
+const MAX_TRACKED_POSTED_ENTRIES = 50;
+
+const normalizePostedEntry = (entry) => {
+  if (!entry || typeof entry !== 'object') {
+    return null;
+  }
+
+  const boardId =
+    typeof entry.boardId === 'string' && entry.boardId.trim().length > 0
+      ? entry.boardId.trim()
+      : null;
+  const normalizedDifficulty =
+    typeof entry.difficulty === 'string' ? entry.difficulty.trim() : '';
+  const difficulty = normalizedDifficulty.length > 0 ? normalizedDifficulty : null;
+  const numericSeconds = Number(entry.seconds);
+  const seconds = Number.isFinite(numericSeconds) ? numericSeconds : null;
+  const solvedAt =
+    typeof entry.solvedAt === 'string' && entry.solvedAt.trim().length > 0
+      ? entry.solvedAt.trim()
+      : null;
+
+  if (!boardId && (!difficulty || seconds === null)) {
+    return null;
+  }
+
+  return {
+    boardId,
+    difficulty,
+    seconds,
+    solvedAt
+  };
 };
 
-const setLastPostedGlobalScore = (value) => {
-  if (Number.isFinite(value)) {
-    storage.globalLeaderboardLastPostedScore = Number(value);
+const postedEntriesMatch = (a, b) => {
+  if (!a || !b) {
+    return false;
+  }
+
+  if (a.boardId && b.boardId) {
+    if (a.boardId !== b.boardId) {
+      return false;
+    }
+
+    const aSeconds = Number.isFinite(a.seconds) ? a.seconds : null;
+    const bSeconds = Number.isFinite(b.seconds) ? b.seconds : null;
+
+    if (aSeconds !== null && bSeconds !== null && aSeconds !== bSeconds) {
+      return false;
+    }
+
+    const aDifficulty = a.difficulty || null;
+    const bDifficulty = b.difficulty || null;
+
+    if (aDifficulty && bDifficulty && aDifficulty !== bDifficulty) {
+      return false;
+    }
+
+    if (aSeconds === null || bSeconds === null) {
+      return aDifficulty === bDifficulty;
+    }
+
+    return aDifficulty === bDifficulty;
+  }
+
+  const aSeconds = Number.isFinite(a.seconds) ? a.seconds : null;
+  const bSeconds = Number.isFinite(b.seconds) ? b.seconds : null;
+
+  if (aSeconds === null || bSeconds === null) {
+    return false;
+  }
+
+  return (
+    aSeconds === bSeconds &&
+    (a.difficulty || null) === (b.difficulty || null) &&
+    (a.solvedAt || null) === (b.solvedAt || null)
+  );
+};
+
+const readPostedGlobalEntries = () => {
+  if (!Array.isArray(storage.globalLeaderboardPostedEntries)) {
+    return [];
+  }
+
+  return storage.globalLeaderboardPostedEntries
+    .map((entry) => normalizePostedEntry(entry))
+    .filter(Boolean);
+};
+
+const hasPostedGlobalEntry = ({ boardId, difficulty, seconds, solvedAt }) => {
+  const candidate = normalizePostedEntry({ boardId, difficulty, seconds, solvedAt });
+  if (!candidate) {
+    return false;
+  }
+
+  return readPostedGlobalEntries().some((entry) => postedEntriesMatch(entry, candidate));
+};
+
+const recordPostedGlobalEntry = ({ boardId, difficulty, seconds, solvedAt, score }) => {
+  const candidate = normalizePostedEntry({ boardId, difficulty, seconds, solvedAt });
+  if (!candidate) {
+    return;
+  }
+
+  const entries = readPostedGlobalEntries();
+  if (entries.some((entry) => postedEntriesMatch(entry, candidate))) {
+    return;
+  }
+
+  entries.unshift(candidate);
+  storage.globalLeaderboardPostedEntries = entries.slice(0, MAX_TRACKED_POSTED_ENTRIES);
+
+  if (Number.isFinite(score)) {
+    storage.globalLeaderboardLastPostedScore = Number(score);
   } else {
     delete storage.globalLeaderboardLastPostedScore;
   }
+
   writeStorage(storage);
 };
 
@@ -1032,8 +1138,8 @@ postScoreController = createPostScoreController({
     Boolean(leaderboardController?.hasSupabaseConfiguration?.()),
   getBestLocalEntry: () => leaderboardController?.getBestLocalEntry?.() || null,
   hasAnyCompletedBoards: () => leaderboardController?.hasAnyCompletedBoards?.() || false,
-  getLastPostedScore: () => getLastPostedGlobalScore(),
-  setLastPostedScore: (value) => setLastPostedGlobalScore(value),
+  hasPostedEntry: (details) => hasPostedGlobalEntry(details),
+  markEntryPosted: (details) => recordPostedGlobalEntry(details),
   elements: {
     button: leaderboardPostBestButton,
     overlay: postScoreOverlay,
