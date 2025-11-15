@@ -249,12 +249,16 @@ export const createLeaderboardManager = ({
         .map((entry) => normalizeEntry(entry))
     );
 
-  const persistLeaderboardEntries = (entries) => {
+  const persistLeaderboardEntries = (entries = []) => {
     const leaderboard = ensureLeaderboardStorage();
     leaderboard.length = 0;
-    entries.slice(0, MAX_LEADERBOARD_ENTRIES).forEach((entry) => {
-      leaderboard.push(entry);
-    });
+    entries
+      .map((entry) => normalizeEntry(entry))
+      .filter((entry) => entry && entry.uploaded !== true)
+      .slice(0, MAX_LEADERBOARD_ENTRIES)
+      .forEach((entry) => {
+        leaderboard.push(entry);
+      });
     writeStorage(getStorage());
   };
 
