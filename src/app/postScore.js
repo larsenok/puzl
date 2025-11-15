@@ -270,6 +270,22 @@ export const createPostScoreController = ({
       return;
     }
 
+    const normalized = normalizeInitials(input.value, locale);
+    input.value = normalized;
+
+    if (normalized.length !== 3) {
+      input.setCustomValidity(translate('postScoreInitialsError'));
+      input.reportValidity();
+      return;
+    }
+
+    input.setCustomValidity('');
+
+    if (scoreElement) {
+      updateScoreDisplay();
+    }
+
+    const postedScore = computeEntryScore(entry);
     const alreadyPosted =
       typeof hasPostedEntry === 'function'
         ? hasPostedEntry({
@@ -285,19 +301,19 @@ export const createPostScoreController = ({
       return;
     }
 
-    const normalized = normalizeInitials(input.value, locale);
-    input.value = normalized;
+    const storageSnapshot = typeof getStorage === 'function' ? getStorage() : null;
+    const lastPostedScore = Number(storageSnapshot?.globalLeaderboardLastPostedScore);
+    const hasLastPostedScore = Number.isFinite(lastPostedScore);
 
-    if (normalized.length !== 3) {
-      input.setCustomValidity(translate('postScoreInitialsError'));
-      input.reportValidity();
+    if (hasLastPostedScore && Number.isFinite(postedScore) && postedScore <= lastPostedScore) {
+      updateStatus('notice', translate('postScoreNeedsHigherScore'));
+      window.setTimeout(() => {
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      }, 0);
       return;
-    }
-
-    input.setCustomValidity('');
-
-    if (scoreElement) {
-      updateScoreDisplay();
     }
 
     state.postScoreSubmitting = true;
@@ -317,7 +333,6 @@ export const createPostScoreController = ({
       if (result?.skipped) {
         updateStatus('notice', translate('leaderboardGlobalConfigure'));
       } else {
-        const postedScore = computeEntryScore(entry);
         if (typeof markEntryUploaded === 'function') {
           try {
             markEntryUploaded({
