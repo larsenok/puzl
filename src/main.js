@@ -448,7 +448,6 @@ const stopTimer = () => {
 
 const resetProgress = () => {
   stopTimer();
-  const lastPostedScore = storage.globalLeaderboardLastPostedScore;
   const lastFetchDate = storage.globalLeaderboardLastFetchDate;
   const cachedGlobalLeaderboard = storage.globalLeaderboardCache;
   try {
@@ -458,9 +457,6 @@ const resetProgress = () => {
   }
   storage = readStorage();
   storage.controlsLocked = state.controlsLocked;
-  if (Number.isFinite(Number(lastPostedScore))) {
-    storage.globalLeaderboardLastPostedScore = Number(lastPostedScore);
-  }
   if (typeof lastFetchDate === 'string') {
     storage.globalLeaderboardLastFetchDate = lastFetchDate;
   }
