@@ -1,5 +1,6 @@
 const SCORE_SCALE = 1000;
 const EXTREME_TIME_BONUS_MAX_MULTIPLIER = 1.25;
+const EXTREME_SCORE_MULTIPLIER = 1.2;
 const EXTREME_TIME_BONUS_MIN_SECONDS = 60;
 const EXTREME_TIME_BONUS_MAX_SECONDS = 90;
 
@@ -57,7 +58,11 @@ export const computeDifficultyScore = ({ difficulties = {}, difficulty, seconds 
     difficulty === 'extreme'
       ? getExtremeTimeBonusMultiplier(normalizedSeconds)
       : 1;
-  const rawScore = Math.max(0, baseRatio * weightMultiplier * timeBonusMultiplier * SCORE_SCALE);
+  const difficultyMultiplier = difficulty === 'extreme' ? EXTREME_SCORE_MULTIPLIER : 1;
+  const rawScore = Math.max(
+    0,
+    baseRatio * weightMultiplier * timeBonusMultiplier * difficultyMultiplier * SCORE_SCALE
+  );
 
   return {
     score: Math.round(rawScore),

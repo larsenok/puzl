@@ -30,10 +30,7 @@ if (typeof storage.regionFillEnabled !== 'boolean') {
   storage.regionFillEnabled = true;
 }
 
-const normalizeGameType = (value) =>
-  typeof value === 'string' && Object.prototype.hasOwnProperty.call(GAME_TYPES, value)
-    ? value
-    : DEFAULT_GAME_TYPE;
+const normalizeGameType = () => DEFAULT_GAME_TYPE;
 
 const storedGameType = normalizeGameType(storage.gameType);
 if (storage.gameType !== storedGameType) {
@@ -276,6 +273,7 @@ const extremeDifficultyButton = difficultyButtons.find(
 const footerDescriptionElement = document.getElementById('footer-description');
 const gameTypeSelect = document.getElementById('game-type-select');
 const gameTypeLabelElement = document.getElementById('game-type-select-label');
+const gameTypeValueElement = document.getElementById('game-type-value');
 const resetProgressButton = document.getElementById('reset-progress-button');
 const leaderboardButton = document.getElementById('leaderboard-button');
 const leaderboardOverlay = document.getElementById('leaderboard-overlay');
@@ -470,6 +468,10 @@ const applyTranslations = () => {
 
   if (gameTypeLabelElement) {
     gameTypeLabelElement.textContent = translate('gameTypeLabel');
+  }
+
+  if (gameTypeValueElement) {
+    gameTypeValueElement.textContent = translate('gameTypeStars');
   }
 
   if (gameTypeSelect) {
