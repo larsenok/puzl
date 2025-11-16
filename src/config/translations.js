@@ -47,7 +47,8 @@ export const TRANSLATIONS = {
     difficultySet: 'Difficulty set to {difficulty}',
     footer: 'Balance each shape badge while matching every row and column total.',
     footerStars: 'Balance each shape badge while matching every row and column total.',
-    footerGears: 'Chain gears by matching the run lengths beside every row and column.',
+    footerGears:
+      'Use a square matrix of gears, then follow the listed run-length rules for every row and column.',
     colorPaletteMenuLabel: 'Region color options',
     cellAria:
       'Row {row}, column {column}. Part of a shape needing {requirement} apples.',
@@ -119,7 +120,7 @@ export const TRANSLATIONS = {
     footerStars:
       'Match hver rad- og kolonneverdi mens hvert område får riktig antall merker.',
     footerGears:
-      'Koble gir ved å matche lengdene som står ved hver rad og kolonne.',
+      'Bruk et kvadratisk rutenett med gir, og følg reglene som står ved hver rad og kolonne.',
     colorPaletteMenuLabel: 'Fargevalg for regioner',
     cellAria:
       'Rad {row}, kolonne {column}. Del av en form som trenger {requirement} epler.',
