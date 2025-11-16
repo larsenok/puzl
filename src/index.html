@@ -117,17 +117,10 @@
 
       <footer class="footer">
         <div class="footer__info">
-          <label class="game-type-select" for="game-type-select">
-            <span id="game-type-select-label" class="visually-hidden">Game</span>
-            <select
-              id="game-type-select"
-              class="game-type-select__input"
-              aria-labelledby="game-type-select-label"
-            >
-              <option value="stars" selected>Stars</option>
-              <option value="gears">Gears</option>
-            </select>
-          </label>
+          <div class="game-type-display" aria-live="polite">
+            <span id="game-type-select-label" class="game-type-display__label">Game</span>
+            <span id="game-type-value" class="game-type-display__value">Stars</span>
+          </div>
           <p id="footer-description" class="footer__description">
             Balance each shape badge while matching every row and column total.
           </p>

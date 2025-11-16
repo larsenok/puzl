@@ -1168,34 +1168,25 @@ body {
   gap: 12px;
 }
 
-.game-type-select {
-  display: inline-flex;
-  align-items: center;
+.game-type-display {
+  display: flex;
+  flex-direction: column;
   color: #111827;
-}
-
-.game-type-select__input {
-  appearance: none;
-  border: 1px solid #d1d5db;
-  border-radius: 999px;
-  padding: 6px 32px 6px 12px;
-  font-size: 14px;
-  color: #111827;
-  background-color: #fff;
-  background-image:
-    linear-gradient(45deg, transparent 50%, #6b7280 50%),
-    linear-gradient(135deg, #6b7280 50%, transparent 50%);
-  background-position:
-    calc(100% - 18px) calc(50% - 3px),
-    calc(100% - 12px) calc(50% - 3px);
-  background-size: 6px 6px;
-  background-repeat: no-repeat;
   min-width: 120px;
+  gap: 2px;
 }
 
-.game-type-select__input:focus {
-  outline: 2px solid rgba(37, 99, 235, 0.5);
-  outline-offset: 3px;
+.game-type-display__label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.game-type-display__value {
+  font-size: 14px;
+  font-weight: 600;
 }
 
 @media (max-width: 640px) {
