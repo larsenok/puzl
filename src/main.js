@@ -190,9 +190,42 @@ const recordPostedGlobalEntry = ({ boardId, difficulty, seconds, solvedAt, score
   writeStorage(storage);
 };
 
+const GAME_SPECIFIC_DIFFICULTIES = {
+  gears: ['easy', 'normal', 'hard']
+};
+
+const getAllowedDifficultiesForGame = (gameType = DEFAULT_GAME_TYPE) => {
+  const specific = GAME_SPECIFIC_DIFFICULTIES[gameType];
+  if (Array.isArray(specific) && specific.length > 0) {
+    return specific;
+  }
+  return Object.keys(DIFFICULTIES);
+};
+
+const normalizeDifficultyForGame = (difficulty, gameType = DEFAULT_GAME_TYPE) => {
+  const allowed = getAllowedDifficultiesForGame(gameType);
+  if (allowed.includes(difficulty)) {
+    return difficulty;
+  }
+  if (allowed.includes(DEFAULT_DIFFICULTY)) {
+    return DEFAULT_DIFFICULTY;
+  }
+  return allowed[0] || DEFAULT_DIFFICULTY;
+};
+
+const initialDifficulty = normalizeDifficultyForGame(
+  readStoredDifficultyForGame(storedGameType),
+  storedGameType
+);
+const initialDifficultyStorageKey = getDifficultyStorageKey(storedGameType);
+if (storage[initialDifficultyStorageKey] !== initialDifficulty) {
+  storage[initialDifficultyStorageKey] = initialDifficulty;
+  writeStorage(storage);
+}
+
 const state = {
   gameType: storedGameType,
-  difficulty: readStoredDifficultyForGame(storedGameType),
+  difficulty: initialDifficulty,
   puzzle: null,
   boardState: [],
   isSolved: false,
@@ -388,11 +421,15 @@ const markExtremeUnlocked = () => {
 };
 
 const isExtremeDifficultyUnlocked = () => {
+  if (state.gameType !== 'stars') {
+    return false;
+  }
+
   if (storage.extremeUnlocked) {
     return true;
   }
 
-  const puzzles = ensurePuzzlesStorage();
+  const puzzles = ensurePuzzlesStorage('stars');
   const hardEntry = puzzles.hard;
   if (hardEntry?.solved) {
     markExtremeUnlocked();
@@ -404,6 +441,14 @@ const isExtremeDifficultyUnlocked = () => {
 
 const updateExtremeAvailability = () => {
   if (!extremeDifficultyButton) {
+    return;
+  }
+  const allowed = getAllowedDifficultiesForGame(state.gameType).includes('extreme');
+  if (!allowed) {
+    extremeDifficultyButton.hidden = true;
+    extremeDifficultyButton.disabled = true;
+    extremeDifficultyButton.classList.remove('is-active');
+    extremeDifficultyButton.setAttribute('aria-pressed', 'false');
     return;
   }
   const unlocked = isExtremeDifficultyUnlocked();
@@ -722,14 +767,15 @@ const loadPuzzle = ({
   gameType = state.gameType
 } = {}) => {
   const normalizedGameType = normalizeGameType(gameType);
+  const normalizedDifficulty = normalizeDifficultyForGame(difficulty, normalizedGameType);
   const puzzles = ensurePuzzlesStorage(normalizedGameType);
   const todayKey = getTodayKey();
-  let entry = puzzles[difficulty];
+  let entry = puzzles[normalizedDifficulty];
 
   if (!entry || entry.date !== todayKey || forceNew) {
     const paletteColors = getPaletteColorsById(activeColorPaletteId);
     const puzzle = createPuzzle({
-      difficulty,
+      difficulty: normalizedDifficulty,
       paletteColors,
       gameType: normalizedGameType
     });
@@ -748,16 +794,16 @@ const loadPuzzle = ({
     };
   }
 
-  puzzles[difficulty] = entry;
+  puzzles[normalizedDifficulty] = entry;
   entry.gameType = normalizedGameType;
-  storage[getDifficultyStorageKey(normalizedGameType)] = difficulty;
+  storage[getDifficultyStorageKey(normalizedGameType)] = normalizedDifficulty;
   storage.gameType = normalizedGameType;
   syncControlsLockToStorage();
 
   currentEntry = entry;
-  state.difficulty = difficulty;
+  state.difficulty = normalizedDifficulty;
   state.gameType = normalizedGameType;
-  setAppDifficultyAttribute(difficulty);
+  setAppDifficultyAttribute(normalizedDifficulty);
   setAppGameTypeAttribute(normalizedGameType);
   state.puzzle = entry.puzzle;
   applyActivePaletteToPuzzle(state.puzzle);
@@ -771,12 +817,27 @@ const loadPuzzle = ({
   writeStorage(storage);
 };
 
+const isLeaderboardEnabledForGame = (gameType = state.gameType) => gameType !== 'gears';
+
+const updateLeaderboardAvailability = () => {
+  if (!leaderboardButton) {
+    return;
+  }
+  const enabled = isLeaderboardEnabledForGame(state.gameType);
+  leaderboardButton.hidden = !enabled;
+  leaderboardButton.disabled = !enabled;
+  if (!enabled && leaderboardController?.isOpen?.()) {
+    leaderboardController.close();
+  }
+};
+
 const renderCurrentPuzzle = ({ announce = false, message, additionalState } = {}) => {
   createBoardStructure();
   updateBoard();
   updateTimerDisplay();
   setAppGameTypeAttribute(state.gameType);
   updateFooterDescription();
+  updateLeaderboardAvailability();
   let statusDetails = null;
 
   if (announce) {
@@ -1304,15 +1365,22 @@ const newPuzzle = ({ announce = true, forceNew = false } = {}) => {
 };
 
 const updateDifficultyButtons = () => {
+  const allowed = getAllowedDifficultiesForGame(state.gameType);
   difficultyButtons.forEach((button) => {
     const difficulty = button.dataset.difficulty;
-    const isActive = difficulty === state.difficulty;
+    const isAvailable = allowed.includes(difficulty);
+    const isActive = isAvailable && difficulty === state.difficulty;
+    button.hidden = !isAvailable;
+    button.disabled = !isAvailable;
     button.classList.toggle('is-active', isActive);
     button.setAttribute('aria-pressed', String(isActive));
   });
 };
 
 const setDifficulty = (difficulty) => {
+  if (!getAllowedDifficultiesForGame(state.gameType).includes(difficulty)) {
+    return;
+  }
   if (!DIFFICULTIES[difficulty] || state.difficulty === difficulty) {
     return;
   }
@@ -1345,14 +1413,15 @@ const setGameType = (gameType) => {
   state.gameType = normalized;
   storage.gameType = normalized;
   const storedDifficulty = readStoredDifficultyForGame(normalized);
-  state.difficulty = storedDifficulty;
+  state.difficulty = normalizeDifficultyForGame(storedDifficulty, normalized);
   state.globalLeaderboard = [];
   state.globalLeaderboardLoaded = false;
   state.globalLeaderboardError = null;
   state.globalLeaderboardLoading = false;
   currentEntry = null;
+  const nextDefinition = GAME_TYPES[normalized] || GAME_TYPES[DEFAULT_GAME_TYPE];
   const message = translate('statusGameTypeChanged', {
-    game: translate(getCurrentGameDefinition().labelKey)
+    game: translate(nextDefinition?.labelKey || 'gameTypeStars')
   });
   loadPuzzle({ difficulty: state.difficulty, forceNew: false, gameType: normalized });
   renderCurrentPuzzle({
@@ -1529,10 +1598,10 @@ const initializeApp = () => {
   applyTranslations();
   updateControlsLockState();
   updateRegionFillState();
-  const storedDifficulty = readStoredDifficultyForGame(state.gameType);
-  if (storedDifficulty && DIFFICULTIES[storedDifficulty]) {
-    state.difficulty = storedDifficulty;
-  }
+  state.difficulty = normalizeDifficultyForGame(
+    readStoredDifficultyForGame(state.gameType),
+    state.gameType
+  );
   if (gameTypeSelect) {
     gameTypeSelect.value = state.gameType;
   }
