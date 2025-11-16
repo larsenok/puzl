@@ -13,6 +13,9 @@ export const TRANSLATIONS = {
     actionLeaderboard: 'Leaderboard',
     actionPostScore: 'Post score',
     actionPostBest: 'Post best',
+    gameTypeLabel: 'Game',
+    gameTypeStars: 'Stars',
+    gameTypeGears: 'Gears',
     actionLockControls: 'Lock controls',
     actionUnlockControls: 'Unlock controls',
     actionShowRegionColors: 'Show region colors',
@@ -43,9 +46,13 @@ export const TRANSLATIONS = {
     actionCloseLeaderboard: 'Close leaderboard',
     difficultySet: 'Difficulty set to {difficulty}',
     footer: 'Balance each shape badge while matching every row and column total.',
+    footerStars: 'Balance each shape badge while matching every row and column total.',
+    footerGears: 'Chain gears by matching the run lengths beside every row and column.',
     colorPaletteMenuLabel: 'Region color options',
     cellAria:
       'Row {row}, column {column}. Part of a shape needing {requirement} apples.',
+    cellAriaGears:
+      'Row {row}, column {column}. Toggle gears to match the listed runs.',
     postScoreTitle: 'Post best score',
     postScoreInputLabel: 'Player name',
     postScoreInputPlaceholder: 'write name',
@@ -57,7 +64,9 @@ export const TRANSLATIONS = {
     postScoreSubmitted: 'Score posted to the global leaderboard.',
     postScoreSubmitError: 'Could not send the score. Please try again.',
     postScoreButtonLabel: 'Post best score',
-    postScoreNeedsHigherScore: 'Beat your best score to post again.'
+    postScoreNeedsHigherScore: 'Beat your best score to post again.',
+    statusGameTypeChanged: '{game} board ready.',
+    leaderboardTitleForGame: '{game} leaderboard'
   },
   nb: {
     difficultyLabel: 'Vanskelighetsgrad',
@@ -73,6 +82,9 @@ export const TRANSLATIONS = {
     actionLeaderboard: 'Toppliste',
     actionPostScore: 'Del poengsum',
     actionPostBest: 'Del beste',
+    gameTypeLabel: 'Spill',
+    gameTypeStars: 'Stjerner',
+    gameTypeGears: 'Gears',
     actionLockControls: 'Lås handlinger',
     actionUnlockControls: 'Lås opp handlinger',
     actionShowRegionColors: 'Vis regionfarger',
@@ -104,9 +116,15 @@ export const TRANSLATIONS = {
     statusProgressCleared: 'Fremdrift slettet. Klar for nye brett.',
     footer:
       'Match hver rad- og kolonneverdi mens hvert område får riktig antall merker.',
+    footerStars:
+      'Match hver rad- og kolonneverdi mens hvert område får riktig antall merker.',
+    footerGears:
+      'Koble gir ved å matche lengdene som står ved hver rad og kolonne.',
     colorPaletteMenuLabel: 'Fargevalg for regioner',
     cellAria:
       'Rad {row}, kolonne {column}. Del av en form som trenger {requirement} epler.',
+    cellAriaGears:
+      'Rad {row}, kolonne {column}. Slå av og på gir slik at mønsteret matcher hintene.',
     postScoreTitle: 'Del beste poengsum',
     postScoreInputLabel: 'Spillernavn',
     postScoreInputPlaceholder: 'skriv navn',
@@ -118,7 +136,9 @@ export const TRANSLATIONS = {
     postScoreSubmitted: 'Poengsummen ble sendt til den globale topplisten.',
     postScoreSubmitError: 'Kunne ikke sende poengsummen. Prøv igjen.',
     postScoreButtonLabel: 'Del beste poengsum',
-    postScoreNeedsHigherScore: 'Slå din beste poengsum for å sende på nytt.'
+    postScoreNeedsHigherScore: 'Slå din beste poengsum for å sende på nytt.',
+    statusGameTypeChanged: '{game}-brett klart.',
+    leaderboardTitleForGame: '{game}-toppliste'
   }
 };
 

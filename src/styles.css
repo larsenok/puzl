@@ -375,6 +375,34 @@ body {
   transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.app[data-game='gears'] .hint-text {
+  min-width: 56px;
+  padding: 4px 10px;
+  height: auto;
+  min-height: 32px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.app[data-game='gears'] .row-hint-cell,
+.app[data-game='gears'] .column-hint-cell {
+  min-height: 40px;
+}
+
+.app[data-game='gears'] .row-hint-cell {
+  flex: 0 0 auto;
+  min-width: 72px;
+}
+
+.app[data-game='gears'] .column-hints {
+  align-items: center;
+}
+
+.app[data-game='gears'] .column-hints-grid {
+  align-items: center;
+}
+
 .hint-satisfied {
   color: #047857;
   background-color: rgba(4, 120, 87, 0.16);
@@ -1139,22 +1167,80 @@ body {
   margin-top: auto;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 12px;
   font-size: 12px;
-  text-align: center;
   color: #6b7280;
+  width: 100%;
+}
+
+.footer__info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .footer__description {
   margin: 0;
+  flex: 1 1 220px;
+  text-align: left;
 }
 
 .footer-controls {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 12px;
+}
+
+.game-type-select {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #111827;
+}
+
+.game-type-select__label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9ca3af;
+}
+
+.game-type-select__input {
+  appearance: none;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  padding: 6px 32px 6px 12px;
+  font-size: 14px;
+  color: #111827;
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #6b7280 50%),
+    linear-gradient(135deg, #6b7280 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+  min-width: 140px;
+}
+
+.game-type-select__input:focus {
+  outline: 2px solid rgba(37, 99, 235, 0.5);
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .footer__description {
+    text-align: center;
+  }
+
+  .footer-controls {
+    justify-content: center;
+  }
 }
 
 @media (min-width: 520px) {

@@ -32,6 +32,7 @@ export const createPostScoreController = ({
   hasAnyCompletedBoards = () => false,
   hasPostedEntry = () => false,
   markEntryPosted = () => {},
+  getLastPostedScore = () => null,
   elements
 }) => {
   const {
@@ -79,6 +80,14 @@ export const createPostScoreController = ({
       seconds: entry.seconds
     });
     return Number.isFinite(score) ? score : null;
+  };
+
+  const resolveLastPostedScore = () => {
+    if (typeof getLastPostedScore === 'function') {
+      const value = Number(getLastPostedScore());
+      return Number.isFinite(value) ? value : null;
+    }
+    return null;
   };
 
   const updateScoreDisplay = () => {
@@ -160,7 +169,15 @@ export const createPostScoreController = ({
         : Boolean(canSubmitToGlobalLeaderboard);
 
     const hasBoards = hasCompletedBoards();
-    const shouldShow = Boolean(hasBoards && canSubmit);
+    const bestEntry = readBestEntry();
+    const entryScore = computeEntryScore(bestEntry);
+    const lastPostedScore = resolveLastPostedScore();
+    const hasNewRecord =
+      hasBoards &&
+      bestEntry &&
+      Number.isFinite(entryScore) &&
+      (!Number.isFinite(lastPostedScore) || entryScore > lastPostedScore);
+    const shouldShow = Boolean(canSubmit && hasNewRecord);
     button.hidden = !shouldShow;
 
     const shouldDisable = !shouldShow || state.postScoreSubmitting;
@@ -301,11 +318,9 @@ export const createPostScoreController = ({
       return;
     }
 
-    const storageSnapshot = typeof getStorage === 'function' ? getStorage() : null;
-    const lastPostedScore = Number(storageSnapshot?.globalLeaderboardLastPostedScore);
-    const hasLastPostedScore = Number.isFinite(lastPostedScore);
+    const lastPostedScore = resolveLastPostedScore();
 
-    if (hasLastPostedScore && Number.isFinite(postedScore) && postedScore <= lastPostedScore) {
+    if (Number.isFinite(lastPostedScore) && Number.isFinite(postedScore) && postedScore <= lastPostedScore) {
       updateStatus('notice', translate('postScoreNeedsHigherScore'));
       window.setTimeout(() => {
         if (input) {
@@ -340,7 +355,8 @@ export const createPostScoreController = ({
               initials: normalized,
               difficulty: entry.difficulty,
               seconds: entry.seconds,
-              solvedAt: entry.solvedAt
+              solvedAt: entry.solvedAt,
+              gameType: entry.gameType
             });
           } catch (markError) {
             console.error('Failed to mark leaderboard entry as uploaded', markError);
@@ -353,7 +369,8 @@ export const createPostScoreController = ({
               difficulty: entry.difficulty,
               seconds: entry.seconds,
               solvedAt: entry.solvedAt,
-              score: postedScore
+              score: postedScore,
+              gameType: entry.gameType
             });
           } catch (postError) {
             console.error('Failed to record posted leaderboard entry', postError);

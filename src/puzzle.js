@@ -1,5 +1,7 @@
 import { DIFFICULTIES, DEFAULT_DIFFICULTY } from './config/difficulties.js';
+import { DEFAULT_GAME_TYPE } from './config/games.js';
 import { PUZZLE_LIBRARY } from './data/puzzle-library.js';
+import { GEAR_PUZZLES } from './data/gears-library.js';
 
 export const CELL_STATES = ['empty', 'fruit', 'mark'];
 
@@ -193,8 +195,51 @@ const buildPuzzle = (difficulty, paletteColors, attempt = 0) => {
     columnTotals,
     regionGrid: overlay,
     regions,
-    regionsById
+    regionsById,
+    gameType: 'stars'
   };
 };
 
-export const createPuzzle = (difficulty, paletteColors) => buildPuzzle(difficulty, paletteColors);
+const chooseGearPuzzle = (difficulty) => {
+  const matching = GEAR_PUZZLES.filter(
+    (puzzle) => !puzzle.difficulty || puzzle.difficulty === difficulty
+  );
+  const collection = matching.length > 0 ? matching : GEAR_PUZZLES;
+  return collection[Math.floor(Math.random() * collection.length)];
+};
+
+const buildGearPuzzle = (difficulty) => {
+  const config = chooseGearPuzzle(difficulty);
+  const size = config.size;
+  const regionId = 'gear-region';
+  const region = {
+    id: regionId,
+    requirement: null,
+    anchor: [0, 0],
+    color: '#94a3b8'
+  };
+  const regionGrid = Array.from({ length: size }, () =>
+    Array.from({ length: size }, () => regionId)
+  );
+  return {
+    size,
+    solution: config.solution.map((row) => row.slice()),
+    rowHints: config.rowHints.map((hint) => hint.slice()),
+    columnHints: config.columnHints.map((hint) => hint.slice()),
+    regions: [region],
+    regionsById: { [regionId]: region },
+    regionGrid,
+    gameType: 'gears'
+  };
+};
+
+export const createPuzzle = ({
+  difficulty = DEFAULT_DIFFICULTY,
+  paletteColors,
+  gameType = DEFAULT_GAME_TYPE
+} = {}) => {
+  if (gameType === 'gears') {
+    return buildGearPuzzle(difficulty);
+  }
+  return buildPuzzle(difficulty, paletteColors);
+};
