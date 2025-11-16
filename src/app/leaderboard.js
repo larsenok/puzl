@@ -103,7 +103,9 @@ export const createLeaderboardManager = ({
   getStorage,
   writeStorage,
   supabase,
-  elements
+  elements,
+  getGameType = () => 'stars',
+  getGameLabel = () => ''
 }) => {
   const {
     button,
@@ -122,19 +124,125 @@ export const createLeaderboardManager = ({
   const supabaseHelpers = createSupabaseHelpers(supabase);
   let lastFocusedElement = null;
 
+  const resolveGameType = (override) => {
+    if (typeof override === 'string' && override.trim().length > 0) {
+      return override;
+    }
+    if (typeof getGameType === 'function') {
+      const current = getGameType();
+      if (typeof current === 'string' && current.trim().length > 0) {
+        return current;
+      }
+    }
+    return 'stars';
+  };
+
+  const getGameSpecificKey = (base, override) => {
+    const type = resolveGameType(override);
+    return type === 'stars' ? base : `${base}_${type}`;
+  };
+
+  const getLocalizedGameLabel = () => {
+    if (typeof getGameLabel === 'function') {
+      const label = getGameLabel();
+      if (typeof label === 'string' && label.trim().length > 0) {
+        return label;
+      }
+    }
+    return '';
+  };
+
+  const updateLeaderboardTitle = () => {
+    if (!titleElement) {
+      return;
+    }
+    const label = getLocalizedGameLabel();
+    if (label) {
+      titleElement.textContent = translate('leaderboardTitleForGame', { game: label });
+    } else {
+      titleElement.textContent = translate('leaderboardTitle');
+    }
+  };
+
+  const readGlobalCacheEntry = () => {
+    const storage = getStorage();
+    const cache = storage.globalLeaderboardCache;
+    const type = resolveGameType();
+
+    if (!cache) {
+      return null;
+    }
+
+    if (Array.isArray(cache.entries) && type === 'stars') {
+      return cache;
+    }
+
+    if (cache.entries && type !== 'stars') {
+      return null;
+    }
+
+    const entry = cache[type];
+    if (entry && Array.isArray(entry.entries)) {
+      return entry;
+    }
+
+    return null;
+  };
+
+  const writeGlobalCacheEntry = (payload) => {
+    const storage = getStorage();
+    const type = resolveGameType();
+    const cache = storage.globalLeaderboardCache;
+
+    if (!cache || Array.isArray(cache.entries)) {
+      if (type === 'stars') {
+        storage.globalLeaderboardCache = payload;
+        return;
+      }
+      const legacy = cache && Array.isArray(cache.entries) ? cache : null;
+      storage.globalLeaderboardCache = {};
+      if (legacy) {
+        storage.globalLeaderboardCache.stars = legacy;
+      }
+    }
+
+    storage.globalLeaderboardCache[type] = payload;
+  };
+
+  const getGlobalFetchDateKey = (override) =>
+    getGameSpecificKey('globalLeaderboardLastFetchDate', override);
+
+  const clearGlobalCacheForCurrentGame = () => {
+    const storage = getStorage();
+    const cache = storage.globalLeaderboardCache;
+    const type = resolveGameType();
+    if (!cache) {
+      return;
+    }
+    if (Array.isArray(cache.entries) && type === 'stars') {
+      delete storage.globalLeaderboardCache;
+      return;
+    }
+    if (cache.entries && type !== 'stars') {
+      return;
+    }
+    if (cache[type]) {
+      delete cache[type];
+    }
+  };
+
   const hydrateGlobalLeaderboardFromCache = () => {
     if (!supabaseHelpers.hasConfiguration()) {
       return;
     }
 
-    const storage = getStorage();
-    const cache = storage.globalLeaderboardCache;
+    const cacheEntry = readGlobalCacheEntry();
 
-    if (!cache || !Array.isArray(cache.entries)) {
+    if (!cacheEntry) {
       return;
     }
 
-    const hydratedEntries = cache.entries
+    const hydratedEntries = cacheEntry.entries
       .map((entry) =>
         normalizeEntry({
           initials: (entry.initials || '').toString().slice(0, 3),
@@ -150,15 +258,17 @@ export const createLeaderboardManager = ({
     state.globalLeaderboard = hydratedEntries;
 
     const todayKey = getTodayKey();
-    state.globalLeaderboardLoaded = storage.globalLeaderboardLastFetchDate === todayKey;
+    const storage = getStorage();
+    state.globalLeaderboardLoaded = storage[getGlobalFetchDateKey()] === todayKey;
   };
 
-  const ensureLeaderboardStorage = () => {
+  const ensureLeaderboardStorage = (gameTypeOverride) => {
     const storage = getStorage();
-    if (!Array.isArray(storage.leaderboard)) {
-      storage.leaderboard = [];
+    const key = getGameSpecificKey('leaderboard', gameTypeOverride);
+    if (!Array.isArray(storage[key])) {
+      storage[key] = [];
     }
-    return storage.leaderboard;
+    return storage[key];
   };
 
   const normalizeUploadedFlag = (value) => {
@@ -198,6 +308,7 @@ export const createLeaderboardManager = ({
     const numericSeconds = Number(entry.seconds);
     const normalizedSeconds = Number.isFinite(numericSeconds) ? numericSeconds : null;
     const uploaded = normalizeUploadedFlag(entry.uploaded);
+    const gameType = resolveGameType(entry.gameType);
     const { score, parSeconds } = computeDifficultyScore({
       difficulties,
       difficulty: entry.difficulty,
@@ -209,7 +320,8 @@ export const createLeaderboardManager = ({
       seconds: normalizedSeconds,
       score,
       parSeconds,
-      uploaded
+      uploaded,
+      gameType
     };
   };
 
@@ -242,15 +354,15 @@ export const createLeaderboardManager = ({
   const sortLeaderboardEntries = (entries = []) =>
     entries.filter(Boolean).sort(compareEntries);
 
-  const readStoredLeaderboardEntries = () =>
+  const readStoredLeaderboardEntries = (gameTypeOverride) =>
     sortLeaderboardEntries(
-      ensureLeaderboardStorage()
+      ensureLeaderboardStorage(gameTypeOverride)
         .filter((entry) => entry && typeof entry === 'object')
         .map((entry) => normalizeEntry(entry))
     );
 
-  const persistLeaderboardEntries = (entries = []) => {
-    const leaderboard = ensureLeaderboardStorage();
+  const persistLeaderboardEntries = (entries = [], gameTypeOverride) => {
+    const leaderboard = ensureLeaderboardStorage(gameTypeOverride);
     leaderboard.length = 0;
     entries
       .map((entry) => normalizeEntry(entry))
@@ -490,6 +602,8 @@ export const createLeaderboardManager = ({
 
     const view = state.leaderboardView === 'global' && globalAvailable ? 'global' : 'local';
 
+    updateLeaderboardTitle();
+
     tabs.forEach((tab) => {
       const tabView = tab.dataset.view === 'global' ? 'global' : 'local';
       const isActive = tabView === view;
@@ -532,7 +646,8 @@ export const createLeaderboardManager = ({
       state.globalLeaderboardLoaded = false;
       state.globalLeaderboardError = null;
       state.globalLeaderboardLoading = false;
-      delete storage.globalLeaderboardCache;
+      clearGlobalCacheForCurrentGame();
+      delete storage[getGlobalFetchDateKey()];
       writeStorage(storage);
       renderGlobalLeaderboard(state.leaderboardView === 'global');
       return;
@@ -543,14 +658,15 @@ export const createLeaderboardManager = ({
     }
 
     const todayKey = getTodayKey();
-    const fetchedToday = storage.globalLeaderboardLastFetchDate === todayKey;
+    const fetchedToday = storage[getGlobalFetchDateKey()] === todayKey;
 
     if (state.globalLeaderboardLoaded && !force && fetchedToday) {
       renderGlobalLeaderboard(state.leaderboardView === 'global');
       return;
     }
 
-    if (!force && fetchedToday && Array.isArray(storage.globalLeaderboardCache?.entries)) {
+    const cachedEntry = readGlobalCacheEntry();
+    if (!force && fetchedToday && cachedEntry) {
       hydrateGlobalLeaderboardFromCache();
       renderGlobalLeaderboard(state.leaderboardView === 'global');
       return;
@@ -567,8 +683,8 @@ export const createLeaderboardManager = ({
         .filter((entry) => entry && entry.initials && entry.uploaded)
         .sort(compareEntries);
       state.globalLeaderboardLoaded = true;
-      storage.globalLeaderboardLastFetchDate = todayKey;
-      storage.globalLeaderboardCache = {
+      storage[getGlobalFetchDateKey()] = todayKey;
+      writeGlobalCacheEntry({
         date: todayKey,
         entries: state.globalLeaderboard.map((entry) => ({
           initials: entry.initials,
@@ -577,7 +693,7 @@ export const createLeaderboardManager = ({
           createdAt: entry.createdAt || null,
           uploaded: true
         }))
-      };
+      });
       writeStorage(storage);
     } catch (error) {
       console.error('Failed to load global leaderboard', error);
@@ -602,19 +718,28 @@ export const createLeaderboardManager = ({
     }
   };
 
-  const recordLeaderboardEntry = ({ boardId, difficulty, seconds, solvedAt, date }) => {
+  const recordLeaderboardEntry = ({
+    boardId,
+    difficulty,
+    seconds,
+    solvedAt,
+    date,
+    gameType
+  }) => {
     if (!boardId) {
       return;
     }
 
-    const leaderboard = ensureLeaderboardStorage();
+    const type = resolveGameType(gameType);
+    const leaderboard = ensureLeaderboardStorage(type);
     const normalizedNewEntry = normalizeEntry({
       boardId,
       difficulty,
       seconds,
       solvedAt,
       date,
-      uploaded: false
+      uploaded: false,
+      gameType: type
     });
 
     if (!normalizedNewEntry) {
@@ -633,17 +758,17 @@ export const createLeaderboardManager = ({
       leaderboard.push(normalizedNewEntry);
     }
 
-    const normalizedEntries = readStoredLeaderboardEntries();
-    persistLeaderboardEntries(normalizedEntries);
+    const normalizedEntries = readStoredLeaderboardEntries(type);
+    persistLeaderboardEntries(normalizedEntries, type);
     renderLeaderboard();
   };
 
-  const markLeaderboardEntryAsUploaded = ({ boardId, initials }) => {
+  const markLeaderboardEntryAsUploaded = ({ boardId, initials, gameType }) => {
     if (!boardId) {
       return;
     }
 
-    const leaderboard = ensureLeaderboardStorage();
+    const leaderboard = ensureLeaderboardStorage(gameType);
     const index = leaderboard.findIndex(
       (entry) => entry && typeof entry === 'object' && entry.boardId === boardId
     );
@@ -671,8 +796,8 @@ export const createLeaderboardManager = ({
       uploaded: true
     };
 
-    const normalizedEntries = readStoredLeaderboardEntries();
-    persistLeaderboardEntries(normalizedEntries);
+    const normalizedEntries = readStoredLeaderboardEntries(gameType);
+    persistLeaderboardEntries(normalizedEntries, gameType);
     renderLeaderboard();
   };
 
@@ -762,9 +887,7 @@ export const createLeaderboardManager = ({
       button.setAttribute('title', label);
     }
 
-    if (titleElement) {
-      titleElement.textContent = translate('leaderboardTitle');
-    }
+    updateLeaderboardTitle();
 
     if (emptyState) {
       emptyState.textContent = translate('leaderboardEmpty');

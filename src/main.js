@@ -1,5 +1,6 @@
 import { ACTIVE_LOCALE, translate } from './config/translations.js';
 import { DIFFICULTIES, DEFAULT_DIFFICULTY } from './config/difficulties.js';
+import { GAME_TYPES, DEFAULT_GAME_TYPE } from './config/games.js';
 import { DEFAULT_COLOR_PALETTE_ID, getPaletteColorsById } from './palette.js';
 import { CELL_STATES, createEmptyBoard, createPuzzle } from './puzzle.js';
 import { cloneBoard } from './utils/board.js';
@@ -28,9 +29,35 @@ if (typeof storage.controlsLocked !== 'boolean') {
 if (typeof storage.regionFillEnabled !== 'boolean') {
   storage.regionFillEnabled = true;
 }
+
+const normalizeGameType = (value) =>
+  typeof value === 'string' && Object.prototype.hasOwnProperty.call(GAME_TYPES, value)
+    ? value
+    : DEFAULT_GAME_TYPE;
+
+const storedGameType = normalizeGameType(storage.gameType);
+if (storage.gameType !== storedGameType) {
+  storage.gameType = storedGameType;
+  writeStorage(storage);
+}
 let currentEntry = null;
 
 const MAX_TRACKED_POSTED_ENTRIES = 50;
+
+const getGameScopedStorageKey = (baseKey, gameType = DEFAULT_GAME_TYPE) =>
+  gameType === DEFAULT_GAME_TYPE ? baseKey : `${baseKey}_${gameType}`;
+
+const getDifficultyStorageKey = (gameType = DEFAULT_GAME_TYPE) =>
+  getGameScopedStorageKey('difficulty', gameType);
+
+const readStoredDifficultyForGame = (gameType = DEFAULT_GAME_TYPE) => {
+  const key = getDifficultyStorageKey(gameType);
+  const storedValue = storage[key];
+  if (typeof storedValue === 'string' && DIFFICULTIES[storedValue]) {
+    return storedValue;
+  }
+  return DEFAULT_DIFFICULTY;
+};
 
 const normalizePostedEntry = (entry) => {
   if (!entry || typeof entry !== 'object') {
@@ -108,50 +135,64 @@ const postedEntriesMatch = (a, b) => {
   );
 };
 
-const readPostedGlobalEntries = () => {
-  if (!Array.isArray(storage.globalLeaderboardPostedEntries)) {
+const readPostedGlobalEntries = (gameType = getActiveGameType()) => {
+  const key = getGameScopedStorageKey('globalLeaderboardPostedEntries', gameType);
+  const entries = storage[key];
+  if (!Array.isArray(entries)) {
     return [];
   }
 
-  return storage.globalLeaderboardPostedEntries
-    .map((entry) => normalizePostedEntry(entry))
-    .filter(Boolean);
+  return entries.map((entry) => normalizePostedEntry(entry)).filter(Boolean);
 };
 
-const hasPostedGlobalEntry = ({ boardId, difficulty, seconds, solvedAt }) => {
+const hasPostedGlobalEntry = ({ boardId, difficulty, seconds, solvedAt, gameType }) => {
   const candidate = normalizePostedEntry({ boardId, difficulty, seconds, solvedAt });
   if (!candidate) {
     return false;
   }
 
-  return readPostedGlobalEntries().some((entry) => postedEntriesMatch(entry, candidate));
+  return readPostedGlobalEntries(gameType).some((entry) => postedEntriesMatch(entry, candidate));
 };
 
-const recordPostedGlobalEntry = ({ boardId, difficulty, seconds, solvedAt, score }) => {
+const readLastPostedScore = (gameType = getActiveGameType()) => {
+  const key = getGameScopedStorageKey('globalLeaderboardLastPostedScore', gameType);
+  const value = Number(storage[key]);
+  return Number.isFinite(value) ? value : null;
+};
+
+const writeLastPostedScore = (score, gameType = getActiveGameType()) => {
+  const key = getGameScopedStorageKey('globalLeaderboardLastPostedScore', gameType);
+  if (Number.isFinite(score)) {
+    storage[key] = Number(score);
+  } else {
+    delete storage[key];
+  }
+};
+
+const recordPostedGlobalEntry = ({ boardId, difficulty, seconds, solvedAt, score, gameType }) => {
   const candidate = normalizePostedEntry({ boardId, difficulty, seconds, solvedAt });
   if (!candidate) {
     return;
   }
 
-  const entries = readPostedGlobalEntries();
+  const type = gameType || getActiveGameType();
+  const entries = readPostedGlobalEntries(type);
   if (entries.some((entry) => postedEntriesMatch(entry, candidate))) {
     return;
   }
 
   entries.unshift(candidate);
-  storage.globalLeaderboardPostedEntries = entries.slice(0, MAX_TRACKED_POSTED_ENTRIES);
+  const key = getGameScopedStorageKey('globalLeaderboardPostedEntries', type);
+  storage[key] = entries.slice(0, MAX_TRACKED_POSTED_ENTRIES);
 
-  if (Number.isFinite(score)) {
-    storage.globalLeaderboardLastPostedScore = Number(score);
-  } else {
-    delete storage.globalLeaderboardLastPostedScore;
-  }
+  writeLastPostedScore(score, type);
 
   writeStorage(storage);
 };
 
 const state = {
-  difficulty: DEFAULT_DIFFICULTY,
+  gameType: storedGameType,
+  difficulty: readStoredDifficultyForGame(storedGameType),
   puzzle: null,
   boardState: [],
   isSolved: false,
@@ -172,6 +213,17 @@ const state = {
 
 const formatScoreValue = (value) => formatScore(value, ACTIVE_LOCALE);
 
+const getCurrentGameDefinition = () => GAME_TYPES[state.gameType] || GAME_TYPES[DEFAULT_GAME_TYPE];
+
+const updateFooterDescription = () => {
+  if (!footerDescriptionElement) {
+    return;
+  }
+  const definition = getCurrentGameDefinition();
+  const descriptionKey = definition?.descriptionKey || 'footer';
+  footerDescriptionElement.textContent = translate(descriptionKey);
+};
+
 const appRoot = document.querySelector('.app');
 const difficultyToggleElement = document.querySelector('.difficulty-toggle');
 const columnHintsContainer = document.getElementById('column-hints');
@@ -189,6 +241,8 @@ const extremeDifficultyButton = difficultyButtons.find(
   (button) => button.dataset.difficulty === 'extreme'
 );
 const footerDescriptionElement = document.getElementById('footer-description');
+const gameTypeSelect = document.getElementById('game-type-select');
+const gameTypeLabelElement = document.getElementById('game-type-select-label');
 const resetProgressButton = document.getElementById('reset-progress-button');
 const leaderboardButton = document.getElementById('leaderboard-button');
 const leaderboardOverlay = document.getElementById('leaderboard-overlay');
@@ -266,6 +320,9 @@ const applyActivePaletteToPuzzle = (puzzle) => {
   if (!puzzle) {
     return;
   }
+  if (puzzle.gameType === 'gears') {
+    return;
+  }
   const colors = getPaletteColorsById(activeColorPaletteId);
   const length = colors.length || 1;
   puzzle.regions.forEach((region, index) => {
@@ -310,11 +367,17 @@ const applyPaletteToBoardElements = () => {
 };
 
 
-const ensurePuzzlesStorage = () => {
-  if (!storage.puzzles || typeof storage.puzzles !== 'object') {
-    storage.puzzles = {};
+const getActiveGameType = () => (typeof state?.gameType === 'string' ? state.gameType : storedGameType);
+
+const getPuzzleStorageKey = (gameType = getActiveGameType()) =>
+  getGameScopedStorageKey('puzzles', gameType);
+
+const ensurePuzzlesStorage = (gameType = getActiveGameType()) => {
+  const key = getPuzzleStorageKey(gameType);
+  if (!storage[key] || typeof storage[key] !== 'object') {
+    storage[key] = {};
   }
-  return storage.puzzles;
+  return storage[key];
 };
 
 const markExtremeUnlocked = () => {
@@ -358,6 +421,21 @@ const updateExtremeAvailability = () => {
 const applyTranslations = () => {
   if (typeof document !== 'undefined' && document.documentElement) {
     document.documentElement.lang = ACTIVE_LOCALE;
+  }
+
+  if (gameTypeLabelElement) {
+    gameTypeLabelElement.textContent = translate('gameTypeLabel');
+  }
+
+  if (gameTypeSelect) {
+    Array.from(gameTypeSelect.options).forEach((option) => {
+      if (option.value === 'stars') {
+        option.textContent = translate('gameTypeStars');
+      } else if (option.value === 'gears') {
+        option.textContent = translate('gameTypeGears');
+      }
+    });
+    gameTypeSelect.setAttribute('aria-label', translate('gameTypeLabel'));
   }
 
   if (difficultyToggleElement) {
@@ -405,9 +483,7 @@ const applyTranslations = () => {
     timerElement.setAttribute('aria-label', translate('timeSpent'));
   }
 
-  if (footerDescriptionElement) {
-    footerDescriptionElement.textContent = translate('footer');
-  }
+  updateFooterDescription();
 
 
   if (resetProgressButton) {
@@ -425,17 +501,19 @@ const persistCurrentState = (additional = {}) => {
     writeStorage(storage);
     return;
   }
-  const puzzles = ensurePuzzlesStorage();
+  const puzzles = ensurePuzzlesStorage(state.gameType);
   currentEntry = {
     ...currentEntry,
     puzzle: state.puzzle,
     boardState: cloneBoard(state.boardState),
     secondsElapsed: state.timer.secondsElapsed,
     updatedAt: getTimestamp(),
+    gameType: state.gameType,
     ...additional
   };
   puzzles[state.difficulty] = currentEntry;
-  storage.difficulty = state.difficulty;
+  storage[getDifficultyStorageKey(state.gameType)] = state.difficulty;
+  storage.gameType = state.gameType;
   syncControlsLockToStorage();
   writeStorage(storage);
 };
@@ -445,7 +523,9 @@ const recordLeaderboardEntry = () => {
     return;
   }
 
-  const boardId = currentEntry.createdAt || `${state.difficulty}-${currentEntry.date || getTimestamp()}`;
+  const boardId = currentEntry.createdAt
+    ? `${state.gameType}-${currentEntry.createdAt}`
+    : `${state.gameType}-${state.difficulty}-${currentEntry.date || getTimestamp()}`;
   const seconds = state.timer.secondsElapsed;
   const solvedAt = getTimestamp();
 
@@ -454,7 +534,8 @@ const recordLeaderboardEntry = () => {
     difficulty: state.difficulty,
     seconds,
     solvedAt,
-    date: currentEntry.date
+    date: currentEntry.date,
+    gameType: state.gameType
   });
   postScoreController?.updateButtonState();
 };
@@ -554,7 +635,9 @@ const stopTimer = () => {
 
 const resetProgress = () => {
   stopTimer();
-  const lastFetchDate = storage.globalLeaderboardLastFetchDate;
+  const fetchDateEntries = Object.entries(storage).filter(([key]) =>
+    key.startsWith('globalLeaderboardLastFetchDate')
+  );
   const cachedGlobalLeaderboard = storage.globalLeaderboardCache;
   try {
     localStorage.removeItem(STORAGE_KEY);
@@ -563,13 +646,15 @@ const resetProgress = () => {
   }
   storage = readStorage();
   storage.controlsLocked = state.controlsLocked;
-  if (typeof lastFetchDate === 'string') {
-    storage.globalLeaderboardLastFetchDate = lastFetchDate;
-  }
+  fetchDateEntries.forEach(([key, value]) => {
+    storage[key] = value;
+  });
   if (cachedGlobalLeaderboard && typeof cachedGlobalLeaderboard === 'object') {
     storage.globalLeaderboardCache = cachedGlobalLeaderboard;
   }
   currentEntry = null;
+  state.gameType = DEFAULT_GAME_TYPE;
+  storage.gameType = DEFAULT_GAME_TYPE;
   state.difficulty = DEFAULT_DIFFICULTY;
   state.puzzle = null;
   state.boardState = [];
@@ -579,7 +664,7 @@ const resetProgress = () => {
   state.timer.intervalId = null;
   state.timer.running = false;
   const message = translate('statusProgressCleared');
-  loadPuzzle({ difficulty: state.difficulty, forceNew: true });
+  loadPuzzle({ difficulty: state.difficulty, forceNew: true, gameType: state.gameType });
   renderCurrentPuzzle({
     announce: true,
     message,
@@ -591,6 +676,10 @@ const resetProgress = () => {
   });
   updateExtremeAvailability();
   leaderboardController?.render();
+  leaderboardController?.applyTranslations();
+  if (gameTypeSelect) {
+    gameTypeSelect.value = state.gameType;
+  }
 };
 
 const resetTimer = (seconds = 0) => {
@@ -627,14 +716,23 @@ const resumeTimerIfNeeded = () => {
   }
 };
 
-const loadPuzzle = ({ difficulty = state.difficulty, forceNew = false } = {}) => {
-  const puzzles = ensurePuzzlesStorage();
+const loadPuzzle = ({
+  difficulty = state.difficulty,
+  forceNew = false,
+  gameType = state.gameType
+} = {}) => {
+  const normalizedGameType = normalizeGameType(gameType);
+  const puzzles = ensurePuzzlesStorage(normalizedGameType);
   const todayKey = getTodayKey();
   let entry = puzzles[difficulty];
 
   if (!entry || entry.date !== todayKey || forceNew) {
     const paletteColors = getPaletteColorsById(activeColorPaletteId);
-    const puzzle = createPuzzle(difficulty, paletteColors);
+    const puzzle = createPuzzle({
+      difficulty,
+      paletteColors,
+      gameType: normalizedGameType
+    });
     const boardState = createEmptyBoard(puzzle.size);
     entry = {
       date: todayKey,
@@ -645,17 +743,22 @@ const loadPuzzle = ({ difficulty = state.difficulty, forceNew = false } = {}) =>
       status: null,
       secondsElapsed: 0,
       createdAt: getTimestamp(),
-      updatedAt: getTimestamp()
+      updatedAt: getTimestamp(),
+      gameType: normalizedGameType
     };
   }
 
   puzzles[difficulty] = entry;
-  storage.difficulty = difficulty;
+  entry.gameType = normalizedGameType;
+  storage[getDifficultyStorageKey(normalizedGameType)] = difficulty;
+  storage.gameType = normalizedGameType;
   syncControlsLockToStorage();
 
   currentEntry = entry;
   state.difficulty = difficulty;
+  state.gameType = normalizedGameType;
   setAppDifficultyAttribute(difficulty);
+  setAppGameTypeAttribute(normalizedGameType);
   state.puzzle = entry.puzzle;
   applyActivePaletteToPuzzle(state.puzzle);
   state.boardState = cloneBoard(entry.boardState);
@@ -672,6 +775,8 @@ const renderCurrentPuzzle = ({ announce = false, message, additionalState } = {}
   createBoardStructure();
   updateBoard();
   updateTimerDisplay();
+  setAppGameTypeAttribute(state.gameType);
+  updateFooterDescription();
   let statusDetails = null;
 
   if (announce) {
@@ -715,6 +820,12 @@ const setAppDifficultyAttribute = (difficulty) => {
   }
 };
 
+const setAppGameTypeAttribute = (gameType) => {
+  if (appRoot) {
+    appRoot.dataset.game = gameType;
+  }
+};
+
 const getCurrentRowTotals = () =>
   state.boardState.map((row) => row.filter((cell) => cell === 'fruit').length);
 
@@ -725,12 +836,95 @@ const getCurrentColumnTotals = () => {
   );
 };
 
+const formatGearHint = (values = []) =>
+  Array.isArray(values) && values.length ? values.join('·') : '0';
+
+const computeGearGroupsForRow = (row = []) => {
+  const groups = [];
+  let count = 0;
+  row.forEach((cell) => {
+    if (cell === 'fruit') {
+      count += 1;
+    } else if (count > 0) {
+      groups.push(count);
+      count = 0;
+    }
+  });
+  if (count > 0) {
+    groups.push(count);
+  }
+  return groups;
+};
+
+const getGearColumnGroups = () => {
+  if (!state.puzzle) {
+    return [];
+  }
+  const size = state.puzzle.size;
+  return Array.from({ length: size }, (_, column) => {
+    const groups = [];
+    let count = 0;
+    for (let row = 0; row < size; row += 1) {
+      if (state.boardState[row][column] === 'fruit') {
+        count += 1;
+      } else if (count > 0) {
+        groups.push(count);
+        count = 0;
+      }
+    }
+    if (count > 0) {
+      groups.push(count);
+    }
+    return groups;
+  });
+};
+
+const normalizeGearHints = (values = []) =>
+  Array.isArray(values)
+    ? values
+        .map((value) => Number(value) || 0)
+        .filter((value) => Number.isFinite(value) && value > 0)
+    : [];
+
+const gearGroupsMatch = (current = [], target = []) => {
+  const normalizedTarget = normalizeGearHints(target);
+  if (current.length !== normalizedTarget.length) {
+    return false;
+  }
+  return current.every((value, index) => value === normalizedTarget[index]);
+};
+
 const applyHintClasses = (element, current, target) => {
   element.classList.remove('hint-satisfied', 'hint-exceeded');
   if (current === target) {
     element.classList.add('hint-satisfied');
   } else if (current > target) {
     element.classList.add('hint-exceeded');
+  }
+};
+
+const applyGearHintClasses = (element, currentGroups = [], targetGroups = []) => {
+  if (!element) {
+    return;
+  }
+  element.classList.remove('hint-satisfied', 'hint-exceeded');
+  const normalizedTarget = normalizeGearHints(targetGroups);
+  if (currentGroups.length > normalizedTarget.length) {
+    element.classList.add('hint-exceeded');
+    return;
+  }
+  for (let index = 0; index < currentGroups.length; index += 1) {
+    if ((normalizedTarget[index] || 0) < currentGroups[index]) {
+      element.classList.add('hint-exceeded');
+      return;
+    }
+  }
+  if (!currentGroups.length && !normalizedTarget.length) {
+    element.classList.add('hint-satisfied');
+    return;
+  }
+  if (gearGroupsMatch(currentGroups, normalizedTarget)) {
+    element.classList.add('hint-satisfied');
   }
 };
 
@@ -767,7 +961,7 @@ const updateCell = (row, column) => {
     return;
   }
   if (stateValue === 'fruit') {
-    content.textContent = '★';
+    content.textContent = state.gameType === 'gears' ? '⚙' : '★';
   } else if (stateValue === 'mark') {
     content.textContent = '×';
   } else {
@@ -776,6 +970,32 @@ const updateCell = (row, column) => {
 };
 
 const updateHints = () => {
+  if (state.gameType === 'gears') {
+    const rowGroups = state.boardState.map((row) => computeGearGroupsForRow(row));
+    const columnGroups = getGearColumnGroups();
+
+    rowGroups.forEach((groups, index) => {
+      const element = rowHintElements[index];
+      if (!element) {
+        return;
+      }
+      const target = state.puzzle.rowHints?.[index] || [];
+      element.textContent = formatGearHint(target);
+      applyGearHintClasses(element, groups, target);
+    });
+
+    columnGroups.forEach((groups, index) => {
+      const element = columnHintElements[index];
+      if (!element) {
+        return;
+      }
+      const target = state.puzzle.columnHints?.[index] || [];
+      element.textContent = formatGearHint(target);
+      applyGearHintClasses(element, groups, target);
+    });
+    return;
+  }
+
   const currentRowTotals = getCurrentRowTotals();
   const currentColumnTotals = getCurrentColumnTotals();
 
@@ -852,7 +1072,12 @@ const createBoardStructure = () => {
     wrapper.className = 'column-hint-cell';
     const text = document.createElement('span');
     text.className = 'hint-text';
-    text.textContent = total;
+    if (state.gameType === 'gears') {
+      const hint = state.puzzle.columnHints?.[index] || [];
+      text.textContent = formatGearHint(hint);
+    } else {
+      text.textContent = total;
+    }
     wrapper.appendChild(text);
     columnHintGrid.appendChild(wrapper);
     columnHintElements[index] = text;
@@ -896,16 +1121,30 @@ const createBoardStructure = () => {
       content.setAttribute('aria-hidden', 'true');
       button.appendChild(content);
       button._contentElement = content;
-      button.setAttribute(
-        'aria-label',
-        translate('cellAria', {
-          row: row + 1,
-          column: column + 1,
-          requirement: region.requirement
-        })
-      );
+      if (state.gameType === 'gears') {
+        button.setAttribute(
+          'aria-label',
+          translate('cellAriaGears', {
+            row: row + 1,
+            column: column + 1
+          })
+        );
+      } else {
+        button.setAttribute(
+          'aria-label',
+          translate('cellAria', {
+            row: row + 1,
+            column: column + 1,
+            requirement: region.requirement
+          })
+        );
+      }
 
-      if (region.anchor[0] === row && region.anchor[1] === column) {
+      if (
+        state.gameType === 'stars' &&
+        region.anchor[0] === row &&
+        region.anchor[1] === column
+      ) {
         button.dataset.requirement = region.requirement;
       }
 
@@ -917,7 +1156,12 @@ const createBoardStructure = () => {
     hintWrapper.className = 'row-hint-cell';
     const hintText = document.createElement('span');
     hintText.className = 'hint-text';
-    hintText.textContent = state.puzzle.rowTotals[row];
+    if (state.gameType === 'gears') {
+      const hint = state.puzzle.rowHints?.[row] || [];
+      hintText.textContent = formatGearHint(hint);
+    } else {
+      hintText.textContent = state.puzzle.rowTotals[row];
+    }
     hintWrapper.appendChild(hintText);
 
     rowHintElements[row] = hintText;
@@ -929,7 +1173,64 @@ const createBoardStructure = () => {
   }
 };
 
+const checkGearsSolution = () => {
+  const rowGroups = state.boardState.map((row) => computeGearGroupsForRow(row));
+  const columnGroups = getGearColumnGroups();
+  const rowHints = state.puzzle.rowHints || [];
+  const columnHints = state.puzzle.columnHints || [];
+
+  const rowsMatch = rowGroups.every((groups, index) =>
+    gearGroupsMatch(groups, rowHints[index] || [])
+  );
+  const columnsMatch = columnGroups.every((groups, index) =>
+    gearGroupsMatch(groups, columnHints[index] || [])
+  );
+
+  const solutionMatches = state.puzzle.solution.every((solutionRow, rowIndex) =>
+    solutionRow.every((expected, columnIndex) => {
+      const actual = state.boardState[rowIndex][columnIndex] === 'fruit';
+      return Boolean(expected) === actual;
+    })
+  );
+
+  if (rowsMatch && columnsMatch && solutionMatches) {
+    const alreadySolved = Boolean(currentEntry?.solved);
+    stopTimer();
+    state.isSolved = true;
+    updateTimerLockState();
+    postScoreController?.updateButtonState();
+    const solvedMessage = translate('statusSolved');
+    updateStatus('success', solvedMessage);
+    if (!alreadySolved) {
+      recordLeaderboardEntry();
+    }
+    persistCurrentState({
+      solved: true,
+      solvedAt: getTimestamp(),
+      status: { type: 'success', text: solvedMessage }
+    });
+    if (state.difficulty === 'hard') {
+      updateExtremeAvailability();
+    }
+  } else {
+    const keepGoingMessage = translate('statusKeepGoing');
+    updateStatus('alert', keepGoingMessage);
+    state.isSolved = false;
+    updateTimerLockState();
+    postScoreController?.updateButtonState();
+    persistCurrentState({
+      solved: false,
+      solvedAt: null,
+      status: { type: 'alert', text: keepGoingMessage }
+    });
+  }
+};
+
 const checkSolution = () => {
+  if (state.gameType === 'gears') {
+    checkGearsSolution();
+    return;
+  }
   const { rowTotals, columnTotals, regionGrid, regions, size } = state.puzzle;
 
   const currentRowTotals = getCurrentRowTotals();
@@ -987,7 +1288,7 @@ const checkSolution = () => {
 };
 
 const newPuzzle = ({ announce = true, forceNew = false } = {}) => {
-  loadPuzzle({ difficulty: state.difficulty, forceNew });
+  loadPuzzle({ difficulty: state.difficulty, forceNew, gameType: state.gameType });
   const message = forceNew
     ? translate('statusNewBoardCreated')
     : translate('statusBoardReady');
@@ -1018,7 +1319,7 @@ const setDifficulty = (difficulty) => {
   if (difficulty === 'extreme' && !isExtremeDifficultyUnlocked()) {
     return;
   }
-  loadPuzzle({ difficulty, forceNew: false });
+  loadPuzzle({ difficulty, forceNew: false, gameType: state.gameType });
   const difficultyLabel = translate(DIFFICULTIES[difficulty].labelKey);
   const message = translate('difficultySet', { difficulty: difficultyLabel });
   renderCurrentPuzzle({
@@ -1030,6 +1331,46 @@ const setDifficulty = (difficulty) => {
       status: { type: 'notice', text: message }
     }
   });
+};
+
+const setGameType = (gameType) => {
+  const normalized = normalizeGameType(gameType);
+  if (state.gameType === normalized) {
+    if (gameTypeSelect) {
+      gameTypeSelect.value = normalized;
+    }
+    return;
+  }
+  persistCurrentState();
+  state.gameType = normalized;
+  storage.gameType = normalized;
+  const storedDifficulty = readStoredDifficultyForGame(normalized);
+  state.difficulty = storedDifficulty;
+  state.globalLeaderboard = [];
+  state.globalLeaderboardLoaded = false;
+  state.globalLeaderboardError = null;
+  state.globalLeaderboardLoading = false;
+  currentEntry = null;
+  const message = translate('statusGameTypeChanged', {
+    game: translate(getCurrentGameDefinition().labelKey)
+  });
+  loadPuzzle({ difficulty: state.difficulty, forceNew: false, gameType: normalized });
+  renderCurrentPuzzle({
+    announce: true,
+    message,
+    additionalState: {
+      solved: false,
+      solvedAt: null,
+      status: { type: 'notice', text: message }
+    }
+  });
+  updateFooterDescription();
+  if (gameTypeSelect) {
+    gameTypeSelect.value = normalized;
+  }
+  leaderboardController?.render();
+  leaderboardController?.applyTranslations();
+  postScoreController?.updateButtonState();
 };
 
 boardContainer.addEventListener('click', (event) => {
@@ -1092,6 +1433,13 @@ if (resetProgressButton) {
   });
 }
 
+if (gameTypeSelect) {
+  gameTypeSelect.value = state.gameType;
+  gameTypeSelect.addEventListener('change', (event) => {
+    setGameType(event.target.value);
+  });
+}
+
 leaderboardController = createLeaderboardManager({
   state,
   translate,
@@ -1117,7 +1465,9 @@ leaderboardController = createLeaderboardManager({
     globalRefreshButton: leaderboardGlobalRefreshButton,
     closeButton: leaderboardCloseButton,
     titleElement: leaderboardTitleElement
-  }
+  },
+  getGameType: () => state.gameType,
+  getGameLabel: () => translate(getCurrentGameDefinition().labelKey)
 });
 
 postScoreController = createPostScoreController({
@@ -1132,14 +1482,17 @@ postScoreController = createPostScoreController({
   updateStatus,
   onGlobalLeaderboardRefresh: (options) =>
     leaderboardController.loadGlobalLeaderboard(options),
-  markEntryUploaded: (details) => leaderboardController.markEntryAsUploaded(details),
+  markEntryUploaded: (details) =>
+    leaderboardController.markEntryAsUploaded({ ...details, gameType: state.gameType }),
   locale: ACTIVE_LOCALE,
   canSubmitToGlobalLeaderboard: () =>
     Boolean(leaderboardController?.hasSupabaseConfiguration?.()),
   getBestLocalEntry: () => leaderboardController?.getBestLocalEntry?.() || null,
   hasAnyCompletedBoards: () => leaderboardController?.hasAnyCompletedBoards?.() || false,
-  hasPostedEntry: (details) => hasPostedGlobalEntry(details),
-  markEntryPosted: (details) => recordPostedGlobalEntry(details),
+  hasPostedEntry: (details) => hasPostedGlobalEntry({ ...details, gameType: state.gameType }),
+  markEntryPosted: (details) =>
+    recordPostedGlobalEntry({ ...details, gameType: state.gameType }),
+  getLastPostedScore: () => readLastPostedScore(state.gameType),
   elements: {
     button: leaderboardPostBestButton,
     overlay: postScoreOverlay,
@@ -1176,11 +1529,14 @@ const initializeApp = () => {
   applyTranslations();
   updateControlsLockState();
   updateRegionFillState();
-  const storedDifficulty = storage.difficulty;
+  const storedDifficulty = readStoredDifficultyForGame(state.gameType);
   if (storedDifficulty && DIFFICULTIES[storedDifficulty]) {
     state.difficulty = storedDifficulty;
   }
-  loadPuzzle({ difficulty: state.difficulty, forceNew: false });
+  if (gameTypeSelect) {
+    gameTypeSelect.value = state.gameType;
+  }
+  loadPuzzle({ difficulty: state.difficulty, forceNew: false, gameType: state.gameType });
   renderCurrentPuzzle({ announce: false });
   leaderboardController?.setView(state.leaderboardView);
 };
