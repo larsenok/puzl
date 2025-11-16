@@ -1412,6 +1412,9 @@ const setGameType = (gameType) => {
   persistCurrentState();
   state.gameType = normalized;
   storage.gameType = normalized;
+  setAppGameTypeAttribute(normalized);
+  updateLeaderboardAvailability();
+  writeStorage(storage);
   const storedDifficulty = readStoredDifficultyForGame(normalized);
   state.difficulty = normalizeDifficultyForGame(storedDifficulty, normalized);
   state.globalLeaderboard = [];
@@ -1598,6 +1601,8 @@ const initializeApp = () => {
   applyTranslations();
   updateControlsLockState();
   updateRegionFillState();
+  setAppGameTypeAttribute(state.gameType);
+  updateLeaderboardAvailability();
   state.difficulty = normalizeDifficultyForGame(
     readStoredDifficultyForGame(state.gameType),
     state.gameType
