@@ -375,34 +375,6 @@ body {
   transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.app[data-game='gears'] .hint-text {
-  min-width: 56px;
-  padding: 4px 10px;
-  height: auto;
-  min-height: 32px;
-  border-radius: 10px;
-  font-size: 14px;
-  line-height: 1.2;
-}
-
-.app[data-game='gears'] .row-hint-cell,
-.app[data-game='gears'] .column-hint-cell {
-  min-height: 40px;
-}
-
-.app[data-game='gears'] .row-hint-cell {
-  flex: 0 0 auto;
-  min-width: 72px;
-}
-
-.app[data-game='gears'] .column-hints {
-  align-items: center;
-}
-
-.app[data-game='gears'] .column-hints-grid {
-  align-items: center;
-}
-
 .hint-satisfied {
   color: #047857;
   background-color: rgba(4, 120, 87, 0.16);
@@ -1175,16 +1147,17 @@ body {
 }
 
 .footer__info {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 16px;
-  flex-wrap: wrap;
+  width: 100%;
 }
 
 .footer__description {
   margin: 0;
-  flex: 1 1 220px;
+  min-width: 0;
   text-align: left;
 }
 
@@ -1196,17 +1169,9 @@ body {
 }
 
 .game-type-select {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: inline-flex;
+  align-items: center;
   color: #111827;
-}
-
-.game-type-select__label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #9ca3af;
 }
 
 .game-type-select__input {
@@ -1225,7 +1190,7 @@ body {
     calc(100% - 12px) calc(50% - 3px);
   background-size: 6px 6px;
   background-repeat: no-repeat;
-  min-width: 140px;
+  min-width: 120px;
 }
 
 .game-type-select__input:focus {
@@ -1234,10 +1199,6 @@ body {
 }
 
 @media (max-width: 640px) {
-  .footer__description {
-    text-align: center;
-  }
-
   .footer-controls {
     justify-content: center;
   }
