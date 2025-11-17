@@ -280,7 +280,7 @@ const leaderboardOverlay = document.getElementById('leaderboard-overlay');
 const leaderboardLocalView = document.getElementById('leaderboard-local-view');
 const leaderboardList = document.getElementById('leaderboard-list');
 const leaderboardEmptyState = document.getElementById('leaderboard-empty-state');
-const leaderboardTabs = Array.from(document.querySelectorAll('.leaderboard-tab'));
+const leaderboardLocalHeading = document.getElementById('leaderboard-local-heading');
 const leaderboardGlobalView = document.getElementById('leaderboard-global-view');
 const leaderboardGlobalList = document.getElementById('leaderboard-global-list');
 const leaderboardGlobalEmptyState = document.getElementById('leaderboard-global-empty-state');
@@ -288,8 +288,10 @@ const leaderboardGlobalLoading = document.getElementById('leaderboard-global-loa
 const leaderboardGlobalRefreshButton = document.getElementById(
   'leaderboard-global-refresh-button'
 );
+const leaderboardGlobalHeading = document.getElementById('leaderboard-global-heading');
 const leaderboardCloseButton = document.getElementById('leaderboard-close-button');
 const leaderboardTitleElement = document.getElementById('leaderboard-title');
+const leaderboardViewToggle = document.getElementById('leaderboard-view-toggle');
 
 const postScoreOverlay = document.getElementById('post-score-overlay');
 const postScoreForm = document.getElementById('post-score-form');
@@ -1535,17 +1537,18 @@ leaderboardController = createLeaderboardManager({
     localView: leaderboardLocalView,
     list: leaderboardList,
     emptyState: leaderboardEmptyState,
-    tabs: leaderboardTabs,
+    localHeading: leaderboardLocalHeading,
     globalView: leaderboardGlobalView,
     globalList: leaderboardGlobalList,
     globalEmptyState: leaderboardGlobalEmptyState,
     globalLoading: leaderboardGlobalLoading,
     globalRefreshButton: leaderboardGlobalRefreshButton,
+    globalHeading: leaderboardGlobalHeading,
     closeButton: leaderboardCloseButton,
-    titleElement: leaderboardTitleElement
+    titleElement: leaderboardTitleElement,
+    viewToggle: leaderboardViewToggle
   },
-  getGameType: () => state.gameType,
-  getGameLabel: () => translate(getCurrentGameDefinition().labelKey)
+  getGameType: () => state.gameType
 });
 
 postScoreController = createPostScoreController({

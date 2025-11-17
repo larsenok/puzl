@@ -582,7 +582,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .leaderboard-modal__title {
@@ -590,6 +591,42 @@ body {
   font-weight: 700;
   margin: 0;
   color: #0f172a;
+}
+
+.leaderboard-modal__actions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.leaderboard-view-toggle {
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background-color: #f8fafc;
+  color: #0f172a;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+}
+
+.leaderboard-view-toggle:hover {
+  background-color: #e2e8f0;
+}
+
+.leaderboard-view-toggle:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.45);
+  outline-offset: 2px;
+}
+
+.leaderboard-view-toggle[aria-pressed='true'] {
+  background-color: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.35);
 }
 
 .leaderboard-modal__close {
@@ -661,31 +698,44 @@ body {
   background-color: #e2e8f0;
 }
 
-.leaderboard-controls {
+.leaderboard-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (min-width: 720px) {
+  .leaderboard-sections {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+}
+
+.leaderboard-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  min-height: 100%;
+}
+
+.leaderboard-section__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
 }
 
-.leaderboard-tabs-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1 1 auto;
-  min-width: 0;
-  flex-wrap: nowrap;
-}
-
-.leaderboard-tabs {
-  display: inline-flex;
-  align-self: center;
-  background-color: rgba(148, 163, 184, 0.22);
-  border-radius: 999px;
-  padding: 3px;
-  gap: 4px;
+.leaderboard-section__title {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #0f172a;
 }
 
 .leaderboard-post-button {
@@ -720,41 +770,11 @@ body {
   box-shadow: none;
 }
 
-.leaderboard-tab {
-  border: none;
-  background: transparent;
-  color: #475569;
-  font: inherit;
-  font-weight: 600;
-  font-size: 12px;
-  padding: 5px 16px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.leaderboard-tab.is-active {
-  background-color: #ffffff;
-  color: #0f172a;
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
-}
-
-.leaderboard-tab:focus-visible {
-  outline: 2px solid rgba(37, 99, 235, 0.45);
-  outline-offset: 2px;
-}
-
 .leaderboard-empty {
   margin: 0;
   font-size: 14px;
   color: #475569;
   text-align: center;
-}
-
-.leaderboard-view {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 .leaderboard-loading {

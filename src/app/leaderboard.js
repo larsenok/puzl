@@ -104,8 +104,7 @@ export const createLeaderboardManager = ({
   writeStorage,
   supabase,
   elements,
-  getGameType = () => 'stars',
-  getGameLabel = () => ''
+  getGameType = () => 'stars'
 }) => {
   const {
     button,
@@ -113,14 +112,16 @@ export const createLeaderboardManager = ({
     localView,
     list,
     emptyState,
-    tabs,
+    localHeading,
     globalView,
     globalList,
     globalEmptyState,
     globalLoading,
     globalRefreshButton,
+    globalHeading,
     closeButton,
-    titleElement
+    titleElement,
+    viewToggle
   } = elements;
 
   const supabaseHelpers = createSupabaseHelpers(supabase);
@@ -144,26 +145,24 @@ export const createLeaderboardManager = ({
     return type === 'stars' ? base : `${base}_${type}`;
   };
 
-  const getLocalizedGameLabel = () => {
-    if (typeof getGameLabel === 'function') {
-      const label = getGameLabel();
-      if (typeof label === 'string' && label.trim().length > 0) {
-        return label;
-      }
-    }
-    return '';
-  };
-
   const updateLeaderboardTitle = () => {
     if (!titleElement) {
       return;
     }
-    const label = getLocalizedGameLabel();
-    if (label) {
-      titleElement.textContent = translate('leaderboardTitleForGame', { game: label });
-    } else {
-      titleElement.textContent = translate('leaderboardTitle');
+    titleElement.textContent = translate('leaderboardTitle');
+  };
+
+  const updateViewToggle = () => {
+    if (!viewToggle) {
+      return;
     }
+    const isGlobal = state.leaderboardView === 'global';
+    const labelKey = isGlobal ? 'leaderboardViewShowLocal' : 'leaderboardViewShowGlobal';
+    const label = translate(labelKey);
+    viewToggle.textContent = label;
+    viewToggle.setAttribute('aria-pressed', isGlobal ? 'true' : 'false');
+    viewToggle.setAttribute('aria-label', label);
+    viewToggle.setAttribute('title', label);
   };
 
   const readGlobalCacheEntry = () => {
@@ -461,28 +460,19 @@ export const createLeaderboardManager = ({
     return item;
   };
 
-  const renderLocalLeaderboard = (isActive) => {
+  const renderLocalLeaderboard = () => {
     if (!list || !emptyState) {
       return;
     }
 
     if (localView) {
+      const isActive = state.leaderboardView === 'local';
+      localView.hidden = !isActive;
       if (isActive) {
-        localView.hidden = false;
         localView.removeAttribute('aria-hidden');
       } else {
-        localView.hidden = true;
         localView.setAttribute('aria-hidden', 'true');
       }
-    }
-
-    if (!isActive) {
-      list.innerHTML = '';
-      list.hidden = true;
-      list.setAttribute('aria-hidden', 'true');
-      emptyState.hidden = true;
-      emptyState.setAttribute('aria-hidden', 'true');
-      return;
     }
 
     const entries = getLeaderboardEntries();
@@ -513,15 +503,25 @@ export const createLeaderboardManager = ({
     });
   };
 
-  const renderGlobalLeaderboard = (isActive) => {
+  const renderGlobalLeaderboard = () => {
     if (!globalList || !globalEmptyState || !globalLoading) {
       return;
     }
 
-    const canShowRefresh = Boolean(isActive && supabaseHelpers.hasConfiguration());
+    if (globalView) {
+      const isActive = state.leaderboardView === 'global';
+      globalView.hidden = !isActive;
+      if (isActive) {
+        globalView.removeAttribute('aria-hidden');
+      } else {
+        globalView.setAttribute('aria-hidden', 'true');
+      }
+    }
+
+    const hasConfiguration = supabaseHelpers.hasConfiguration();
 
     if (globalRefreshButton) {
-      if (canShowRefresh) {
+      if (hasConfiguration) {
         globalRefreshButton.hidden = false;
         globalRefreshButton.disabled = state.globalLeaderboardLoading;
         globalRefreshButton.removeAttribute('aria-hidden');
@@ -531,27 +531,7 @@ export const createLeaderboardManager = ({
       }
     }
 
-    if (globalView) {
-      if (isActive) {
-        globalView.hidden = false;
-        globalView.removeAttribute('aria-hidden');
-      } else {
-        globalView.hidden = true;
-        globalView.setAttribute('aria-hidden', 'true');
-      }
-    }
-
-    if (!isActive) {
-      globalList.hidden = true;
-      globalList.setAttribute('aria-hidden', 'true');
-      globalEmptyState.hidden = true;
-      globalEmptyState.setAttribute('aria-hidden', 'true');
-      globalLoading.hidden = true;
-      globalLoading.setAttribute('aria-hidden', 'true');
-      return;
-    }
-
-    if (!supabaseHelpers.hasConfiguration()) {
+    if (!hasConfiguration) {
       globalLoading.hidden = true;
       globalLoading.setAttribute('aria-hidden', 'true');
       globalList.hidden = true;
@@ -619,51 +599,11 @@ export const createLeaderboardManager = ({
     });
   };
 
-  const canUseGlobalLeaderboard = () => supabaseHelpers.hasConfiguration();
-
   const renderLeaderboard = () => {
-    const globalAvailable = canUseGlobalLeaderboard();
-
-    if (!globalAvailable && state.leaderboardView === 'global') {
-      state.leaderboardView = 'local';
-    }
-
-    const view = state.leaderboardView === 'global' && globalAvailable ? 'global' : 'local';
-
     updateLeaderboardTitle();
-
-    tabs.forEach((tab) => {
-      const tabView = tab.dataset.view === 'global' ? 'global' : 'local';
-      const isActive = tabView === view;
-      const shouldHide = tabView === 'global' && !globalAvailable;
-
-      tab.classList.toggle('is-active', isActive && !shouldHide);
-      tab.setAttribute('aria-selected', String(isActive && !shouldHide));
-      tab.setAttribute('tabindex', shouldHide ? '-1' : isActive ? '0' : '-1');
-
-      if (shouldHide) {
-        tab.hidden = true;
-        tab.setAttribute('aria-hidden', 'true');
-      } else {
-        tab.hidden = false;
-        tab.removeAttribute('aria-hidden');
-      }
-    });
-
-    if (globalRefreshButton) {
-      const shouldShowRefresh = view === 'global' && globalAvailable;
-      if (shouldShowRefresh) {
-        globalRefreshButton.hidden = false;
-        globalRefreshButton.removeAttribute('aria-hidden');
-        globalRefreshButton.disabled = state.globalLeaderboardLoading;
-      } else {
-        globalRefreshButton.hidden = true;
-        globalRefreshButton.setAttribute('aria-hidden', 'true');
-      }
-    }
-
-    renderLocalLeaderboard(view === 'local');
-    renderGlobalLeaderboard(view === 'global' && globalAvailable);
+    updateViewToggle();
+    renderLocalLeaderboard();
+    renderGlobalLeaderboard();
   };
 
   const loadGlobalLeaderboard = async ({ force = false } = {}) => {
@@ -677,7 +617,7 @@ export const createLeaderboardManager = ({
       clearGlobalCacheForCurrentGame();
       delete storage[getGlobalFetchDateKey()];
       writeStorage(storage);
-      renderGlobalLeaderboard(state.leaderboardView === 'global');
+      renderGlobalLeaderboard();
       return;
     }
 
@@ -689,20 +629,20 @@ export const createLeaderboardManager = ({
     const fetchedToday = storage[getGlobalFetchDateKey()] === todayKey;
 
     if (state.globalLeaderboardLoaded && !force && fetchedToday) {
-      renderGlobalLeaderboard(state.leaderboardView === 'global');
+      renderGlobalLeaderboard();
       return;
     }
 
     const cachedEntry = readGlobalCacheEntry();
     if (!force && fetchedToday && cachedEntry) {
       hydrateGlobalLeaderboardFromCache();
-      renderGlobalLeaderboard(state.leaderboardView === 'global');
+      renderGlobalLeaderboard();
       return;
     }
 
     state.globalLeaderboardLoading = true;
     state.globalLeaderboardError = null;
-    renderGlobalLeaderboard(state.leaderboardView === 'global');
+    renderGlobalLeaderboard();
 
     try {
       const entries = await supabaseHelpers.fetchEntries();
@@ -728,7 +668,7 @@ export const createLeaderboardManager = ({
       state.globalLeaderboardError = error;
     } finally {
       state.globalLeaderboardLoading = false;
-      renderGlobalLeaderboard(state.leaderboardView === 'global');
+      renderGlobalLeaderboard();
     }
   };
 
@@ -736,12 +676,10 @@ export const createLeaderboardManager = ({
     if (view !== 'local' && view !== 'global') {
       return;
     }
-    if (view === 'global' && !canUseGlobalLeaderboard()) {
-      return;
-    }
-    state.leaderboardView = view;
+    const normalizedView = view === 'global' ? 'global' : 'local';
+    state.leaderboardView = normalizedView;
     renderLeaderboard();
-    if (view === 'global') {
+    if (normalizedView === 'global' && supabaseHelpers.hasConfiguration()) {
       loadGlobalLeaderboard();
     }
   };
@@ -835,7 +773,7 @@ export const createLeaderboardManager = ({
     }
 
     renderLeaderboard();
-    if (state.leaderboardView === 'global') {
+    if (supabaseHelpers.hasConfiguration()) {
       loadGlobalLeaderboard();
     }
 
@@ -871,13 +809,6 @@ export const createLeaderboardManager = ({
   const isLeaderboardOpen = () => Boolean(overlay && !overlay.hidden);
 
   const attachEventListeners = () => {
-    tabs.forEach((tab) => {
-      tab.addEventListener('click', () => {
-        const { view } = tab.dataset;
-        setLeaderboardView(view === 'global' ? 'global' : 'local');
-      });
-    });
-
     if (button) {
       button.addEventListener('click', () => {
         openLeaderboard();
@@ -906,6 +837,13 @@ export const createLeaderboardManager = ({
         loadGlobalLeaderboard({ force: true });
       });
     }
+
+    if (viewToggle) {
+      viewToggle.addEventListener('click', () => {
+        const nextView = state.leaderboardView === 'local' ? 'global' : 'local';
+        setLeaderboardView(nextView);
+      });
+    }
   };
 
   const applyTranslations = () => {
@@ -921,14 +859,13 @@ export const createLeaderboardManager = ({
       emptyState.textContent = translate('leaderboardEmpty');
     }
 
-    tabs.forEach((tab) => {
-      const { view } = tab.dataset;
-      if (view === 'local') {
-        tab.textContent = translate('leaderboardTabLocal');
-      } else if (view === 'global') {
-        tab.textContent = translate('leaderboardTabGlobal');
-      }
-    });
+    if (localHeading) {
+      localHeading.textContent = translate('leaderboardTabLocal');
+    }
+
+    if (globalHeading) {
+      globalHeading.textContent = translate('leaderboardTabGlobal');
+    }
 
     if (globalLoading) {
       globalLoading.textContent = translate('leaderboardLoading');
@@ -958,6 +895,8 @@ export const createLeaderboardManager = ({
     if (closeButton) {
       closeButton.setAttribute('aria-label', translate('actionCloseLeaderboard'));
     }
+
+    updateViewToggle();
   };
 
   hydrateGlobalLeaderboardFromCache();
