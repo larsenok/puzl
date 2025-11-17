@@ -624,12 +624,10 @@ body {
 }
 
 .leaderboard-refresh-button {
-  align-self: stretch;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  margin-top: 4px;
   padding: 10px 11px;
   border-radius: 12px;
   border: 1px solid rgba(15, 23, 42, 0.12);
@@ -640,6 +638,7 @@ body {
   font-size: 14px;
   cursor: pointer;
   transition: background-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
 }
 
 .leaderboard-refresh-button__icon {
@@ -669,6 +668,15 @@ body {
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 16px;
+}
+
+.leaderboard-tabs-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap;
 }
 
 .leaderboard-tabs {
@@ -741,6 +749,12 @@ body {
   font-size: 14px;
   color: #475569;
   text-align: center;
+}
+
+.leaderboard-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .leaderboard-loading {

@@ -110,9 +110,11 @@ export const createLeaderboardManager = ({
   const {
     button,
     overlay,
+    localView,
     list,
     emptyState,
     tabs,
+    globalView,
     globalList,
     globalEmptyState,
     globalLoading,
@@ -464,10 +466,22 @@ export const createLeaderboardManager = ({
       return;
     }
 
+    if (localView) {
+      if (isActive) {
+        localView.hidden = false;
+        localView.removeAttribute('aria-hidden');
+      } else {
+        localView.hidden = true;
+        localView.setAttribute('aria-hidden', 'true');
+      }
+    }
+
     if (!isActive) {
       list.innerHTML = '';
       list.hidden = true;
+      list.setAttribute('aria-hidden', 'true');
       emptyState.hidden = true;
+      emptyState.setAttribute('aria-hidden', 'true');
       return;
     }
 
@@ -477,12 +491,16 @@ export const createLeaderboardManager = ({
     if (!entries.length) {
       emptyState.textContent = translate('leaderboardEmpty');
       emptyState.hidden = false;
+      emptyState.removeAttribute('aria-hidden');
       list.hidden = true;
+      list.setAttribute('aria-hidden', 'true');
       return;
     }
 
     emptyState.hidden = true;
+    emptyState.setAttribute('aria-hidden', 'true');
     list.hidden = false;
+    list.removeAttribute('aria-hidden');
 
     entries.forEach((entry, index) => {
       list.appendChild(
@@ -510,6 +528,16 @@ export const createLeaderboardManager = ({
       } else {
         globalRefreshButton.hidden = true;
         globalRefreshButton.setAttribute('aria-hidden', 'true');
+      }
+    }
+
+    if (globalView) {
+      if (isActive) {
+        globalView.hidden = false;
+        globalView.removeAttribute('aria-hidden');
+      } else {
+        globalView.hidden = true;
+        globalView.setAttribute('aria-hidden', 'true');
       }
     }
 
