@@ -207,24 +207,37 @@
         </div>
         <div class="leaderboard-modal__body">
           <div class="leaderboard-controls">
-            <div class="leaderboard-tabs" role="tablist">
+            <div class="leaderboard-tabs-row">
+              <div class="leaderboard-tabs" role="tablist">
+                <button
+                  type="button"
+                  class="leaderboard-tab is-active"
+                  data-view="local"
+                  role="tab"
+                  aria-selected="true"
+                >
+                  Local
+                </button>
+                <button
+                  type="button"
+                  class="leaderboard-tab"
+                  data-view="global"
+                  role="tab"
+                  aria-selected="false"
+                >
+                  Global
+                </button>
+              </div>
               <button
+                id="leaderboard-global-refresh-button"
+                class="leaderboard-refresh-button"
                 type="button"
-                class="leaderboard-tab is-active"
-                data-view="local"
-                role="tab"
-                aria-selected="true"
+                hidden
               >
-                Local
-              </button>
-              <button
-                type="button"
-                class="leaderboard-tab"
-                data-view="global"
-                role="tab"
-                aria-selected="false"
-              >
-                Global
+                <span class="leaderboard-refresh-button__icon" aria-hidden="true"
+                  >&#8635;</span
+                >
+                <span class="leaderboard-refresh-button__label">Update</span>
               </button>
             </div>
             <button
@@ -236,30 +249,25 @@
               Post best
             </button>
           </div>
-          <p id="leaderboard-empty-state" class="leaderboard-empty">No completed boards yet.</p>
-          <ol id="leaderboard-list" class="leaderboard-list" hidden></ol>
-          <div id="leaderboard-global-loading" class="leaderboard-loading" hidden>
-            Loading…
+          <div id="leaderboard-local-view" class="leaderboard-view">
+            <p id="leaderboard-empty-state" class="leaderboard-empty">
+              No completed boards yet.
+            </p>
+            <ol id="leaderboard-list" class="leaderboard-list" hidden></ol>
           </div>
-          <p id="leaderboard-global-empty-state" class="leaderboard-empty" hidden>
-            Connect Supabase to load the global leaderboard.
-          </p>
-          <ol
-            id="leaderboard-global-list"
-            class="leaderboard-list leaderboard-list--global"
-            hidden
-          ></ol>
-          <button
-            id="leaderboard-global-refresh-button"
-            class="leaderboard-refresh-button"
-            type="button"
-            hidden
-          >
-            <span class="leaderboard-refresh-button__icon" aria-hidden="true"
-              >&#8635;</span
-            >
-            <span class="leaderboard-refresh-button__label">Update</span>
-          </button>
+          <div id="leaderboard-global-view" class="leaderboard-view">
+            <div id="leaderboard-global-loading" class="leaderboard-loading" hidden>
+              Loading…
+            </div>
+            <p id="leaderboard-global-empty-state" class="leaderboard-empty" hidden>
+              Connect Supabase to load the global leaderboard.
+            </p>
+            <ol
+              id="leaderboard-global-list"
+              class="leaderboard-list leaderboard-list--global"
+              hidden
+            ></ol>
+          </div>
         </div>
       </div>
     </div>
