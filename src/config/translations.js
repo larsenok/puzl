@@ -41,6 +41,8 @@ export const TRANSLATIONS = {
     leaderboardGlobalError: 'Could not load the global leaderboard. Try again later.',
     leaderboardGlobalRefresh: 'Update',
     leaderboardGlobalRefreshAriaLabel: 'Refresh global leaderboard',
+    leaderboardViewShowLocal: 'Show local list',
+    leaderboardViewShowGlobal: 'Show global list',
     leaderboardScoreValue: 'Score {score}',
     leaderboardParValue: 'Par {par}',
     actionCloseLeaderboard: 'Close leaderboard',
@@ -66,8 +68,7 @@ export const TRANSLATIONS = {
     postScoreSubmitError: 'Could not send the score. Please try again.',
     postScoreButtonLabel: 'Post best score',
     postScoreNeedsHigherScore: 'Beat your best score to post again.',
-    statusGameTypeChanged: '{game} board ready.',
-    leaderboardTitleForGame: '{game} leaderboard'
+    statusGameTypeChanged: '{game} board ready.'
   },
   nb: {
     difficultyLabel: 'Vanskelighetsgrad',
@@ -110,6 +111,8 @@ export const TRANSLATIONS = {
     leaderboardGlobalError: 'Kunne ikke laste den globale topplisten. Prøv igjen senere.',
     leaderboardGlobalRefresh: 'Oppdater',
     leaderboardGlobalRefreshAriaLabel: 'Oppdater global toppliste',
+    leaderboardViewShowLocal: 'Vis lokal liste',
+    leaderboardViewShowGlobal: 'Vis global liste',
     leaderboardScoreValue: 'Poeng {score}',
     leaderboardParValue: 'Par {par}',
     actionCloseLeaderboard: 'Lukk topplisten',
@@ -138,8 +141,7 @@ export const TRANSLATIONS = {
     postScoreSubmitError: 'Kunne ikke sende poengsummen. Prøv igjen.',
     postScoreButtonLabel: 'Del beste poengsum',
     postScoreNeedsHigherScore: 'Slå din beste poengsum for å sende på nytt.',
-    statusGameTypeChanged: '{game}-brett klart.',
-    leaderboardTitleForGame: '{game}-toppliste'
+    statusGameTypeChanged: '{game}-brett klart.'
   }
 };
 
