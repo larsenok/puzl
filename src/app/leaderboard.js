@@ -461,10 +461,6 @@ export const createLeaderboardManager = ({
   };
 
   const renderLocalLeaderboard = () => {
-    if (!list || !emptyState) {
-      return;
-    }
-
     if (localView) {
       const isActive = state.leaderboardView === 'local';
       localView.hidden = !isActive;
@@ -473,6 +469,10 @@ export const createLeaderboardManager = ({
       } else {
         localView.setAttribute('aria-hidden', 'true');
       }
+    }
+
+    if (!list || !emptyState) {
+      return;
     }
 
     const entries = getLeaderboardEntries();
@@ -504,10 +504,6 @@ export const createLeaderboardManager = ({
   };
 
   const renderGlobalLeaderboard = () => {
-    if (!globalList || !globalEmptyState || !globalLoading) {
-      return;
-    }
-
     if (globalView) {
       const isActive = state.leaderboardView === 'global';
       globalView.hidden = !isActive;
@@ -516,6 +512,10 @@ export const createLeaderboardManager = ({
       } else {
         globalView.setAttribute('aria-hidden', 'true');
       }
+    }
+
+    if (!globalList || !globalEmptyState || !globalLoading) {
+      return;
     }
 
     const hasConfiguration = supabaseHelpers.hasConfiguration();
