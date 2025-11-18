@@ -1,8 +1,8 @@
 const SCORE_SCALE = 1000;
-const EXTREME_TIME_BONUS_MAX_MULTIPLIER = 1.25;
+const EXTREME_TIME_BONUS_MAX_MULTIPLIER = 1.5;
 const EXTREME_SCORE_MULTIPLIER = 1.2;
-const EXTREME_TIME_BONUS_MIN_SECONDS = 60;
-const EXTREME_TIME_BONUS_MAX_SECONDS = 90;
+const EXTREME_TIME_BONUS_MIN_SECONDS = 60; // 1 minute
+const EXTREME_TIME_BONUS_MAX_SECONDS = 120; // 2 minutes
 
 const toFiniteNumber = (value, fallback = null) => {
   const numeric = Number(value);
