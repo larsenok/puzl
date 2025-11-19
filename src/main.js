@@ -277,6 +277,7 @@ const gameTypeValueElement = document.getElementById('game-type-value');
 const resetProgressButton = document.getElementById('reset-progress-button');
 const leaderboardButton = document.getElementById('leaderboard-button');
 const leaderboardOverlay = document.getElementById('leaderboard-overlay');
+const leaderboardSections = document.getElementById('leaderboard-sections');
 const leaderboardLocalView = document.getElementById('leaderboard-local-view');
 const leaderboardList = document.getElementById('leaderboard-list');
 const leaderboardEmptyState = document.getElementById('leaderboard-empty-state');
@@ -1546,7 +1547,8 @@ leaderboardController = createLeaderboardManager({
     globalHeading: leaderboardGlobalHeading,
     closeButton: leaderboardCloseButton,
     titleElement: leaderboardTitleElement,
-    viewToggle: leaderboardViewToggle
+    viewToggle: leaderboardViewToggle,
+    sectionsContainer: leaderboardSections
   },
   getGameType: () => state.gameType
 });
