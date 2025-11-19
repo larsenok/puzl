@@ -195,8 +195,18 @@
         aria-labelledby="leaderboard-title"
       >
         <div class="leaderboard-modal__header">
-          <h2 id="leaderboard-title" class="leaderboard-modal__title">Leaderboard</h2>
-          <div class="leaderboard-modal__actions">
+          <div class="leaderboard-modal__title-row">
+            <h2 id="leaderboard-title" class="leaderboard-modal__title">Leaderboard</h2>
+            <button
+              id="leaderboard-close-button"
+              class="leaderboard-modal__close"
+              type="button"
+              aria-label="Close leaderboard"
+            >
+              &times;
+            </button>
+          </div>
+          <div class="leaderboard-modal__view-toggle-row">
             <button
               id="leaderboard-view-toggle"
               class="leaderboard-view-toggle"
@@ -221,14 +231,6 @@
               >
                 Global
               </span>
-            </button>
-            <button
-              id="leaderboard-close-button"
-              class="leaderboard-modal__close"
-              type="button"
-              aria-label="Close leaderboard"
-            >
-              &times;
             </button>
           </div>
         </div>

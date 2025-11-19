@@ -170,14 +170,8 @@ export const createPostScoreController = ({
 
     const hasBoards = hasCompletedBoards();
     const bestEntry = readBestEntry();
-    const entryScore = computeEntryScore(bestEntry);
-    const lastPostedScore = resolveLastPostedScore();
-    const hasNewRecord =
-      hasBoards &&
-      bestEntry &&
-      Number.isFinite(entryScore) &&
-      (!Number.isFinite(lastPostedScore) || entryScore > lastPostedScore);
-    const shouldShow = Boolean(canSubmit && hasNewRecord);
+    const hasUnpostedBest = hasBoards && bestEntry && !bestEntry.uploaded;
+    const shouldShow = Boolean(canSubmit && hasUnpostedBest);
     button.hidden = !shouldShow;
 
     const shouldDisable = !shouldShow || state.postScoreSubmitting;

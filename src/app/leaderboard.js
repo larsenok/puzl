@@ -347,6 +347,45 @@ export const createLeaderboardManager = ({
     };
   };
 
+  const serializeEntryForStorage = (entry) => {
+    if (!entry || typeof entry !== 'object') {
+      return null;
+    }
+
+    const boardId = typeof entry.boardId === 'string' ? entry.boardId.trim() : '';
+    if (!boardId) {
+      return null;
+    }
+
+    const secondsValue = Number(entry.seconds);
+    const normalizedSeconds = Number.isFinite(secondsValue) ? secondsValue : null;
+    const difficultyValue =
+      typeof entry.difficulty === 'string' && entry.difficulty.trim().length > 0
+        ? entry.difficulty.trim()
+        : null;
+    const solvedAtValue =
+      typeof entry.solvedAt === 'string' && entry.solvedAt.trim().length > 0
+        ? entry.solvedAt
+        : null;
+    const dateValue =
+      typeof entry.date === 'string' && entry.date.trim().length > 0 ? entry.date : null;
+    const initialsValue =
+      typeof entry.initials === 'string' && entry.initials.trim().length > 0
+        ? entry.initials.trim().slice(0, 3)
+        : null;
+
+    return {
+      boardId,
+      difficulty: difficultyValue,
+      seconds: normalizedSeconds,
+      solvedAt: solvedAtValue,
+      date: dateValue,
+      uploaded: normalizeUploadedFlag(entry.uploaded),
+      initials: initialsValue,
+      gameType: resolveGameType(entry.gameType)
+    };
+  };
+
   const compareEntries = (a, b) => {
     const aScore = Number.isFinite(a?.score) ? a.score : Number.NEGATIVE_INFINITY;
     const bScore = Number.isFinite(b?.score) ? b.score : Number.NEGATIVE_INFINITY;
@@ -387,10 +426,8 @@ export const createLeaderboardManager = ({
     const leaderboard = ensureLeaderboardStorage(gameTypeOverride);
     leaderboard.length = 0;
     entries
-      .map((entry) => normalizeEntry(entry))
-      .filter(
-        (entry) => entry && typeof entry.boardId === 'string' && entry.boardId.trim().length > 0
-      )
+      .map((entry) => serializeEntryForStorage(entry))
+      .filter((entry) => entry && entry.boardId)
       .slice(0, MAX_LEADERBOARD_ENTRIES)
       .forEach((entry) => {
         leaderboard.push(entry);
