@@ -157,12 +157,26 @@ export const createLeaderboardManager = ({
       return;
     }
     const isGlobal = state.leaderboardView === 'global';
-    const labelKey = isGlobal ? 'leaderboardViewShowLocal' : 'leaderboardViewShowGlobal';
-    const label = translate(labelKey);
-    viewToggle.textContent = label;
+    const switchLabel = translate('leaderboardViewSwitchLabel');
+    const localLabel = translate('leaderboardTabLocal');
+    const globalLabel = translate('leaderboardTabGlobal');
+    const localOption = viewToggle.querySelector('[data-option="local"]');
+    const globalOption = viewToggle.querySelector('[data-option="global"]');
+
+    if (localOption) {
+      localOption.textContent = localLabel;
+      localOption.classList.toggle('is-active', !isGlobal);
+    }
+
+    if (globalOption) {
+      globalOption.textContent = globalLabel;
+      globalOption.classList.toggle('is-active', isGlobal);
+    }
+
+    viewToggle.setAttribute('data-view', isGlobal ? 'global' : 'local');
     viewToggle.setAttribute('aria-pressed', isGlobal ? 'true' : 'false');
-    viewToggle.setAttribute('aria-label', label);
-    viewToggle.setAttribute('title', label);
+    viewToggle.setAttribute('aria-label', switchLabel);
+    viewToggle.setAttribute('title', switchLabel);
   };
 
   const readGlobalCacheEntry = () => {
