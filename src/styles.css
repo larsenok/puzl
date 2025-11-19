@@ -580,10 +580,21 @@ body {
 
 .leaderboard-modal__header {
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.leaderboard-modal__title-row {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap;
+}
+
+.leaderboard-modal__view-toggle-row {
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
 
 .leaderboard-modal__title {
@@ -593,12 +604,6 @@ body {
   color: #0f172a;
 }
 
-.leaderboard-modal__actions {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
 
 .leaderboard-view-toggle {
   position: relative;
