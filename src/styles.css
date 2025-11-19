@@ -740,6 +740,11 @@ body {
   gap: 20px;
 }
 
+.leaderboard-sections[data-view='local'] #leaderboard-global-view,
+.leaderboard-sections[data-view='global'] #leaderboard-local-view {
+  display: none;
+}
+
 @media (min-width: 720px) {
   .leaderboard-sections {
     display: grid;

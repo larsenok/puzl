@@ -121,7 +121,8 @@ export const createLeaderboardManager = ({
     globalHeading,
     closeButton,
     titleElement,
-    viewToggle
+    viewToggle,
+    sectionsContainer
   } = elements;
 
   const supabaseHelpers = createSupabaseHelpers(supabase);
@@ -153,10 +154,16 @@ export const createLeaderboardManager = ({
   };
 
   const updateViewToggle = () => {
+    const isGlobal = state.leaderboardView === 'global';
+    const currentView = isGlobal ? 'global' : 'local';
+
+    if (sectionsContainer) {
+      sectionsContainer.setAttribute('data-view', currentView);
+    }
+
     if (!viewToggle) {
       return;
     }
-    const isGlobal = state.leaderboardView === 'global';
     const switchLabel = translate('leaderboardViewSwitchLabel');
     const localLabel = translate('leaderboardTabLocal');
     const globalLabel = translate('leaderboardTabGlobal');
@@ -173,7 +180,7 @@ export const createLeaderboardManager = ({
       globalOption.classList.toggle('is-active', isGlobal);
     }
 
-    viewToggle.setAttribute('data-view', isGlobal ? 'global' : 'local');
+    viewToggle.setAttribute('data-view', currentView);
     viewToggle.setAttribute('aria-pressed', isGlobal ? 'true' : 'false');
     viewToggle.setAttribute('aria-label', switchLabel);
     viewToggle.setAttribute('title', switchLabel);
