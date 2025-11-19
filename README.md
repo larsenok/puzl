@@ -19,6 +19,13 @@ column matches its total exactly the clue turns green; exceeding the total turns
 logic of overlapping constraints to ensure each region hits its requirement while the rows and
 columns all satisfy their totals.
 
+## Scoring
+
+Every finished board records the chosen difficulty and the total time it took to solve. Those two
+values are enough for the game to determine a final score: faster solves give more points, slower
+runs still earn credit, and tougher difficulties multiply the result. Extreme mode adds a small
+bonus on top so leaderboard chasers have a little extra incentive to brave the hardest boards.
+
 ## Project structure
 
 - `src/index.html` contains the static markup that Vercel serves.

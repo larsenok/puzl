@@ -1,8 +1,6 @@
 const SCORE_SCALE = 1000;
-const EXTREME_TIME_BONUS_MAX_MULTIPLIER = 1.5;
-const EXTREME_SCORE_MULTIPLIER = 1.2;
-const EXTREME_TIME_BONUS_MIN_SECONDS = 60; // 1 minute
-const EXTREME_TIME_BONUS_MAX_SECONDS = 120; // 2 minutes
+const EXTREME_DIFFICULTY_BONUS = 1.1;
+const SAFE_MIN_SECONDS = 0.1;
 
 const toFiniteNumber = (value, fallback = null) => {
   const numeric = Number(value);
@@ -22,25 +20,6 @@ export const getDifficultyWeight = (difficulties = {}, difficulty) => {
   return Number(weight);
 };
 
-const getExtremeTimeBonusMultiplier = (seconds) => {
-  if (!Number.isFinite(seconds)) {
-    return 1;
-  }
-
-  if (seconds <= EXTREME_TIME_BONUS_MIN_SECONDS) {
-    return EXTREME_TIME_BONUS_MAX_MULTIPLIER;
-  }
-
-  if (seconds >= EXTREME_TIME_BONUS_MAX_SECONDS) {
-    return 1;
-  }
-
-  const rangeSeconds = EXTREME_TIME_BONUS_MAX_SECONDS - EXTREME_TIME_BONUS_MIN_SECONDS;
-  const bonusSpan = EXTREME_TIME_BONUS_MAX_MULTIPLIER - 1;
-  const progress = (seconds - EXTREME_TIME_BONUS_MIN_SECONDS) / rangeSeconds;
-  return EXTREME_TIME_BONUS_MAX_MULTIPLIER - bonusSpan * progress;
-};
-
 export const computeDifficultyScore = ({ difficulties = {}, difficulty, seconds }) => {
   const parSeconds = getParSeconds(difficulties, difficulty);
   const weight = getDifficultyWeight(difficulties, difficulty);
@@ -53,15 +32,26 @@ export const computeDifficultyScore = ({ difficulties = {}, difficulty, seconds 
     return { score: 0, parSeconds, weight };
   }
 
-  const baseRatio = parSeconds ? parSeconds / normalizedSeconds : 1 / normalizedSeconds;
-  const timeBonusMultiplier =
-    difficulty === 'extreme'
-      ? getExtremeTimeBonusMultiplier(normalizedSeconds)
-      : 1;
-  const difficultyMultiplier = difficulty === 'extreme' ? EXTREME_SCORE_MULTIPLIER : 1;
+  const clampedSeconds = Math.max(SAFE_MIN_SECONDS, normalizedSeconds);
+  const hasPar = Number.isFinite(parSeconds) && parSeconds > 0;
+  const baselinePar = hasPar ? Math.max(parSeconds, SAFE_MIN_SECONDS) : null;
+
+  let performanceMultiplier;
+  if (baselinePar) {
+    if (clampedSeconds <= baselinePar) {
+      const progress = (baselinePar - clampedSeconds) / baselinePar;
+      performanceMultiplier = 1 + progress;
+    } else {
+      performanceMultiplier = baselinePar / clampedSeconds;
+    }
+  } else {
+    performanceMultiplier = 1 / clampedSeconds;
+  }
+
+  const difficultyMultiplier = difficulty === 'extreme' ? EXTREME_DIFFICULTY_BONUS : 1;
   const rawScore = Math.max(
     0,
-    baseRatio * weightMultiplier * timeBonusMultiplier * difficultyMultiplier * SCORE_SCALE
+    performanceMultiplier * weightMultiplier * difficultyMultiplier * SCORE_SCALE
   );
 
   return {
