@@ -349,7 +349,11 @@ export const createPostScoreController = ({
       const result = await submitScore({
         initials: normalized,
         seconds: entry.seconds,
-        difficulty: entry.difficulty
+        difficulty: entry.difficulty,
+        boardId: entry.boardId,
+        solvedAt: entry.solvedAt,
+        score: postedScore,
+        gameType: entry.gameType
       });
 
       const storage = getStorage();
