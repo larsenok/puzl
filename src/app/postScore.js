@@ -33,6 +33,7 @@ export const createPostScoreController = ({
   hasPostedEntry = () => false,
   markEntryPosted = () => {},
   getLastPostedScore = () => null,
+  getLastPostedEntryForBoard = () => null,
   elements
 }) => {
   const {
@@ -313,6 +314,10 @@ export const createPostScoreController = ({
     }
 
     const postedScore = computeEntryScore(entry);
+    const lastPostedEntryForBoard =
+      typeof getLastPostedEntryForBoard === 'function' && entry?.boardId
+        ? getLastPostedEntryForBoard(entry.boardId)
+        : null;
     const alreadyPosted =
       typeof hasPostedEntry === 'function'
         ? hasPostedEntry({
@@ -330,8 +335,14 @@ export const createPostScoreController = ({
     }
 
     const lastPostedScore = resolveLastPostedScore();
+    const shouldRequireHigherScore = Boolean(lastPostedEntryForBoard);
 
-    if (Number.isFinite(lastPostedScore) && Number.isFinite(postedScore) && postedScore <= lastPostedScore) {
+    if (
+      shouldRequireHigherScore &&
+      Number.isFinite(lastPostedScore) &&
+      Number.isFinite(postedScore) &&
+      postedScore <= lastPostedScore
+    ) {
       updateStatus('notice', translate('postScoreNeedsHigherScore'));
       window.setTimeout(() => {
         if (input) {

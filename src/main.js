@@ -180,6 +180,17 @@ const readLastPostedScore = (gameType = getActiveGameType()) => {
   return Number.isFinite(value) ? value : null;
 };
 
+const readLastPostedEntryForBoard = (boardId, gameType = getActiveGameType()) => {
+  if (typeof boardId !== 'string' || boardId.trim().length === 0) {
+    return null;
+  }
+
+  const normalizedBoardId = boardId.trim();
+  return (
+    readPostedGlobalEntries(gameType).find((entry) => entry.boardId === normalizedBoardId) || null
+  );
+};
+
 const writeLastPostedScore = (score, gameType = getActiveGameType()) => {
   const key = getGameScopedStorageKey('globalLeaderboardLastPostedScore', gameType);
   if (Number.isFinite(score)) {
@@ -1599,6 +1610,8 @@ postScoreController = createPostScoreController({
   markEntryPosted: (details) =>
     recordPostedGlobalEntry({ ...details, gameType: state.gameType }),
   getLastPostedScore: () => readLastPostedScore(state.gameType),
+  getLastPostedEntryForBoard: (boardId) =>
+    readLastPostedEntryForBoard(boardId, state.gameType),
   elements: {
     button: leaderboardPostBestButton,
     overlay: postScoreOverlay,
