@@ -3,6 +3,19 @@ import { getTodayKey } from '../storage.js';
 
 const MAX_LEADERBOARD_ENTRIES = 20;
 
+const createLocalEntryId = () =>
+  `lb-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+const resolveEntryIdentity = (entry) => {
+  const boardId = typeof entry?.boardId === 'string' ? entry.boardId.trim() : '';
+  const id =
+    typeof entry?.id === 'string' && entry.id.trim().length > 0
+      ? entry.id.trim()
+      : boardId || createLocalEntryId();
+
+  return { id, boardId };
+};
+
 const createSupabaseHelpers = ({ url, anonKey, table }) => {
   const hasConfiguration = () => {
     const validUrl = typeof url === 'string' && !url.includes('PLACEHOLDER');
@@ -327,6 +340,7 @@ export const createLeaderboardManager = ({
       return null;
     }
 
+    const { id, boardId } = resolveEntryIdentity(entry);
     const numericSeconds = Number(entry.seconds);
     const normalizedSeconds = Number.isFinite(numericSeconds) ? numericSeconds : null;
     const uploaded = normalizeUploadedFlag(entry.uploaded);
@@ -339,6 +353,8 @@ export const createLeaderboardManager = ({
 
     return {
       ...entry,
+      id,
+      boardId,
       seconds: normalizedSeconds,
       score,
       parSeconds,
@@ -352,7 +368,7 @@ export const createLeaderboardManager = ({
       return null;
     }
 
-    const boardId = typeof entry.boardId === 'string' ? entry.boardId.trim() : '';
+    const { id, boardId } = resolveEntryIdentity(entry);
     if (!boardId) {
       return null;
     }
@@ -375,6 +391,7 @@ export const createLeaderboardManager = ({
         : null;
 
     return {
+      id,
       boardId,
       difficulty: difficultyValue,
       seconds: normalizedSeconds,

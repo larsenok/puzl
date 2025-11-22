@@ -69,6 +69,8 @@ export const TRANSLATIONS = {
     postScoreSubmitError: 'Could not send the score. Please try again.',
     postScoreButtonLabel: 'Post best score',
     postScoreNeedsHigherScore: 'Beat your best score to post again.',
+    postScoreAlreadyPosted: 'Best score already posted.',
+    postScoreBestSubmitted: 'Best was posted.',
     statusGameTypeChanged: '{game} board ready.'
   },
   nb: {
@@ -143,6 +145,8 @@ export const TRANSLATIONS = {
     postScoreSubmitError: 'Kunne ikke sende poengsummen. Prøv igjen.',
     postScoreButtonLabel: 'Del beste poengsum',
     postScoreNeedsHigherScore: 'Slå din beste poengsum for å sende på nytt.',
+    postScoreAlreadyPosted: 'Beste poengsum er allerede delt.',
+    postScoreBestSubmitted: 'Beste ble delt.',
     statusGameTypeChanged: '{game}-brett klart.'
   }
 };

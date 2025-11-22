@@ -41,6 +41,24 @@ let currentEntry = null;
 
 const MAX_TRACKED_POSTED_ENTRIES = 50;
 
+const createLocalRecordId = () =>
+  `post-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+const resolvePostedEntryIdentity = (entry) => {
+  const idFromEntry = typeof entry?.id === 'string' && entry.id.trim().length > 0
+    ? entry.id.trim()
+    : null;
+  const boardId =
+    typeof entry?.boardId === 'string' && entry.boardId.trim().length > 0
+      ? entry.boardId.trim()
+      : null;
+
+  return {
+    id: idFromEntry || boardId || createLocalRecordId(),
+    boardId
+  };
+};
+
 const getGameScopedStorageKey = (baseKey, gameType = DEFAULT_GAME_TYPE) =>
   gameType === DEFAULT_GAME_TYPE ? baseKey : `${baseKey}_${gameType}`;
 
@@ -61,10 +79,7 @@ const normalizePostedEntry = (entry) => {
     return null;
   }
 
-  const boardId =
-    typeof entry.boardId === 'string' && entry.boardId.trim().length > 0
-      ? entry.boardId.trim()
-      : null;
+  const { id, boardId } = resolvePostedEntryIdentity(entry);
   const normalizedDifficulty =
     typeof entry.difficulty === 'string' ? entry.difficulty.trim() : '';
   const difficulty = normalizedDifficulty.length > 0 ? normalizedDifficulty : null;
@@ -80,6 +95,7 @@ const normalizePostedEntry = (entry) => {
   }
 
   return {
+    id,
     boardId,
     difficulty,
     seconds,
@@ -90,6 +106,13 @@ const normalizePostedEntry = (entry) => {
 const postedEntriesMatch = (a, b) => {
   if (!a || !b) {
     return false;
+  }
+
+  const aId = typeof a.id === 'string' && a.id.trim().length > 0 ? a.id.trim() : null;
+  const bId = typeof b.id === 'string' && b.id.trim().length > 0 ? b.id.trim() : null;
+
+  if (aId && bId) {
+    return aId === bId;
   }
 
   if (a.boardId && b.boardId) {
@@ -142,8 +165,8 @@ const readPostedGlobalEntries = (gameType = getActiveGameType()) => {
   return entries.map((entry) => normalizePostedEntry(entry)).filter(Boolean);
 };
 
-const hasPostedGlobalEntry = ({ boardId, difficulty, seconds, solvedAt, gameType }) => {
-  const candidate = normalizePostedEntry({ boardId, difficulty, seconds, solvedAt });
+const hasPostedGlobalEntry = ({ id, boardId, difficulty, seconds, solvedAt, gameType }) => {
+  const candidate = normalizePostedEntry({ id, boardId, difficulty, seconds, solvedAt });
   if (!candidate) {
     return false;
   }
@@ -166,8 +189,8 @@ const writeLastPostedScore = (score, gameType = getActiveGameType()) => {
   }
 };
 
-const recordPostedGlobalEntry = ({ boardId, difficulty, seconds, solvedAt, score, gameType }) => {
-  const candidate = normalizePostedEntry({ boardId, difficulty, seconds, solvedAt });
+const recordPostedGlobalEntry = ({ id, boardId, difficulty, seconds, solvedAt, score, gameType }) => {
+  const candidate = normalizePostedEntry({ id, boardId, difficulty, seconds, solvedAt });
   if (!candidate) {
     return;
   }

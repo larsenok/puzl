@@ -170,15 +170,31 @@ export const createPostScoreController = ({
 
     const hasBoards = hasCompletedBoards();
     const bestEntry = readBestEntry();
-    const hasUnpostedBest = hasBoards && bestEntry && !bestEntry.uploaded;
-    const shouldShow = Boolean(canSubmit && hasUnpostedBest);
+    const alreadyPosted =
+      hasBoards &&
+      bestEntry &&
+      typeof hasPostedEntry === 'function'
+        ? hasPostedEntry({
+            id: bestEntry.id,
+            boardId: bestEntry.boardId,
+            difficulty: bestEntry.difficulty,
+            seconds: bestEntry.seconds,
+            solvedAt: bestEntry.solvedAt
+          })
+        : false;
+
+    const shouldShow = Boolean(canSubmit && hasBoards && bestEntry);
     button.hidden = !shouldShow;
 
-    const shouldDisable = !shouldShow || state.postScoreSubmitting;
+    const shouldDisable = !shouldShow || state.postScoreSubmitting || alreadyPosted;
     button.disabled = shouldDisable;
     button.setAttribute('aria-disabled', shouldDisable ? 'true' : 'false');
 
-    button.removeAttribute('title');
+    if (alreadyPosted) {
+      button.setAttribute('title', translate('postScoreAlreadyPosted'));
+    } else {
+      button.removeAttribute('title');
+    }
   };
 
   const renderModalState = () => {
@@ -300,6 +316,7 @@ export const createPostScoreController = ({
     const alreadyPosted =
       typeof hasPostedEntry === 'function'
         ? hasPostedEntry({
+            id: entry.id,
             boardId: entry.boardId,
             difficulty: entry.difficulty,
             seconds: entry.seconds,
@@ -359,6 +376,7 @@ export const createPostScoreController = ({
         if (typeof markEntryPosted === 'function') {
           try {
             markEntryPosted({
+              id: entry.id,
               boardId: entry.boardId,
               difficulty: entry.difficulty,
               seconds: entry.seconds,
@@ -370,7 +388,7 @@ export const createPostScoreController = ({
             console.error('Failed to record posted leaderboard entry', postError);
           }
         }
-        updateStatus('success', translate('postScoreSubmitted'));
+        updateStatus('success', translate('postScoreBestSubmitted'));
         state.globalLeaderboardLoaded = false;
         state.globalLeaderboardError = null;
         onGlobalLeaderboardRefresh({ force: true });
