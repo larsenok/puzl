@@ -32,7 +32,7 @@ const createSupabaseHelpers = ({ url, anonKey, table }) => {
     }
 
     const search =
-      `select=initials,seconds,difficulty,score,board_id,game_type,created_at&order=seconds.asc&limit=${MAX_LEADERBOARD_ENTRIES}`;
+      `select=initials,seconds,difficulty,score,game_type,created_at&order=seconds.asc&limit=${MAX_LEADERBOARD_ENTRIES}`;
     const response = await fetch(buildUrl(search), {
       headers: {
         apikey: anonKey,
@@ -56,7 +56,6 @@ const createSupabaseHelpers = ({ url, anonKey, table }) => {
         seconds: Number.isFinite(Number(entry.seconds)) ? Number(entry.seconds) : null,
         difficulty: entry.difficulty,
         score: Number.isFinite(Number(entry.score)) ? Number(entry.score) : null,
-        boardId: entry.board_id || entry.boardId || null,
         gameType: entry.game_type || entry.gameType || null,
         createdAt: entry.created_at || entry.createdAt || null
       }))
@@ -75,7 +74,6 @@ const createSupabaseHelpers = ({ url, anonKey, table }) => {
     initials,
     seconds,
     difficulty,
-    boardId,
     solvedAt,
     score,
     gameType
@@ -95,10 +93,6 @@ const createSupabaseHelpers = ({ url, anonKey, table }) => {
       difficulty,
       created_at: new Date().toISOString()
     };
-
-    if (boardId) {
-      payload.board_id = boardId;
-    }
 
     if (solvedAt) {
       payload.solved_at = solvedAt;
