@@ -1407,9 +1407,11 @@ const newPuzzle = ({ announce = true, forceNew = false } = {}) => {
 
 const updateDifficultyButtons = () => {
   const allowed = getAllowedDifficultiesForGame(state.gameType);
+  const extremeUnlocked = isExtremeDifficultyUnlocked();
   difficultyButtons.forEach((button) => {
     const difficulty = button.dataset.difficulty;
-    const isAvailable = allowed.includes(difficulty);
+    const isExtremeDifficulty = difficulty === 'extreme';
+    const isAvailable = allowed.includes(difficulty) && (!isExtremeDifficulty || extremeUnlocked);
     const isActive = isAvailable && difficulty === state.difficulty;
     button.hidden = !isAvailable;
     button.disabled = !isAvailable;
