@@ -3,6 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "node build.js"
+    "build": "node build.js",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
+  },
+  "dependencies": {
+    "@expo/cli": "^54.0.16",
+    "expo": "~54.0.25",
+    "react": "19.1.0",
+    "react-native": "0.81.5"
   }
 }

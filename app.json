@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "puzl",
+    "slug": "puzl",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "android": {
+      "package": "com.endpanc.puzl"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "83f9e5fa-67f6-4d6d-b68e-b6a3433da6b7"
+      }
+    }
+  }
+}
