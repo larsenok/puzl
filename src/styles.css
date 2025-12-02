@@ -716,7 +716,7 @@ body {
   }
 
   .leaderboard-modal__view-toggle-row {
-    justify-content: flex-end;
+    display: none !important;
   }
 
   .leaderboard-modal__body {
