@@ -23,7 +23,7 @@ export const DIFFICULTIES = {
   extreme: {
     labelKey: 'difficultyExtreme',
     allowedSizes: [8],
-    requirement: { min: 3, max: 6 },
+    requirement: { min: 2, max: 5 },
     parSeconds: 240,
     scoreWeight: 4
   }

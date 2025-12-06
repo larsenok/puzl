@@ -122,7 +122,7 @@ const buildPuzzle = (difficulty, paletteColors, attempt = 0) => {
     const color = palette[colorIndex % paletteLength];
     colorIndex += 1;
 
-    regions.push({ id: regionId, requirement, anchor, color });
+    regions.push({ id: regionId, requirement, anchor, color, size: cells.length });
   }
 
   const rowTotals = solution.map((row) => row.filter(Boolean).length);
@@ -159,11 +159,14 @@ const buildPuzzle = (difficulty, paletteColors, attempt = 0) => {
   const highRequirementCount = regions.filter((region) => region.requirement >= 4).length;
   const requirementFiveCount = regions.filter((region) => region.requirement >= 5).length;
   const smallRequirementCount = regions.filter((region) => region.requirement <= 2).length;
+  const fullRegionCount = regions.filter((region) => region.requirement === region.size).length;
 
   const minHighRequirement = 1;
-  const maxSmallRequirementFraction = difficulty === 'extreme' ? 0.95 : 0.8;
+  const maxSmallRequirementFraction = difficulty === 'extreme' ? 0.6 : 0.8;
   const maxRowMaxCount = 2;
   const maxColumnMaxCount = 2;
+  const maxFullRegionFraction = difficulty === 'extreme' ? 0.35 : 0.6;
+  const maxFullRegionCount = Math.floor(regions.length * maxFullRegionFraction);
 
   const requiresHardRegeneration =
     (difficulty === 'hard' || difficulty === 'extreme') &&
@@ -171,6 +174,7 @@ const buildPuzzle = (difficulty, paletteColors, attempt = 0) => {
       largeRegionCount < 1 ||
       (largestRegionSize >= 6 && requirementFiveCount < 1) ||
       smallRequirementCount > Math.ceil(regions.length * maxSmallRequirementFraction) ||
+      (difficulty === 'extreme' && fullRegionCount > maxFullRegionCount) ||
       rowMaxCount > maxRowMaxCount ||
       columnMaxCount > maxColumnMaxCount);
 
