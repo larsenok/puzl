@@ -191,6 +191,27 @@ const readLastPostedEntryForBoard = (boardId, gameType = getActiveGameType()) =>
   );
 };
 
+const readLastPostedEntryMeta = (gameType = getActiveGameType()) => {
+  const key = getGameScopedStorageKey('globalLeaderboardLastPostedEntry', gameType);
+  const entry = storage[key];
+  if (!entry || typeof entry !== 'object') {
+    return null;
+  }
+
+  const difficulty =
+    typeof entry.difficulty === 'string' && entry.difficulty.trim().length > 0
+      ? entry.difficulty.trim()
+      : null;
+  const score = Number(entry.score);
+  const seconds = Number(entry.seconds);
+
+  return {
+    difficulty,
+    score: Number.isFinite(score) ? score : null,
+    seconds: Number.isFinite(seconds) ? seconds : null
+  };
+};
+
 const writeLastPostedScore = (score, gameType = getActiveGameType()) => {
   const key = getGameScopedStorageKey('globalLeaderboardLastPostedScore', gameType);
   if (Number.isFinite(score)) {
@@ -198,6 +219,27 @@ const writeLastPostedScore = (score, gameType = getActiveGameType()) => {
   } else {
     delete storage[key];
   }
+};
+
+const writeLastPostedEntryMeta = (entry, gameType = getActiveGameType()) => {
+  const key = getGameScopedStorageKey('globalLeaderboardLastPostedEntry', gameType);
+  if (!entry || typeof entry !== 'object') {
+    delete storage[key];
+    return;
+  }
+
+  const difficulty =
+    typeof entry.difficulty === 'string' && entry.difficulty.trim().length > 0
+      ? entry.difficulty.trim()
+      : null;
+  const score = Number(entry.score);
+  const seconds = Number(entry.seconds);
+
+  storage[key] = {
+    difficulty,
+    score: Number.isFinite(score) ? score : null,
+    seconds: Number.isFinite(seconds) ? seconds : null
+  };
 };
 
 const recordPostedGlobalEntry = ({ id, boardId, difficulty, seconds, solvedAt, score, gameType }) => {
@@ -217,6 +259,7 @@ const recordPostedGlobalEntry = ({ id, boardId, difficulty, seconds, solvedAt, s
   storage[key] = entries.slice(0, MAX_TRACKED_POSTED_ENTRIES);
 
   writeLastPostedScore(score, type);
+  writeLastPostedEntryMeta({ difficulty: candidate.difficulty, seconds, score }, type);
 
   writeStorage(storage);
 };
@@ -1390,7 +1433,20 @@ const checkSolution = () => {
 };
 
 const newPuzzle = ({ announce = true, forceNew = false } = {}) => {
-  loadPuzzle({ difficulty: state.difficulty, forceNew, gameType: state.gameType });
+  try {
+    loadPuzzle({ difficulty: state.difficulty, forceNew, gameType: state.gameType });
+  } catch (error) {
+    console.error('Failed to create a new puzzle', error);
+    const errorMessage = translate('statusNewBoardFailed');
+    renderCurrentPuzzle({
+      announce: true,
+      message: errorMessage,
+      additionalState: {
+        status: { type: 'alert', text: errorMessage }
+      }
+    });
+    return;
+  }
   const message = forceNew
     ? translate('statusNewBoardCreated')
     : translate('statusBoardReady');
@@ -1609,6 +1665,7 @@ postScoreController = createPostScoreController({
   getBestLocalEntry: () => leaderboardController?.getBestLocalEntry?.() || null,
   hasAnyCompletedBoards: () => leaderboardController?.hasAnyCompletedBoards?.() || false,
   hasPostedEntry: (details) => hasPostedGlobalEntry({ ...details, gameType: state.gameType }),
+  getLastPostedEntryMeta: () => readLastPostedEntryMeta(state.gameType),
   markEntryPosted: (details) =>
     recordPostedGlobalEntry({ ...details, gameType: state.gameType }),
   getLastPostedScore: () => readLastPostedScore(state.gameType),

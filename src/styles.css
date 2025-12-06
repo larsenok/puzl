@@ -39,6 +39,7 @@ body {
   gap: 24px;
   --base-cell-gap: 4px;
   --cell-gap: var(--base-cell-gap);
+  --cell-scale: 1;
   --cell-requirement-offset-x: 6px;
   --cell-requirement-offset-y: 6px;
   --cell-requirement-padding-y: 2px;
@@ -62,6 +63,7 @@ body {
 .app[data-difficulty='extreme'] {
   max-width: 640px;
   --cell-gap: calc(var(--base-cell-gap) * 0.7);
+  --cell-scale: 1.05;
 }
 
 .app[data-difficulty='extreme'] .board {
@@ -273,6 +275,8 @@ body {
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12);
   touch-action: manipulation;
   overflow: hidden;
+  transform: scale(var(--cell-scale, 1));
+  transform-origin: center;
 }
 
 .cell:focus-visible {
@@ -281,7 +285,7 @@ body {
 }
 
 .cell:active {
-  transform: scale(0.97);
+  transform: scale(calc(var(--cell-scale, 1) * 0.97));
 }
 
 .cell::before {

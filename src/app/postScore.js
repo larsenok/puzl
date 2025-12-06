@@ -31,6 +31,7 @@ export const createPostScoreController = ({
   getBestLocalEntry = () => null,
   hasAnyCompletedBoards = () => false,
   hasPostedEntry = () => false,
+  getLastPostedEntryMeta = () => null,
   markEntryPosted = () => {},
   getLastPostedScore = () => null,
   getLastPostedEntryForBoard = () => null,
@@ -171,10 +172,9 @@ export const createPostScoreController = ({
 
     const hasBoards = hasCompletedBoards();
     const bestEntry = readBestEntry();
+    const shouldCheckPosting = Boolean(canSubmit && hasBoards && bestEntry);
     const alreadyPosted =
-      hasBoards &&
-      bestEntry &&
-      typeof hasPostedEntry === 'function'
+      shouldCheckPosting && typeof hasPostedEntry === 'function'
         ? hasPostedEntry({
             id: bestEntry.id,
             boardId: bestEntry.boardId,
@@ -184,10 +184,76 @@ export const createPostScoreController = ({
           })
         : false;
 
+    const lastPostedEntryMeta = shouldCheckPosting
+      ? typeof getLastPostedEntryMeta === 'function'
+        ? getLastPostedEntryMeta()
+        : null
+      : null;
+
+    const getDifficultyWeight = (difficulty) => {
+      const weight = difficulties?.[difficulty]?.scoreWeight;
+      return Number.isFinite(weight) ? weight : 1;
+    };
+
+    const isHigherDifficulty = (candidate, baseline) =>
+      getDifficultyWeight(candidate) > getDifficultyWeight(baseline);
+
+    const passesLastPostedCheck = () => {
+      if (!shouldCheckPosting || !lastPostedEntryMeta) {
+        return true;
+      }
+
+      const entrySeconds = Number.isFinite(bestEntry?.seconds) ? bestEntry.seconds : null;
+      const lastSeconds = Number.isFinite(lastPostedEntryMeta.seconds)
+        ? lastPostedEntryMeta.seconds
+        : null;
+      const entryScore = Number.isFinite(bestEntry?.score) ? bestEntry.score : null;
+      const lastScore = Number.isFinite(lastPostedEntryMeta.score) ? lastPostedEntryMeta.score : null;
+
+      if (!lastPostedEntryMeta.difficulty && lastSeconds === null && lastScore === null) {
+        return true;
+      }
+
+      if (bestEntry?.difficulty && bestEntry.difficulty === lastPostedEntryMeta.difficulty) {
+        if (entrySeconds === null) {
+          return false;
+        }
+        if (lastSeconds === null) {
+          return true;
+        }
+        return entrySeconds < lastSeconds;
+      }
+
+      if (
+        bestEntry?.difficulty &&
+        lastPostedEntryMeta.difficulty &&
+        isHigherDifficulty(bestEntry.difficulty, lastPostedEntryMeta.difficulty)
+      ) {
+        if (entryScore === null) {
+          return false;
+        }
+        if (lastScore === null) {
+          return true;
+        }
+        return entryScore > lastScore;
+      }
+
+      if (entryScore === null) {
+        return false;
+      }
+      if (lastScore === null) {
+        return true;
+      }
+      return entryScore > lastScore;
+    };
+
+    const meetsPostingRequirements = passesLastPostedCheck();
+
     const shouldShow = Boolean(canSubmit && hasBoards && bestEntry);
     button.hidden = !shouldShow;
 
-    const shouldDisable = !shouldShow || state.postScoreSubmitting || alreadyPosted;
+    const shouldDisable =
+      !shouldShow || state.postScoreSubmitting || alreadyPosted || !meetsPostingRequirements;
     button.disabled = shouldDisable;
     button.setAttribute('aria-disabled', shouldDisable ? 'true' : 'false');
 

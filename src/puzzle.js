@@ -7,6 +7,9 @@ export const CELL_STATES = ['empty', 'fruit', 'mark'];
 
 const MAX_GENERATION_ATTEMPTS = 80;
 
+const getMaxGenerationAttemptsForDifficulty = (difficulty) =>
+  difficulty === 'extreme' ? 200 : MAX_GENERATION_ATTEMPTS;
+
 export const createEmptyBoard = (size) =>
   Array.from({ length: size }, () => Array.from({ length: size }, () => 'empty'));
 
@@ -179,9 +182,10 @@ const buildPuzzle = (difficulty, paletteColors, attempt = 0) => {
       columnMaxCount > maxColumnMaxCount);
 
   if (exceedsRowOrColumnLimit || requiresHardRegeneration) {
-    if (attempt >= MAX_GENERATION_ATTEMPTS) {
+    const maxAttempts = getMaxGenerationAttemptsForDifficulty(difficulty);
+    if (attempt >= maxAttempts) {
       throw new Error(
-        `Failed to generate a ${difficulty} puzzle within ${MAX_GENERATION_ATTEMPTS} attempts`
+        `Failed to generate a ${difficulty} puzzle within ${maxAttempts} attempts`
       );
     }
     return buildPuzzle(difficulty, palette, attempt + 1);
