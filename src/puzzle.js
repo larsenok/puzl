@@ -165,7 +165,12 @@ const buildPuzzle = (difficulty, paletteColors, attempt = 0) => {
   const fullRegionCount = regions.filter((region) => region.requirement === region.size).length;
 
   const minHighRequirement = 1;
-  const maxSmallRequirementFraction = difficulty === 'extreme' ? 0.6 : 0.8;
+  const baseMaxSmallRequirementFraction = difficulty === 'extreme' ? 0.6 : 0.8;
+  const minSmallRequirementCount = regions.filter((region) => region.size <= 2).length;
+  const maxSmallRequirementCount = Math.max(
+    Math.ceil(regions.length * baseMaxSmallRequirementFraction),
+    minSmallRequirementCount
+  );
   const maxRowMaxCount = 2;
   const maxColumnMaxCount = 2;
   const maxFullRegionFraction = difficulty === 'extreme' ? 0.35 : 0.6;
@@ -176,7 +181,7 @@ const buildPuzzle = (difficulty, paletteColors, attempt = 0) => {
     (highRequirementCount < minHighRequirement ||
       largeRegionCount < 1 ||
       (largestRegionSize >= 6 && requirementFiveCount < 1) ||
-      smallRequirementCount > Math.ceil(regions.length * maxSmallRequirementFraction) ||
+      smallRequirementCount > maxSmallRequirementCount ||
       (difficulty === 'extreme' && fullRegionCount > maxFullRegionCount) ||
       rowMaxCount > maxRowMaxCount ||
       columnMaxCount > maxColumnMaxCount);
