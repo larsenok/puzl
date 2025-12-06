@@ -467,8 +467,53 @@ export const createLeaderboardManager = ({
     );
 
   const getBestLocalEntry = () => {
-    const [best] = getLeaderboardEntries();
-    return best || null;
+    const entries = getLeaderboardEntries();
+    if (entries.length === 0) {
+      return null;
+    }
+
+    const scoreFor = (entry) => (Number.isFinite(entry?.score) ? entry.score : null);
+    const secondsFor = (entry) => (Number.isFinite(entry?.seconds) ? entry.seconds : null);
+
+    return entries.reduce((best, entry) => {
+      if (!best) {
+        return entry;
+      }
+
+      const bestScore = scoreFor(best);
+      const entryScore = scoreFor(entry);
+      const bestSeconds = secondsFor(best);
+      const entrySeconds = secondsFor(entry);
+
+      const isSameDifficulty = entry?.difficulty && entry.difficulty === best?.difficulty;
+
+      if (isSameDifficulty) {
+        if (entrySeconds === null) {
+          return best;
+        }
+        if (bestSeconds === null || entrySeconds < bestSeconds) {
+          return entry;
+        }
+        return best;
+      }
+
+      if (entryScore === null) {
+        return best;
+      }
+      if (bestScore === null || entryScore > bestScore) {
+        return entry;
+      }
+      if (entryScore === bestScore) {
+        if (bestSeconds === null) {
+          return entry;
+        }
+        if (entrySeconds !== null && entrySeconds < bestSeconds) {
+          return entry;
+        }
+      }
+
+      return best;
+    }, null);
   };
 
   const hasAnyCompletedBoards = () => getLeaderboardEntries().length > 0;
