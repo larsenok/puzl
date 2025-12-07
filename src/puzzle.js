@@ -25,6 +25,8 @@ const shuffleArray = (input) => {
 const getDifficultySettings = (difficulty) =>
   DIFFICULTIES[difficulty] || DIFFICULTIES[DEFAULT_DIFFICULTY];
 
+const getExtremeRelaxation = (attempt) => Math.min(1, attempt / 80);
+
 const chooseRegionRequirement = (difficulty, minRequirement, maxRequirement) => {
   if (maxRequirement <= minRequirement) {
     return maxRequirement;
@@ -71,6 +73,7 @@ const chooseConfig = (difficulty) => {
 
 const buildPuzzle = (difficulty, paletteColors, attempt = 0) => {
   const settings = getDifficultySettings(difficulty);
+  const maxAttempts = getMaxGenerationAttemptsForDifficulty(difficulty);
   const config = chooseConfig(difficulty);
   const { size } = config;
   const overlay = config.overlays[Math.floor(Math.random() * config.overlays.length)];
@@ -92,6 +95,8 @@ const buildPuzzle = (difficulty, paletteColors, attempt = 0) => {
   let colorIndex = 0;
   const palette = Array.isArray(paletteColors) && paletteColors.length ? paletteColors : ['#f59e0b'];
   const paletteLength = palette.length;
+  const extremeRelaxation = difficulty === 'extreme' ? getExtremeRelaxation(attempt) : 0;
+  const extremeTolerance = difficulty === 'extreme' ? attempt / maxAttempts : 0;
   const regionSizes = Array.from(regionCells.values(), (cells) => cells.length);
   const largestRegionSize = regionSizes.reduce((max, current) => Math.max(max, current), 0);
   const largeRegionCount = regionSizes.filter((regionSize) => regionSize >= 5).length;
@@ -165,7 +170,8 @@ const buildPuzzle = (difficulty, paletteColors, attempt = 0) => {
   const fullRegionCount = regions.filter((region) => region.requirement === region.size).length;
 
   const minHighRequirement = 1;
-  const baseMaxSmallRequirementFraction = difficulty === 'extreme' ? 0.6 : 0.8;
+  const baseMaxSmallRequirementFraction =
+    difficulty === 'extreme' ? 0.6 + 0.2 * extremeRelaxation : 0.8;
   const minSmallRequirementCount = regions.filter((region) => region.size <= 2).length;
   const maxSmallRequirementCount = Math.max(
     Math.ceil(regions.length * baseMaxSmallRequirementFraction),
@@ -173,21 +179,34 @@ const buildPuzzle = (difficulty, paletteColors, attempt = 0) => {
   );
   const maxRowMaxCount = 2;
   const maxColumnMaxCount = 2;
-  const maxFullRegionFraction = difficulty === 'extreme' ? 0.35 : 0.6;
+  const maxFullRegionFraction = difficulty === 'extreme' ? 0.35 + 0.25 * extremeRelaxation : 0.6;
   const maxFullRegionCount = Math.floor(regions.length * maxFullRegionFraction);
+  const allowedSmallRequirementCount = Math.ceil(
+    maxSmallRequirementCount + regions.length * extremeTolerance * 0.25
+  );
+  const allowedFullRegionCount = Math.ceil(
+    maxFullRegionCount + regions.length * extremeTolerance * 0.25
+  );
+  const allowedRowMaxCount = Math.max(maxRowMaxCount, Math.ceil(maxRowMaxCount + extremeTolerance));
+  const allowedColumnMaxCount = Math.max(
+    maxColumnMaxCount,
+    Math.ceil(maxColumnMaxCount + extremeTolerance)
+  );
+  const relaxedHighRequirementNeeded = minHighRequirement > 0 && extremeTolerance < 0.6;
+  const requireLargeRegionPresence = extremeTolerance < 0.6;
+  const requireLargeRequirementFive = extremeTolerance < 0.75;
 
   const requiresHardRegeneration =
     (difficulty === 'hard' || difficulty === 'extreme') &&
-    (highRequirementCount < minHighRequirement ||
-      largeRegionCount < 1 ||
-      (largestRegionSize >= 6 && requirementFiveCount < 1) ||
-      smallRequirementCount > maxSmallRequirementCount ||
-      (difficulty === 'extreme' && fullRegionCount > maxFullRegionCount) ||
-      rowMaxCount > maxRowMaxCount ||
-      columnMaxCount > maxColumnMaxCount);
+    ((relaxedHighRequirementNeeded && highRequirementCount < minHighRequirement) ||
+      (requireLargeRegionPresence && largeRegionCount < 1) ||
+      (requireLargeRequirementFive && largestRegionSize >= 6 && requirementFiveCount < 1) ||
+      smallRequirementCount > allowedSmallRequirementCount ||
+      (difficulty === 'extreme' && fullRegionCount > allowedFullRegionCount) ||
+      rowMaxCount > allowedRowMaxCount ||
+      columnMaxCount > allowedColumnMaxCount);
 
   if (exceedsRowOrColumnLimit || requiresHardRegeneration) {
-    const maxAttempts = getMaxGenerationAttemptsForDifficulty(difficulty);
     if (attempt >= maxAttempts) {
       throw new Error(
         `Failed to generate a ${difficulty} puzzle within ${maxAttempts} attempts`
