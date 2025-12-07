@@ -4,303 +4,52 @@ import { GAME_TYPES, DEFAULT_GAME_TYPE } from './config/games.js';
 import { DEFAULT_COLOR_PALETTE_ID, getPaletteColorsById } from './palette.js';
 import { CELL_STATES, createEmptyBoard, createPuzzle } from './puzzle.js';
 import { cloneBoard } from './utils/board.js';
+import { STORAGE_KEY, getTimestamp, getTodayKey, writeStorage } from './storage.js';
+import { formatTime } from './app/time.js';
+import { createLeaderboardManager } from './app/leaderboard.js';
+import { createPostScoreController } from './app/postScore.js';
+import { formatScore } from './utils/score.js';
 import {
-  STORAGE_KEY,
-  getTimestamp,
-  getTodayKey,
-  readStorage,
-  writeStorage
-} from './storage.js';
-  import { formatTime } from './app/time.js';
-  import { createLeaderboardManager } from './app/leaderboard.js';
-  import { createPostScoreController } from './app/postScore.js';
-  import { formatScore } from './utils/score.js';
-  const SUPABASE_URL = 'https://kbmtgjpvzssvyvbacxzi.supabase.co';
-  const SUPABASE_ANON_KEY =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtibXRnanB2enNzdnl2YmFjeHppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxMjgyMjksImV4cCI6MjA3ODcwNDIyOX0.lUhYyiRyziuMZJDfnKfwmWjwlP0scMJ_Xiam827fnxg';
-  const SUPABASE_LEADERBOARD_TABLE = 'leaderboard';
+  ensurePuzzlesStorage,
+  normalizeGameType,
+  persistStorage,
+  resetStorage,
+  storage
+} from './app/storageHelpers.js';
+import {
+  getAllowedDifficultiesForGame,
+  getDifficultyStorageKey,
+  isExtremeDifficultyUnlocked,
+  readStoredDifficultyForGame,
+  normalizeDifficultyForGame
+} from './app/difficulty.js';
+import {
+  hasPostedGlobalEntry,
+  readLastPostedEntryForBoard,
+  readLastPostedEntryMeta,
+  readLastPostedScore,
+  recordPostedGlobalEntry,
+  shouldPostScore,
+  updateTodayStats,
+  writeLastPostedEntryMeta,
+  writeLastPostedScore
+} from './app/postedEntries.js';
+
+const SUPABASE_URL = 'https://kbmtgjpvzssvyvbacxzi.supabase.co';
+const SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtibXRnanB2enNzdnl2YmFjeHppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxMjgyMjksImV4cCI6MjA3ODcwNDIyOX0.lUhYyiRyziuMZJDfnKfwmWjwlP0scMJ_Xiam827fnxg';
+const SUPABASE_LEADERBOARD_TABLE = 'leaderboard';
 
 const activeColorPaletteId = DEFAULT_COLOR_PALETTE_ID;
 const REGION_FILL_OPACITY = 0.3;
 
-let storage = readStorage();
-if (typeof storage.controlsLocked !== 'boolean') {
-  storage.controlsLocked = false;
-}
-if (typeof storage.regionFillEnabled !== 'boolean') {
-  storage.regionFillEnabled = true;
-}
-
-const normalizeGameType = () => DEFAULT_GAME_TYPE;
+let currentEntry = null;
 
 const storedGameType = normalizeGameType(storage.gameType);
 if (storage.gameType !== storedGameType) {
   storage.gameType = storedGameType;
-  writeStorage(storage);
+  persistStorage();
 }
-let currentEntry = null;
-
-const MAX_TRACKED_POSTED_ENTRIES = 50;
-
-const createLocalRecordId = () =>
-  `post-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-
-const resolvePostedEntryIdentity = (entry) => {
-  const idFromEntry = typeof entry?.id === 'string' && entry.id.trim().length > 0
-    ? entry.id.trim()
-    : null;
-  const boardId =
-    typeof entry?.boardId === 'string' && entry.boardId.trim().length > 0
-      ? entry.boardId.trim()
-      : null;
-
-  return {
-    id: idFromEntry || boardId || createLocalRecordId(),
-    boardId
-  };
-};
-
-const getGameScopedStorageKey = (baseKey, gameType = DEFAULT_GAME_TYPE) =>
-  gameType === DEFAULT_GAME_TYPE ? baseKey : `${baseKey}_${gameType}`;
-
-const getDifficultyStorageKey = (gameType = DEFAULT_GAME_TYPE) =>
-  getGameScopedStorageKey('difficulty', gameType);
-
-const readStoredDifficultyForGame = (gameType = DEFAULT_GAME_TYPE) => {
-  const key = getDifficultyStorageKey(gameType);
-  const storedValue = storage[key];
-  if (typeof storedValue === 'string' && DIFFICULTIES[storedValue]) {
-    return storedValue;
-  }
-  return DEFAULT_DIFFICULTY;
-};
-
-const normalizePostedEntry = (entry) => {
-  if (!entry || typeof entry !== 'object') {
-    return null;
-  }
-
-  const { id, boardId } = resolvePostedEntryIdentity(entry);
-  const normalizedDifficulty =
-    typeof entry.difficulty === 'string' ? entry.difficulty.trim() : '';
-  const difficulty = normalizedDifficulty.length > 0 ? normalizedDifficulty : null;
-  const numericSeconds = Number(entry.seconds);
-  const seconds = Number.isFinite(numericSeconds) ? numericSeconds : null;
-  const solvedAt =
-    typeof entry.solvedAt === 'string' && entry.solvedAt.trim().length > 0
-      ? entry.solvedAt.trim()
-      : null;
-
-  if (!boardId && (!difficulty || seconds === null)) {
-    return null;
-  }
-
-  return {
-    id,
-    boardId,
-    difficulty,
-    seconds,
-    solvedAt
-  };
-};
-
-const postedEntriesMatch = (a, b) => {
-  if (!a || !b) {
-    return false;
-  }
-
-  const aId = typeof a.id === 'string' && a.id.trim().length > 0 ? a.id.trim() : null;
-  const bId = typeof b.id === 'string' && b.id.trim().length > 0 ? b.id.trim() : null;
-
-  if (aId && bId) {
-    return aId === bId;
-  }
-
-  if (a.boardId && b.boardId) {
-    if (a.boardId !== b.boardId) {
-      return false;
-    }
-
-    const aSeconds = Number.isFinite(a.seconds) ? a.seconds : null;
-    const bSeconds = Number.isFinite(b.seconds) ? b.seconds : null;
-
-    if (aSeconds !== null && bSeconds !== null && aSeconds !== bSeconds) {
-      return false;
-    }
-
-    const aDifficulty = a.difficulty || null;
-    const bDifficulty = b.difficulty || null;
-
-    if (aDifficulty && bDifficulty && aDifficulty !== bDifficulty) {
-      return false;
-    }
-
-    if (aSeconds === null || bSeconds === null) {
-      return aDifficulty === bDifficulty;
-    }
-
-    return aDifficulty === bDifficulty;
-  }
-
-  const aSeconds = Number.isFinite(a.seconds) ? a.seconds : null;
-  const bSeconds = Number.isFinite(b.seconds) ? b.seconds : null;
-
-  if (aSeconds === null || bSeconds === null) {
-    return false;
-  }
-
-  return (
-    aSeconds === bSeconds &&
-    (a.difficulty || null) === (b.difficulty || null) &&
-    (a.solvedAt || null) === (b.solvedAt || null)
-  );
-};
-
-const readPostedGlobalEntries = (gameType = getActiveGameType()) => {
-  const key = getGameScopedStorageKey('globalLeaderboardPostedEntries', gameType);
-  const entries = storage[key];
-  if (!Array.isArray(entries)) {
-    return [];
-  }
-
-  return entries.map((entry) => normalizePostedEntry(entry)).filter(Boolean);
-};
-
-const hasPostedGlobalEntry = ({ id, boardId, difficulty, seconds, solvedAt, gameType }) => {
-  const candidate = normalizePostedEntry({ id, boardId, difficulty, seconds, solvedAt });
-  if (!candidate) {
-    return false;
-  }
-
-  return readPostedGlobalEntries(gameType).some((entry) => postedEntriesMatch(entry, candidate));
-};
-
-const readLastPostedScore = (gameType = getActiveGameType()) => {
-  const key = getGameScopedStorageKey('globalLeaderboardLastPostedScore', gameType);
-  const value = Number(storage[key]);
-  return Number.isFinite(value) ? value : null;
-};
-
-const readLastPostedEntryForBoard = (boardId, gameType = getActiveGameType()) => {
-  if (typeof boardId !== 'string' || boardId.trim().length === 0) {
-    return null;
-  }
-
-  const normalizedBoardId = boardId.trim();
-  return (
-    readPostedGlobalEntries(gameType).find((entry) => entry.boardId === normalizedBoardId) || null
-  );
-};
-
-const readLastPostedEntryMeta = (gameType = getActiveGameType()) => {
-  const key = getGameScopedStorageKey('globalLeaderboardLastPostedEntry', gameType);
-  const entry = storage[key];
-  if (!entry || typeof entry !== 'object') {
-    return null;
-  }
-
-  const difficulty =
-    typeof entry.difficulty === 'string' && entry.difficulty.trim().length > 0
-      ? entry.difficulty.trim()
-      : null;
-  const score = Number(entry.score);
-  const seconds = Number(entry.seconds);
-
-  return {
-    difficulty,
-    score: Number.isFinite(score) ? score : null,
-    seconds: Number.isFinite(seconds) ? seconds : null
-  };
-};
-
-const writeLastPostedScore = (score, gameType = getActiveGameType()) => {
-  const key = getGameScopedStorageKey('globalLeaderboardLastPostedScore', gameType);
-  if (Number.isFinite(score)) {
-    storage[key] = Number(score);
-  } else {
-    delete storage[key];
-  }
-};
-
-const writeLastPostedEntryMeta = (entry, gameType = getActiveGameType()) => {
-  const key = getGameScopedStorageKey('globalLeaderboardLastPostedEntry', gameType);
-  if (!entry || typeof entry !== 'object') {
-    delete storage[key];
-    return;
-  }
-
-  const difficulty =
-    typeof entry.difficulty === 'string' && entry.difficulty.trim().length > 0
-      ? entry.difficulty.trim()
-      : null;
-  const score = Number(entry.score);
-  const seconds = Number(entry.seconds);
-
-  storage[key] = {
-    difficulty,
-    score: Number.isFinite(score) ? score : null,
-    seconds: Number.isFinite(seconds) ? seconds : null
-  };
-};
-
-const recordPostedGlobalEntry = ({ id, boardId, difficulty, seconds, solvedAt, score, gameType }) => {
-  const candidate = normalizePostedEntry({ id, boardId, difficulty, seconds, solvedAt });
-  if (!candidate) {
-    return;
-  }
-
-  const type = gameType || getActiveGameType();
-  const entries = readPostedGlobalEntries(type);
-  if (entries.some((entry) => postedEntriesMatch(entry, candidate))) {
-    return;
-  }
-
-  entries.unshift(candidate);
-  const key = getGameScopedStorageKey('globalLeaderboardPostedEntries', type);
-  storage[key] = entries.slice(0, MAX_TRACKED_POSTED_ENTRIES);
-
-  writeLastPostedScore(score, type);
-  writeLastPostedEntryMeta({ difficulty: candidate.difficulty, seconds, score }, type);
-
-  writeStorage(storage);
-};
-
-const GAME_SPECIFIC_DIFFICULTIES = {
-  gears: ['easy', 'normal', 'hard']
-};
-
-const getAllowedDifficultiesForGame = (gameType = DEFAULT_GAME_TYPE) => {
-  const specific = GAME_SPECIFIC_DIFFICULTIES[gameType];
-  if (Array.isArray(specific) && specific.length > 0) {
-    return specific;
-  }
-  return Object.keys(DIFFICULTIES);
-};
-
-const selectFallbackDifficulty = (allowed) => {
-  if (allowed.includes(DEFAULT_DIFFICULTY) && DEFAULT_DIFFICULTY !== 'extreme') {
-    return DEFAULT_DIFFICULTY;
-  }
-  const firstNonExtreme = allowed.find((value) => value !== 'extreme');
-  return firstNonExtreme || allowed[0] || DEFAULT_DIFFICULTY;
-};
-
-const normalizeDifficultyForGame = (difficulty, gameType = DEFAULT_GAME_TYPE) => {
-  const normalizedGameType = normalizeGameType(gameType);
-  const allowed = getAllowedDifficultiesForGame(normalizedGameType);
-  const extremeUnlocked = isExtremeDifficultyUnlocked(normalizedGameType);
-  const candidate = allowed.includes(difficulty) ? difficulty : null;
-
-  if (candidate === 'extreme' && !extremeUnlocked) {
-    return selectFallbackDifficulty(allowed);
-  }
-
-  if (candidate) {
-    return candidate;
-  }
-
-  return selectFallbackDifficulty(allowed);
-};
 
 const initialDifficulty = normalizeDifficultyForGame(
   readStoredDifficultyForGame(storedGameType),
@@ -309,7 +58,7 @@ const initialDifficulty = normalizeDifficultyForGame(
 const initialDifficultyStorageKey = getDifficultyStorageKey(storedGameType);
 if (storage[initialDifficultyStorageKey] !== initialDifficulty) {
   storage[initialDifficultyStorageKey] = initialDifficulty;
-  writeStorage(storage);
+  persistStorage();
 }
 
 const state = {
@@ -497,44 +246,6 @@ const applyPaletteToBoardElements = () => {
 
 const getActiveGameType = () => (typeof state?.gameType === 'string' ? state.gameType : storedGameType);
 
-const getPuzzleStorageKey = (gameType = getActiveGameType()) =>
-  getGameScopedStorageKey('puzzles', gameType);
-
-const ensurePuzzlesStorage = (gameType = getActiveGameType()) => {
-  const key = getPuzzleStorageKey(gameType);
-  if (!storage[key] || typeof storage[key] !== 'object') {
-    storage[key] = {};
-  }
-  return storage[key];
-};
-
-const markExtremeUnlocked = () => {
-  if (!storage.extremeUnlocked) {
-    storage.extremeUnlocked = true;
-    writeStorage(storage);
-  }
-};
-
-const isExtremeDifficultyUnlocked = (gameType = state.gameType) => {
-  const normalizedGameType = normalizeGameType(gameType);
-  if (normalizedGameType !== 'stars') {
-    return false;
-  }
-
-  if (storage.extremeUnlocked) {
-    return true;
-  }
-
-  const puzzles = ensurePuzzlesStorage('stars');
-  const hardEntry = puzzles.hard;
-  if (hardEntry?.solved) {
-    markExtremeUnlocked();
-    return true;
-  }
-
-  return false;
-};
-
 const updateExtremeAvailability = () => {
   if (!extremeDifficultyButton) {
     return;
@@ -643,7 +354,7 @@ const applyTranslations = () => {
 
 const persistCurrentState = (additional = {}) => {
   if (!currentEntry) {
-    writeStorage(storage);
+    persistStorage();
     return;
   }
   const puzzles = ensurePuzzlesStorage(state.gameType);
@@ -660,7 +371,7 @@ const persistCurrentState = (additional = {}) => {
   storage[getDifficultyStorageKey(state.gameType)] = state.difficulty;
   storage.gameType = state.gameType;
   syncControlsLockToStorage();
-  writeStorage(storage);
+  persistStorage();
 };
 
 const recordLeaderboardEntry = () => {
@@ -732,7 +443,7 @@ const updateRegionFillState = ({ persist = false } = {}) => {
 
   if (persist) {
     storage.regionFillEnabled = enabled;
-    writeStorage(storage);
+    persistStorage();
   }
 };
 
@@ -767,7 +478,7 @@ const setControlsLocked = (locked) => {
   state.controlsLocked = Boolean(locked);
   syncControlsLockToStorage();
   updateControlsLockState();
-  writeStorage(storage);
+  persistStorage();
 };
 
 const stopTimer = () => {
@@ -789,7 +500,7 @@ const resetProgress = () => {
   } catch (error) {
     console.error('Failed to clear stored puzzle state', error);
   }
-  storage = readStorage();
+  resetStorage();
   storage.controlsLocked = state.controlsLocked;
   fetchDateEntries.forEach(([key, value]) => {
     storage[key] = value;
@@ -914,7 +625,7 @@ const loadPuzzle = ({
   }
   resetTimer(entry.secondsElapsed || 0);
   postScoreController?.updateButtonState();
-  writeStorage(storage);
+  persistStorage();
 };
 
 const isLeaderboardEnabledForGame = (gameType = state.gameType) => gameType !== 'gears';
@@ -1529,7 +1240,7 @@ const setGameType = (gameType) => {
   storage.gameType = normalized;
   setAppGameTypeAttribute(normalized);
   updateLeaderboardAvailability();
-  writeStorage(storage);
+  persistStorage();
   const storedDifficulty = readStoredDifficultyForGame(normalized);
   state.difficulty = normalizeDifficultyForGame(storedDifficulty, normalized);
   state.globalLeaderboard = [];
