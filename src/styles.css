@@ -366,6 +366,14 @@ body {
   pointer-events: none;
 }
 
+.app[data-difficulty='easy'] .cell[data-requirement]::after {
+  font-size: calc(12px * 1.2);
+}
+
+.app[data-difficulty='extreme'] .cell[data-requirement]::after {
+  font-size: calc(12px * 0.9);
+}
+
 .hint-text {
   display: inline-flex;
   align-items: center;
