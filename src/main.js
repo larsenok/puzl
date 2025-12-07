@@ -1,6 +1,6 @@
 import { ACTIVE_LOCALE, translate } from './config/translations.js';
 import { DIFFICULTIES, DEFAULT_DIFFICULTY } from './config/difficulties.js';
-import { GAME_TYPES, DEFAULT_GAME_TYPE, isValidGameType } from './config/games.js';
+import { GAME_TYPES, DEFAULT_GAME_TYPE } from './config/games.js';
 import { DEFAULT_COLOR_PALETTE_ID, getPaletteColorsById } from './palette.js';
 import { CELL_STATES, createEmptyBoard, createPuzzle } from './puzzle.js';
 import { cloneBoard } from './utils/board.js';
@@ -30,8 +30,7 @@ if (typeof storage.regionFillEnabled !== 'boolean') {
   storage.regionFillEnabled = true;
 }
 
-const normalizeGameType = (gameType) =>
-  isValidGameType(gameType) ? gameType : DEFAULT_GAME_TYPE;
+const normalizeGameType = () => DEFAULT_GAME_TYPE;
 
 const storedGameType = normalizeGameType(storage.gameType);
 if (storage.gameType !== storedGameType) {
