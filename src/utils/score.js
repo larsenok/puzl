@@ -1,5 +1,11 @@
 const SCORE_SCALE = 1000;
 const EXTREME_DIFFICULTY_BONUS = 1.1;
+const DIFFICULTY_SCORE_MULTIPLIERS = {
+  easy: 2,
+  normal: 1.5,
+  hard: 1.25,
+  extreme: EXTREME_DIFFICULTY_BONUS
+};
 const SAFE_MIN_SECONDS = 0.1;
 
 const toFiniteNumber = (value, fallback = null) => {
@@ -48,7 +54,7 @@ export const computeDifficultyScore = ({ difficulties = {}, difficulty, seconds 
     performanceMultiplier = 1 / clampedSeconds;
   }
 
-  const difficultyMultiplier = difficulty === 'extreme' ? EXTREME_DIFFICULTY_BONUS : 1;
+  const difficultyMultiplier = DIFFICULTY_SCORE_MULTIPLIERS[difficulty] || 1;
   const rawScore = Math.max(
     0,
     performanceMultiplier * weightMultiplier * difficultyMultiplier * SCORE_SCALE

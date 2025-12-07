@@ -331,7 +331,7 @@ body {
 }
 
 .app[data-difficulty='extreme'] .cell[data-state='fruit'] .cell__content {
-  font-size: calc(28px * 0.9 * 0.9);
+  font-size: calc(28px * 0.9 * 0.9 * 0.85);
 }
 
 .cell[data-state='mark'] {
@@ -345,7 +345,7 @@ body {
 }
 
 .app[data-difficulty='extreme'] .cell[data-state='mark'] .cell__content {
-  font-size: calc(26px * 0.9 * 0.9);
+  font-size: calc(26px * 0.9 * 0.9 * 0.85);
 }
 
 .cell[data-requirement]::after {
@@ -782,6 +782,11 @@ body {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 20px;
+  }
+
+  .leaderboard-sections[data-view='local'] #leaderboard-global-view,
+  .leaderboard-sections[data-view='global'] #leaderboard-local-view {
+    display: flex;
   }
 }
 
