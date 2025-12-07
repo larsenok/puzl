@@ -277,15 +277,29 @@ const getAllowedDifficultiesForGame = (gameType = DEFAULT_GAME_TYPE) => {
   return Object.keys(DIFFICULTIES);
 };
 
-const normalizeDifficultyForGame = (difficulty, gameType = DEFAULT_GAME_TYPE) => {
-  const allowed = getAllowedDifficultiesForGame(gameType);
-  if (allowed.includes(difficulty)) {
-    return difficulty;
-  }
-  if (allowed.includes(DEFAULT_DIFFICULTY)) {
+const selectFallbackDifficulty = (allowed) => {
+  if (allowed.includes(DEFAULT_DIFFICULTY) && DEFAULT_DIFFICULTY !== 'extreme') {
     return DEFAULT_DIFFICULTY;
   }
-  return allowed[0] || DEFAULT_DIFFICULTY;
+  const firstNonExtreme = allowed.find((value) => value !== 'extreme');
+  return firstNonExtreme || allowed[0] || DEFAULT_DIFFICULTY;
+};
+
+const normalizeDifficultyForGame = (difficulty, gameType = DEFAULT_GAME_TYPE) => {
+  const normalizedGameType = normalizeGameType(gameType);
+  const allowed = getAllowedDifficultiesForGame(normalizedGameType);
+  const extremeUnlocked = isExtremeDifficultyUnlocked(normalizedGameType);
+  const candidate = allowed.includes(difficulty) ? difficulty : null;
+
+  if (candidate === 'extreme' && !extremeUnlocked) {
+    return selectFallbackDifficulty(allowed);
+  }
+
+  if (candidate) {
+    return candidate;
+  }
+
+  return selectFallbackDifficulty(allowed);
 };
 
 const initialDifficulty = normalizeDifficultyForGame(
@@ -501,8 +515,9 @@ const markExtremeUnlocked = () => {
   }
 };
 
-const isExtremeDifficultyUnlocked = () => {
-  if (state.gameType !== 'stars') {
+const isExtremeDifficultyUnlocked = (gameType = state.gameType) => {
+  const normalizedGameType = normalizeGameType(gameType);
+  if (normalizedGameType !== 'stars') {
     return false;
   }
 
@@ -532,7 +547,7 @@ const updateExtremeAvailability = () => {
     extremeDifficultyButton.setAttribute('aria-pressed', 'false');
     return;
   }
-  const unlocked = isExtremeDifficultyUnlocked();
+  const unlocked = isExtremeDifficultyUnlocked(state.gameType);
   if (unlocked) {
     extremeDifficultyButton.hidden = false;
     extremeDifficultyButton.disabled = false;
@@ -1464,7 +1479,7 @@ const newPuzzle = ({ announce = true, forceNew = false } = {}) => {
 
 const updateDifficultyButtons = () => {
   const allowed = getAllowedDifficultiesForGame(state.gameType);
-  const extremeUnlocked = isExtremeDifficultyUnlocked();
+  const extremeUnlocked = isExtremeDifficultyUnlocked(state.gameType);
   difficultyButtons.forEach((button) => {
     const difficulty = button.dataset.difficulty;
     const isExtremeDifficulty = difficulty === 'extreme';
@@ -1484,7 +1499,7 @@ const setDifficulty = (difficulty) => {
   if (!DIFFICULTIES[difficulty] || state.difficulty === difficulty) {
     return;
   }
-  if (difficulty === 'extreme' && !isExtremeDifficultyUnlocked()) {
+  if (difficulty === 'extreme' && !isExtremeDifficultyUnlocked(state.gameType)) {
     return;
   }
   loadPuzzle({ difficulty, forceNew: false, gameType: state.gameType });
