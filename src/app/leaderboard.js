@@ -2,6 +2,7 @@ import { computeDifficultyScore } from '../utils/score.js';
 import { getTodayKey } from '../storage.js';
 
 const MAX_LEADERBOARD_ENTRIES = 20;
+const GLOBAL_FETCH_PAGE_SIZE = 1000;
 
 const createLocalEntryId = () =>
   `lb-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -31,26 +32,42 @@ const createSupabaseHelpers = ({ url, anonKey, table }) => {
       return [];
     }
 
-    const search =
-      `select=initials,seconds,difficulty,created_at&order=seconds.asc&limit=${MAX_LEADERBOARD_ENTRIES}`;
-    const response = await fetch(buildUrl(search), {
-      headers: {
-        apikey: anonKey,
-        Authorization: `Bearer ${anonKey}`,
-        Accept: 'application/json'
+    const search = 'select=initials,seconds,difficulty,created_at&order=created_at.desc';
+    const results = [];
+    let offset = 0;
+
+    while (true) {
+      const start = offset;
+      const end = offset + GLOBAL_FETCH_PAGE_SIZE - 1;
+
+      const response = await fetch(buildUrl(search), {
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+          Accept: 'application/json',
+          Range: `${start}-${end}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch global leaderboard: ${response.status}`);
       }
-    });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch global leaderboard: ${response.status}`);
+      const data = await response.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        break;
+      }
+
+      results.push(...data);
+
+      if (data.length < GLOBAL_FETCH_PAGE_SIZE) {
+        break;
+      }
+
+      offset += GLOBAL_FETCH_PAGE_SIZE;
     }
 
-    const data = await response.json();
-    if (!Array.isArray(data)) {
-      return [];
-    }
-
-    return data
+    return results
       .map((entry) => ({
         initials: (entry.initials || '').toString().slice(0, 3),
         seconds: Number.isFinite(Number(entry.seconds)) ? Number(entry.seconds) : null,
@@ -775,10 +792,12 @@ export const createLeaderboardManager = ({
 
     try {
       const entries = await supabaseHelpers.fetchEntries();
-      state.globalLeaderboard = entries
+      const normalizedEntries = entries
         .map((entry) => normalizeEntry({ ...entry, uploaded: true }))
         .filter((entry) => entry && entry.initials && entry.uploaded)
         .sort(compareEntries);
+
+      state.globalLeaderboard = normalizedEntries.slice(0, MAX_LEADERBOARD_ENTRIES);
       state.globalLeaderboardLoaded = true;
       storage[getGlobalFetchDateKey()] = todayKey;
       writeGlobalCacheEntry({
