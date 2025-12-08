@@ -1,37 +1,23 @@
 # Puzl
 
-Puzl is a bite-sized logic puzzle rendered with plain HTML, CSS, and vanilla JavaScript. This
-public repository ships the static assets that power the game. Boards range from compact 4×4 grids
-to sprawling 8×8 layouts depending on the chosen difficulty.
+Puzl is a static logic puzzle built with plain HTML, CSS, and JavaScript. Boards range from 4×4 to
+8×8 and support four difficulties, including an unlockable Extreme mode.
 
-## Status
+## Features
 
-- ✅ Fully playable across four difficulties with unlockable Extreme mode.
-- ✅ Daily seeds stored locally so players can revisit a board later the same day.
-- ✅ Zero-runtime build that ships static assets ready for any CDN or static host.
+- Daily seeds stored locally so the current board persists across sessions.
+- Local and global leaderboards that track solve time and difficulty.
+- Zero-runtime build script that outputs static assets for any CDN or host.
 
-## How the game works
+## Gameplay
 
-Each puzzle presents a grid divided into irregular regions. Every region has a badge showing how
-many apples it must contain. Rows and columns list their own apple totals as well. Part of the
-puzzle is understanding the rules, so experiment with the interactions to uncover how the
-constraints fit together.
-
-Click or tap a cell to cycle through empty soil, an apple, and a note marker. When a row or
-column matches its total exactly the clue turns green; exceeding the total turns it red. Use the
-logic of overlapping constraints to ensure each region hits its requirement while the rows and
-columns all satisfy their totals.
-
-## Scoring
-
-Every finished board records the chosen difficulty and the total time it took to solve. Those two
-values are enough for the game to determine a final score: faster solves give more points, slower
-runs still earn credit, and tougher difficulties multiply the result. Extreme mode adds a small
-bonus on top so leaderboard chasers have a little extra incentive to brave the hardest boards.
+Each puzzle divides the grid into regions with target apple counts, plus row and column totals.
+Click or tap to toggle a cell through empty soil, apple, and note states. Row and column hints turn
+green when satisfied and red when exceeded.
 
 ## Project structure
 
-- `src/index.html` contains the static markup that Vercel serves.
-- `src/styles.css` styles the board, hints, and controls.
-- `src/main.js` handles puzzle generation, interactions, and win detection.
-- `build.js` copies everything in `src/` to `dist/` during the build step.
+- `src/index.html` – static markup served by the host.
+- `src/styles.css` – board layout, hints, and controls.
+- `src/main.js` – puzzle generation, interactions, scoring, and leaderboards.
+- `build.js` – copies `src/` to `dist/` for deployment.
