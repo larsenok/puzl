@@ -74,17 +74,3 @@ export const getPaletteById = (id) =>
   COLOR_PALETTE_MAP[id] || COLOR_PALETTE_MAP[DEFAULT_COLOR_PALETTE_ID];
 
 export const getPaletteColorsById = (id) => getPaletteById(id).colors;
-
-export const getPalettePreviewGradient = (palette) => {
-  const colors = Array.isArray(palette?.colors) ? palette.colors.filter(Boolean) : [];
-  if (!colors.length) {
-    return '#f59e0b';
-  }
-  if (colors.length === 1) {
-    return colors[0];
-  }
-  const previewColors = colors.slice(0, 3);
-  const step = previewColors.length > 1 ? 100 / (previewColors.length - 1) : 100;
-  const stops = previewColors.map((color, index) => `${color} ${Math.round(index * step)}%`);
-  return `linear-gradient(135deg, ${stops.join(', ')})`;
-};
