@@ -25,14 +25,10 @@ import {
 } from './app/difficulty.js';
 import {
   hasPostedGlobalEntry,
-  readLastPostedEntryForBoard,
   readLastPostedEntryMeta,
   readLastPostedScore,
   recordPostedGlobalEntry,
-  shouldPostScore,
-  updateTodayStats,
-  writeLastPostedEntryMeta,
-  writeLastPostedScore
+  updateTodayStats
 } from './app/postedEntries.js';
 
 const SUPABASE_URL = 'https://kbmtgjpvzssvyvbacxzi.supabase.co';
@@ -74,7 +70,7 @@ const state = {
     intervalId: null,
     secondsElapsed: 0
   },
-  leaderboardView: 'local',
+  leaderboardView: initialDifficulty,
   globalLeaderboard: [],
   globalLeaderboardLoaded: false,
   globalLeaderboardLoading: false,
@@ -1369,7 +1365,14 @@ leaderboardController = createLeaderboardManager({
     viewToggle: leaderboardViewToggle,
     sectionsContainer: leaderboardSections
   },
-  getGameType: () => state.gameType
+  getGameType: () => state.gameType,
+  getAvailableDifficulties: () => {
+    const allowed = getAllowedDifficultiesForGame(state.gameType);
+    if (!isExtremeDifficultyUnlocked(state.gameType)) {
+      return allowed.filter((difficulty) => difficulty !== 'extreme');
+    }
+    return allowed;
+  }
 });
 
 postScoreController = createPostScoreController({
@@ -1389,15 +1392,15 @@ postScoreController = createPostScoreController({
   locale: ACTIVE_LOCALE,
   canSubmitToGlobalLeaderboard: () =>
     Boolean(leaderboardController?.hasSupabaseConfiguration?.()),
-  getBestLocalEntry: () => leaderboardController?.getBestLocalEntry?.() || null,
+  getBestLocalEntry: (difficulty) =>
+    leaderboardController?.getBestLocalEntry?.(difficulty) || null,
   hasAnyCompletedBoards: () => leaderboardController?.hasAnyCompletedBoards?.() || false,
   hasPostedEntry: (details) => hasPostedGlobalEntry({ ...details, gameType: state.gameType }),
-  getLastPostedEntryMeta: () => readLastPostedEntryMeta(state.gameType),
+  getLastPostedEntryMeta: (difficulty) =>
+    readLastPostedEntryMeta(difficulty, state.gameType),
   markEntryPosted: (details) =>
     recordPostedGlobalEntry({ ...details, gameType: state.gameType }),
-  getLastPostedScore: () => readLastPostedScore(state.gameType),
-  getLastPostedEntryForBoard: (boardId) =>
-    readLastPostedEntryForBoard(boardId, state.gameType),
+  getLastPostedScore: (difficulty) => readLastPostedScore(difficulty, state.gameType),
   elements: {
     button: leaderboardPostBestButton,
     overlay: postScoreOverlay,
