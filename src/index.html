@@ -207,31 +207,44 @@
             </button>
           </div>
           <div class="leaderboard-modal__view-toggle-row">
-            <button
+            <div
               id="leaderboard-view-toggle"
-              class="leaderboard-view-toggle"
-              type="button"
-              aria-pressed="false"
+              class="leaderboard-difficulty-toggle"
+              role="tablist"
             >
-              <span
-                class="leaderboard-view-toggle__option"
-                data-option="local"
-                aria-hidden="true"
+              <button
+                class="leaderboard-difficulty-toggle__option"
+                type="button"
+                data-difficulty="easy"
+                role="tab"
               >
-                Local
-              </span>
-              <span
-                class="leaderboard-view-toggle__thumb"
-                aria-hidden="true"
-              ></span>
-              <span
-                class="leaderboard-view-toggle__option"
-                data-option="global"
-                aria-hidden="true"
+                Easy
+              </button>
+              <button
+                class="leaderboard-difficulty-toggle__option"
+                type="button"
+                data-difficulty="normal"
+                role="tab"
               >
-                Global
-              </span>
-            </button>
+                Normal
+              </button>
+              <button
+                class="leaderboard-difficulty-toggle__option"
+                type="button"
+                data-difficulty="hard"
+                role="tab"
+              >
+                Hard
+              </button>
+              <button
+                class="leaderboard-difficulty-toggle__option"
+                type="button"
+                data-difficulty="extreme"
+                role="tab"
+              >
+                Extreme
+              </button>
+            </div>
           </div>
         </div>
         <div class="leaderboard-modal__body">

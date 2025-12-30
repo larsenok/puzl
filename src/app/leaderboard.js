@@ -144,7 +144,7 @@ export const createLeaderboardManager = ({
   supabase,
   elements,
   getGameType = () => 'stars',
-  showLocalLeaderboard = true
+  getAvailableDifficulties = () => Object.keys(difficulties)
 }) => {
   const {
     button,
@@ -168,10 +168,28 @@ export const createLeaderboardManager = ({
   const supabaseHelpers = createSupabaseHelpers(supabase);
   let lastFocusedElement = null;
 
-  const ensureGlobalView = () => {
-    if (!showLocalLeaderboard && state.leaderboardView !== 'global') {
-      state.leaderboardView = 'global';
+  const resolveAvailableDifficulties = () => {
+    const list =
+      typeof getAvailableDifficulties === 'function'
+        ? getAvailableDifficulties()
+        : Object.keys(difficulties);
+    return Array.isArray(list) && list.length > 0 ? list : Object.keys(difficulties);
+  };
+
+  const normalizeLeaderboardDifficulty = (value) =>
+    typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+
+  const ensureLeaderboardDifficulty = () => {
+    const available = resolveAvailableDifficulties();
+    const current = normalizeLeaderboardDifficulty(state.leaderboardView);
+    if (current && available.includes(current)) {
+      return current;
     }
+    const fallback = available[0] || null;
+    if (fallback) {
+      state.leaderboardView = fallback;
+    }
+    return fallback;
   };
 
   const resolveGameType = (override) => {
@@ -200,46 +218,34 @@ export const createLeaderboardManager = ({
   };
 
   const updateViewToggle = () => {
-    ensureGlobalView();
-    const isGlobal = state.leaderboardView === 'global';
-    const currentView = isGlobal ? 'global' : 'local';
+    const activeDifficulty = ensureLeaderboardDifficulty();
 
     if (sectionsContainer) {
-      sectionsContainer.setAttribute('data-view', currentView);
+      sectionsContainer.setAttribute('data-view', 'global');
     }
 
     if (!viewToggle) {
       return;
     }
 
-    if (!showLocalLeaderboard) {
-      viewToggle.hidden = true;
-      viewToggle.setAttribute('aria-hidden', 'true');
-      return;
-    }
+    viewToggle.setAttribute('aria-label', translate('difficultyLabel'));
 
-    viewToggle.hidden = false;
-    viewToggle.removeAttribute('aria-hidden');
-    const switchLabel = translate('leaderboardViewSwitchLabel');
-    const localLabel = translate('leaderboardTabLocal');
-    const globalLabel = translate('leaderboardTabGlobal');
-    const localOption = viewToggle.querySelector('[data-option="local"]');
-    const globalOption = viewToggle.querySelector('[data-option="global"]');
+    const available = resolveAvailableDifficulties();
+    const options = Array.from(viewToggle.querySelectorAll('[data-difficulty]'));
 
-    if (localOption) {
-      localOption.textContent = localLabel;
-      localOption.classList.toggle('is-active', !isGlobal);
-    }
-
-    if (globalOption) {
-      globalOption.textContent = globalLabel;
-      globalOption.classList.toggle('is-active', isGlobal);
-    }
-
-    viewToggle.setAttribute('data-view', currentView);
-    viewToggle.setAttribute('aria-pressed', isGlobal ? 'true' : 'false');
-    viewToggle.setAttribute('aria-label', switchLabel);
-    viewToggle.setAttribute('title', switchLabel);
+    options.forEach((option) => {
+      const difficulty = option.dataset.difficulty;
+      if (!difficulty) {
+        return;
+      }
+      const isAvailable = available.includes(difficulty);
+      option.hidden = !isAvailable;
+      option.setAttribute('aria-hidden', isAvailable ? 'false' : 'true');
+      const isActive = difficulty === activeDifficulty;
+      option.classList.toggle('is-active', isActive);
+      option.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      option.textContent = getDifficultyLabel(difficulty);
+    });
   };
 
   const readGlobalCacheEntry = () => {
@@ -630,22 +636,14 @@ export const createLeaderboardManager = ({
   };
 
   const renderLocalLeaderboard = () => {
-    if (!showLocalLeaderboard) {
-      if (localView) {
-        localView.hidden = true;
-        localView.setAttribute('aria-hidden', 'true');
-      }
-      return;
+    if (localView) {
+      localView.hidden = true;
+      localView.setAttribute('aria-hidden', 'true');
     }
 
     if (localView) {
-      const isActive = state.leaderboardView === 'local';
-      localView.hidden = !isActive;
-      if (isActive) {
-        localView.removeAttribute('aria-hidden');
-      } else {
-        localView.setAttribute('aria-hidden', 'true');
-      }
+      localView.hidden = true;
+      localView.setAttribute('aria-hidden', 'true');
     }
 
     if (!list || !emptyState) {
@@ -681,15 +679,10 @@ export const createLeaderboardManager = ({
   };
 
   const renderGlobalLeaderboard = () => {
-    ensureGlobalView();
+    const activeDifficulty = ensureLeaderboardDifficulty();
     if (globalView) {
-      const isActive = state.leaderboardView === 'global';
-      globalView.hidden = !isActive;
-      if (isActive) {
-        globalView.removeAttribute('aria-hidden');
-      } else {
-        globalView.setAttribute('aria-hidden', 'true');
-      }
+      globalView.hidden = false;
+      globalView.removeAttribute('aria-hidden');
     }
 
     if (!globalList || !globalEmptyState || !globalLoading) {
@@ -742,20 +735,13 @@ export const createLeaderboardManager = ({
       return;
     }
 
-    const activeDifficulty =
-      typeof state.difficulty === 'string' && state.difficulty.trim().length > 0
-        ? state.difficulty.trim()
-        : null;
-
     const entries = (Array.isArray(state.globalLeaderboard)
       ? state.globalLeaderboard
       : []
     )
       .map((entry) => normalizeEntry(entry))
       .filter((entry) => entry && entry.initials && entry.uploaded)
-      .filter((entry) =>
-        activeDifficulty ? entry.difficulty === activeDifficulty : true
-      );
+      .filter((entry) => (activeDifficulty ? entry.difficulty === activeDifficulty : true));
 
     entries.sort(compareEntries);
     globalList.innerHTML = '';
@@ -786,7 +772,6 @@ export const createLeaderboardManager = ({
   };
 
   const renderLeaderboard = () => {
-    ensureGlobalView();
     updateLeaderboardTitle();
     updateViewToggle();
     renderLocalLeaderboard();
@@ -861,22 +846,15 @@ export const createLeaderboardManager = ({
     }
   };
 
-  const setLeaderboardView = (view) => {
-    if (!showLocalLeaderboard && view !== 'global') {
-      state.leaderboardView = 'global';
-      renderLeaderboard();
-      if (supabaseHelpers.hasConfiguration()) {
-        loadGlobalLeaderboard();
-      }
+  const setLeaderboardView = (difficulty) => {
+    const normalized = normalizeLeaderboardDifficulty(difficulty);
+    const available = resolveAvailableDifficulties();
+    if (!normalized || !available.includes(normalized)) {
       return;
     }
-    if (view !== 'local' && view !== 'global') {
-      return;
-    }
-    const normalizedView = view === 'global' ? 'global' : 'local';
-    state.leaderboardView = normalizedView;
+    state.leaderboardView = normalized;
     renderLeaderboard();
-    if (normalizedView === 'global' && supabaseHelpers.hasConfiguration()) {
+    if (supabaseHelpers.hasConfiguration()) {
       loadGlobalLeaderboard();
     }
   };
@@ -969,7 +947,6 @@ export const createLeaderboardManager = ({
       return;
     }
 
-    ensureGlobalView();
     renderLeaderboard();
     if (supabaseHelpers.hasConfiguration()) {
       loadGlobalLeaderboard();
@@ -1037,9 +1014,16 @@ export const createLeaderboardManager = ({
     }
 
     if (viewToggle) {
-      viewToggle.addEventListener('click', () => {
-        const nextView = state.leaderboardView === 'local' ? 'global' : 'local';
-        setLeaderboardView(nextView);
+      viewToggle.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) {
+          return;
+        }
+        const difficulty = target.dataset.difficulty;
+        if (!difficulty) {
+          return;
+        }
+        setLeaderboardView(difficulty);
       });
     }
   };

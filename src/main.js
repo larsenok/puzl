@@ -70,7 +70,7 @@ const state = {
     intervalId: null,
     secondsElapsed: 0
   },
-  leaderboardView: 'global',
+  leaderboardView: initialDifficulty,
   globalLeaderboard: [],
   globalLeaderboardLoaded: false,
   globalLeaderboardLoading: false,
@@ -1366,7 +1366,13 @@ leaderboardController = createLeaderboardManager({
     sectionsContainer: leaderboardSections
   },
   getGameType: () => state.gameType,
-  showLocalLeaderboard: false
+  getAvailableDifficulties: () => {
+    const allowed = getAllowedDifficultiesForGame(state.gameType);
+    if (!isExtremeDifficultyUnlocked(state.gameType)) {
+      return allowed.filter((difficulty) => difficulty !== 'extreme');
+    }
+    return allowed;
+  }
 });
 
 postScoreController = createPostScoreController({
