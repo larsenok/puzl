@@ -618,28 +618,33 @@ body {
 
 
 .leaderboard-difficulty-toggle {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background-color: #f1f5f9;
+  flex-wrap: nowrap;
 }
 
 .leaderboard-difficulty-toggle__option {
-  border: 1px solid rgba(15, 23, 42, 0.18);
-  background-color: #f8fafc;
+  border: none;
+  background-color: transparent;
   color: #475569;
   border-radius: 999px;
-  padding: 6px 14px;
+  padding: 4px 10px;
   font: inherit;
   font-weight: 600;
-  font-size: 12px;
-  letter-spacing: 0.02em;
+  font-size: 11px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .leaderboard-difficulty-toggle__option:hover:not(:disabled) {
-  background-color: #e2e8f0;
+  background-color: rgba(148, 163, 184, 0.2);
 }
 
 .leaderboard-difficulty-toggle__option:focus-visible {
@@ -648,9 +653,9 @@ body {
 }
 
 .leaderboard-difficulty-toggle__option.is-active {
-  background-color: rgba(37, 99, 235, 0.12);
-  border-color: rgba(37, 99, 235, 0.35);
+  background-color: #ffffff;
   color: #0f172a;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.3), 0 4px 8px rgba(15, 23, 42, 0.08);
 }
 
 .leaderboard-modal__close {
@@ -743,6 +748,32 @@ body {
   cursor: not-allowed;
   opacity: 0.6;
   background-color: #e2e8f0;
+}
+
+.leaderboard-refresh-button[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.6;
+  background-color: #e2e8f0;
+}
+
+.leaderboard-refresh {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.leaderboard-refresh-tooltip {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background-color: rgba(15, 23, 42, 0.92);
+  color: #ffffff;
+  font-size: 11px;
+  white-space: nowrap;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.2);
+  z-index: 2;
 }
 
 .leaderboard-sections {
@@ -1246,6 +1277,37 @@ body {
 
 .status-text {
   letter-spacing: 0.04em;
+}
+
+.status-post-button {
+  border: none;
+  background-color: #2563eb;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  box-shadow: 0 6px 12px rgba(37, 99, 235, 0.18);
+}
+
+.status-post-button:hover:not(:disabled) {
+  background-color: #1d4ed8;
+}
+
+.status-post-button:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.45);
+  outline-offset: 2px;
+}
+
+.status-post-button:disabled,
+.status-post-button[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
 }
 
 .footer {

@@ -158,6 +158,7 @@ export const createLeaderboardManager = ({
     globalEmptyState,
     globalLoading,
     globalRefreshButton,
+    globalRefreshTooltip,
     globalHeading,
     closeButton,
     titleElement,
@@ -167,6 +168,10 @@ export const createLeaderboardManager = ({
 
   const supabaseHelpers = createSupabaseHelpers(supabase);
   let lastFocusedElement = null;
+  const refreshCooldownMs = 10000;
+  let refreshCooldownUntil = 0;
+  let refreshCooldownTimer = null;
+  let refreshTooltipTimer = null;
 
   const resolveAvailableDifficulties = () => {
     const list =
@@ -246,6 +251,61 @@ export const createLeaderboardManager = ({
       option.setAttribute('aria-selected', isActive ? 'true' : 'false');
       option.textContent = getDifficultyLabel(difficulty);
     });
+  };
+
+  const isRefreshCooldownActive = () => Date.now() < refreshCooldownUntil;
+
+  const clearRefreshCooldownTimer = () => {
+    if (refreshCooldownTimer) {
+      window.clearTimeout(refreshCooldownTimer);
+      refreshCooldownTimer = null;
+    }
+  };
+
+  const hideRefreshTooltip = () => {
+    if (globalRefreshTooltip) {
+      globalRefreshTooltip.hidden = true;
+      globalRefreshTooltip.setAttribute('aria-hidden', 'true');
+    }
+  };
+
+  const showRefreshCooldownTooltip = () => {
+    if (!globalRefreshTooltip) {
+      return;
+    }
+    globalRefreshTooltip.textContent = translate('leaderboardGlobalRefreshCooldown');
+    globalRefreshTooltip.hidden = false;
+    globalRefreshTooltip.removeAttribute('aria-hidden');
+    if (refreshTooltipTimer) {
+      window.clearTimeout(refreshTooltipTimer);
+    }
+    refreshTooltipTimer = window.setTimeout(() => {
+      hideRefreshTooltip();
+    }, 2200);
+  };
+
+  const updateRefreshCooldownState = () => {
+    if (!globalRefreshButton) {
+      return;
+    }
+    const cooldownActive = isRefreshCooldownActive();
+    if (cooldownActive) {
+      globalRefreshButton.setAttribute('aria-disabled', 'true');
+      globalRefreshButton.setAttribute('data-cooldown', 'true');
+    } else {
+      globalRefreshButton.removeAttribute('aria-disabled');
+      globalRefreshButton.removeAttribute('data-cooldown');
+    }
+  };
+
+  const startRefreshCooldown = () => {
+    refreshCooldownUntil = Date.now() + refreshCooldownMs;
+    updateRefreshCooldownState();
+    clearRefreshCooldownTimer();
+    refreshCooldownTimer = window.setTimeout(() => {
+      refreshCooldownUntil = 0;
+      updateRefreshCooldownState();
+    }, refreshCooldownMs);
   };
 
   const readGlobalCacheEntry = () => {
@@ -695,6 +755,7 @@ export const createLeaderboardManager = ({
       if (hasConfiguration) {
         globalRefreshButton.hidden = false;
         globalRefreshButton.disabled = state.globalLeaderboardLoading;
+        updateRefreshCooldownState();
         globalRefreshButton.removeAttribute('aria-hidden');
       } else {
         globalRefreshButton.hidden = true;
@@ -703,6 +764,7 @@ export const createLeaderboardManager = ({
     }
 
     if (!hasConfiguration) {
+      hideRefreshTooltip();
       globalLoading.hidden = true;
       globalLoading.setAttribute('aria-hidden', 'true');
       globalList.hidden = true;
@@ -714,6 +776,7 @@ export const createLeaderboardManager = ({
     }
 
     if (state.globalLeaderboardLoading) {
+      hideRefreshTooltip();
       globalLoading.hidden = false;
       globalLoading.removeAttribute('aria-hidden');
       globalList.hidden = true;
@@ -727,6 +790,7 @@ export const createLeaderboardManager = ({
     globalLoading.setAttribute('aria-hidden', 'true');
 
     if (state.globalLeaderboardError) {
+      hideRefreshTooltip();
       globalEmptyState.textContent = translate('leaderboardGlobalError');
       globalEmptyState.hidden = false;
       globalEmptyState.removeAttribute('aria-hidden');
@@ -1009,6 +1073,12 @@ export const createLeaderboardManager = ({
         if (state.globalLeaderboardLoading) {
           return;
         }
+        if (isRefreshCooldownActive()) {
+          showRefreshCooldownTooltip();
+          return;
+        }
+        startRefreshCooldown();
+        hideRefreshTooltip();
         loadGlobalLeaderboard({ force: true });
       });
     }
@@ -1072,6 +1142,10 @@ export const createLeaderboardManager = ({
         globalRefreshButton.textContent = label;
       }
       globalRefreshButton.setAttribute('title', label);
+    }
+
+    if (globalRefreshTooltip) {
+      globalRefreshTooltip.textContent = translate('leaderboardGlobalRefreshCooldown');
     }
 
     if (closeButton) {

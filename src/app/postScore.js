@@ -38,6 +38,7 @@ export const createPostScoreController = ({
 }) => {
   const {
     button,
+    statusButton,
     overlay,
     form,
     input,
@@ -134,6 +135,11 @@ export const createPostScoreController = ({
       button.setAttribute('aria-label', translate('postScoreButtonLabel'));
     }
 
+    if (statusButton) {
+      statusButton.textContent = translate('postScoreSend');
+      statusButton.setAttribute('aria-label', translate('postScoreButtonLabel'));
+    }
+
     if (titleElement) {
       titleElement.textContent = translate('postScoreTitle');
     }
@@ -160,7 +166,7 @@ export const createPostScoreController = ({
   };
 
   const updateButtonState = () => {
-    if (!button) {
+    if (!button && !statusButton) {
       return;
     }
 
@@ -214,18 +220,28 @@ export const createPostScoreController = ({
     const meetsPostingRequirements = passesLastPostedCheck();
 
     const shouldShow = Boolean(canSubmit && hasBoards && bestEntry);
-    button.hidden = !shouldShow;
-
     const shouldDisable =
       !shouldShow || state.postScoreSubmitting || alreadyPosted || !meetsPostingRequirements;
-    button.disabled = shouldDisable;
-    button.setAttribute('aria-disabled', shouldDisable ? 'true' : 'false');
 
-    if (alreadyPosted) {
-      button.setAttribute('title', translate('postScoreAlreadyPosted'));
-    } else {
-      button.removeAttribute('title');
-    }
+    const updateButton = (target, { forceHidden = false } = {}) => {
+      if (!target) {
+        return;
+      }
+      target.disabled = shouldDisable;
+      target.setAttribute('aria-disabled', shouldDisable ? 'true' : 'false');
+      target.dataset.postEligible = shouldShow ? 'true' : 'false';
+      if (!forceHidden) {
+        target.hidden = !shouldShow;
+      }
+      if (alreadyPosted) {
+        target.setAttribute('title', translate('postScoreAlreadyPosted'));
+      } else {
+        target.removeAttribute('title');
+      }
+    };
+
+    updateButton(button);
+    updateButton(statusButton, { forceHidden: true });
   };
 
   const renderModalState = () => {
@@ -454,6 +470,15 @@ export const createPostScoreController = ({
     if (button) {
       button.addEventListener('click', () => {
         if (state.postScoreSubmitting || button.disabled) {
+          return;
+        }
+        openModal();
+      });
+    }
+
+    if (statusButton) {
+      statusButton.addEventListener('click', () => {
+        if (state.postScoreSubmitting || statusButton.disabled) {
           return;
         }
         openModal();
