@@ -113,7 +113,16 @@
         </button>
       </div>
 
-      <div class="status" id="status" aria-live="polite"></div>
+      <div class="status" id="status" aria-live="polite">
+        <button
+          id="status-post-button"
+          class="status-post-button"
+          type="button"
+          hidden
+        >
+          Post
+        </button>
+      </div>
 
       <footer class="footer">
         <div class="footer__info">
@@ -285,17 +294,28 @@
                 <h3 id="leaderboard-global-heading" class="leaderboard-section__title">
                   Global
                 </h3>
-                <button
-                  id="leaderboard-global-refresh-button"
-                  class="leaderboard-refresh-button"
-                  type="button"
-                  hidden
-                >
-                  <span class="leaderboard-refresh-button__icon" aria-hidden="true"
-                    >&#8635;</span
+                <div class="leaderboard-refresh">
+                  <button
+                    id="leaderboard-global-refresh-button"
+                    class="leaderboard-refresh-button"
+                    type="button"
+                    hidden
                   >
-                  <span class="leaderboard-refresh-button__label">Update</span>
-                </button>
+                    <span class="leaderboard-refresh-button__icon" aria-hidden="true"
+                      >&#8635;</span
+                    >
+                    <span class="leaderboard-refresh-button__label">Update</span>
+                  </button>
+                  <span
+                    id="leaderboard-global-refresh-tooltip"
+                    class="leaderboard-refresh-tooltip"
+                    role="status"
+                    aria-live="polite"
+                    hidden
+                  >
+                    Please wait before updating again.
+                  </span>
+                </div>
               </div>
               <div id="leaderboard-global-loading" class="leaderboard-loading" hidden>
                 Loading…

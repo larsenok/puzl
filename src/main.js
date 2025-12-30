@@ -96,6 +96,7 @@ const difficultyToggleElement = document.querySelector('.difficulty-toggle');
 const columnHintsContainer = document.getElementById('column-hints');
 const boardContainer = document.getElementById('board');
 const statusElement = document.getElementById('status');
+const statusPostButton = document.getElementById('status-post-button');
 const checkButton = document.getElementById('check-button');
 const clearButton = document.getElementById('clear-button');
 const timerElement = document.getElementById('timer-display');
@@ -125,6 +126,9 @@ const leaderboardGlobalEmptyState = document.getElementById('leaderboard-global-
 const leaderboardGlobalLoading = document.getElementById('leaderboard-global-loading');
 const leaderboardGlobalRefreshButton = document.getElementById(
   'leaderboard-global-refresh-button'
+);
+const leaderboardGlobalRefreshTooltip = document.getElementById(
+  'leaderboard-global-refresh-tooltip'
 );
 const leaderboardGlobalHeading = document.getElementById('leaderboard-global-heading');
 const leaderboardCloseButton = document.getElementById('leaderboard-close-button');
@@ -798,6 +802,9 @@ const applyGearHintClasses = (element, currentGroups = [], targetGroups = []) =>
 
 const updateStatus = (type, text) => {
   statusElement.innerHTML = '';
+  if (statusPostButton) {
+    statusPostButton.hidden = true;
+  }
   if (!text) {
     return;
   }
@@ -818,6 +825,14 @@ const updateStatus = (type, text) => {
 
   statusElement.appendChild(icon);
   statusElement.appendChild(statusText);
+
+  if (statusPostButton) {
+    const solvedMessage = translate('statusSolved');
+    const canShowPost =
+      state.isSolved && text === solvedMessage && statusPostButton.dataset.postEligible === 'true';
+    statusPostButton.hidden = !canShowPost;
+    statusElement.appendChild(statusPostButton);
+  }
 };
 
 const updateCell = (row, column) => {
@@ -1359,6 +1374,7 @@ leaderboardController = createLeaderboardManager({
     globalEmptyState: leaderboardGlobalEmptyState,
     globalLoading: leaderboardGlobalLoading,
     globalRefreshButton: leaderboardGlobalRefreshButton,
+    globalRefreshTooltip: leaderboardGlobalRefreshTooltip,
     globalHeading: leaderboardGlobalHeading,
     closeButton: leaderboardCloseButton,
     titleElement: leaderboardTitleElement,
@@ -1403,6 +1419,7 @@ postScoreController = createPostScoreController({
   getLastPostedScore: (difficulty) => readLastPostedScore(difficulty, state.gameType),
   elements: {
     button: leaderboardPostBestButton,
+    statusButton: statusPostButton,
     overlay: postScoreOverlay,
     form: postScoreForm,
     input: postScoreInput,
