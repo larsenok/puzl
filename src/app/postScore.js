@@ -34,7 +34,6 @@ export const createPostScoreController = ({
   getLastPostedEntryMeta = () => null,
   markEntryPosted = () => {},
   getLastPostedScore = () => null,
-  getLastPostedEntryForBoard = () => null,
   elements
 }) => {
   const {
@@ -54,7 +53,7 @@ export const createPostScoreController = ({
 
   const readBestEntry = () => {
     if (typeof getBestLocalEntry === 'function') {
-      const entry = getBestLocalEntry();
+      const entry = getBestLocalEntry(state.difficulty);
       if (entry && typeof entry === 'object') {
         return entry;
       }
@@ -84,9 +83,9 @@ export const createPostScoreController = ({
     return Number.isFinite(score) ? score : null;
   };
 
-  const resolveLastPostedScore = () => {
+  const resolveLastPostedScore = (difficulty) => {
     if (typeof getLastPostedScore === 'function') {
-      const value = Number(getLastPostedScore());
+      const value = Number(getLastPostedScore(difficulty));
       return Number.isFinite(value) ? value : null;
     }
     return null;
@@ -184,19 +183,10 @@ export const createPostScoreController = ({
           })
         : false;
 
-    const lastPostedEntryMeta = shouldCheckPosting
-      ? typeof getLastPostedEntryMeta === 'function'
-        ? getLastPostedEntryMeta()
-        : null
-      : null;
-
-    const getDifficultyWeight = (difficulty) => {
-      const weight = difficulties?.[difficulty]?.scoreWeight;
-      return Number.isFinite(weight) ? weight : 1;
-    };
-
-    const isHigherDifficulty = (candidate, baseline) =>
-      getDifficultyWeight(candidate) > getDifficultyWeight(baseline);
+    const lastPostedEntryMeta =
+      shouldCheckPosting && typeof getLastPostedEntryMeta === 'function'
+        ? getLastPostedEntryMeta(bestEntry.difficulty)
+        : null;
 
     const passesLastPostedCheck = () => {
       if (!shouldCheckPosting || !lastPostedEntryMeta) {
@@ -207,44 +197,18 @@ export const createPostScoreController = ({
       const lastSeconds = Number.isFinite(lastPostedEntryMeta.seconds)
         ? lastPostedEntryMeta.seconds
         : null;
-      const entryScore = Number.isFinite(bestEntry?.score) ? bestEntry.score : null;
-      const lastScore = Number.isFinite(lastPostedEntryMeta.score) ? lastPostedEntryMeta.score : null;
 
-      if (!lastPostedEntryMeta.difficulty && lastSeconds === null && lastScore === null) {
+      if (!lastPostedEntryMeta.difficulty && lastSeconds === null) {
         return true;
       }
 
-      if (bestEntry?.difficulty && bestEntry.difficulty === lastPostedEntryMeta.difficulty) {
-        if (entrySeconds === null) {
-          return false;
-        }
-        if (lastSeconds === null) {
-          return true;
-        }
-        return entrySeconds < lastSeconds;
-      }
-
-      if (
-        bestEntry?.difficulty &&
-        lastPostedEntryMeta.difficulty &&
-        isHigherDifficulty(bestEntry.difficulty, lastPostedEntryMeta.difficulty)
-      ) {
-        if (entryScore === null) {
-          return false;
-        }
-        if (lastScore === null) {
-          return true;
-        }
-        return entryScore > lastScore;
-      }
-
-      if (entryScore === null) {
+      if (entrySeconds === null) {
         return false;
       }
-      if (lastScore === null) {
+      if (lastSeconds === null) {
         return true;
       }
-      return entryScore > lastScore;
+      return entrySeconds < lastSeconds;
     };
 
     const meetsPostingRequirements = passesLastPostedCheck();
@@ -380,10 +344,6 @@ export const createPostScoreController = ({
     }
 
     const postedScore = computeEntryScore(entry);
-    const lastPostedEntryForBoard =
-      typeof getLastPostedEntryForBoard === 'function' && entry?.boardId
-        ? getLastPostedEntryForBoard(entry.boardId)
-        : null;
     const alreadyPosted =
       typeof hasPostedEntry === 'function'
         ? hasPostedEntry({
@@ -400,8 +360,8 @@ export const createPostScoreController = ({
       return;
     }
 
-    const lastPostedScore = resolveLastPostedScore();
-    const shouldRequireHigherScore = Boolean(lastPostedEntryForBoard);
+    const lastPostedScore = resolveLastPostedScore(entry.difficulty);
+    const shouldRequireHigherScore = Number.isFinite(lastPostedScore);
 
     if (
       shouldRequireHigherScore &&

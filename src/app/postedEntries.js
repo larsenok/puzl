@@ -3,6 +3,27 @@ import { getTimestamp, getTodayKey, writeStorage } from '../storage.js';
 import { getGameScopedStorageKey, storage } from './storageHelpers.js';
 
 const MAX_TRACKED_POSTED_ENTRIES = 50;
+const LAST_POSTED_ENTRY_KEY = 'globalLeaderboardLastPostedEntryByDifficulty';
+const LAST_POSTED_SCORE_KEY = 'globalLeaderboardLastPostedScoreByDifficulty';
+
+const normalizeDifficulty = (difficulty) =>
+  typeof difficulty === 'string' && difficulty.trim().length > 0 ? difficulty.trim() : null;
+
+const normalizeLastPostedEntryMeta = (entry) => {
+  if (!entry || typeof entry !== 'object') {
+    return null;
+  }
+
+  const difficulty = normalizeDifficulty(entry.difficulty);
+  const score = Number(entry.score);
+  const seconds = Number(entry.seconds);
+
+  return {
+    difficulty,
+    score: Number.isFinite(score) ? score : null,
+    seconds: Number.isFinite(seconds) ? seconds : null
+  };
+};
 
 const createLocalRecordId = () =>
   `post-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -129,72 +150,118 @@ export const hasPostedGlobalEntry = ({
   return readPostedGlobalEntries(gameType).some((entry) => postedEntriesMatch(entry, candidate));
 };
 
-export const readLastPostedScore = (gameType = DEFAULT_GAME_TYPE) => {
-  const key = getGameScopedStorageKey('globalLeaderboardLastPostedScore', gameType);
-  const value = Number(storage[key]);
+const getLastPostedScoreKey = (gameType) =>
+  getGameScopedStorageKey(LAST_POSTED_SCORE_KEY, gameType);
+
+export const readLastPostedScore = (difficulty, gameType = DEFAULT_GAME_TYPE) => {
+  const normalizedDifficulty = normalizeDifficulty(difficulty);
+  const key = getLastPostedScoreKey(gameType);
+  const scoreMap = storage[key];
+
+  if (normalizedDifficulty && scoreMap && typeof scoreMap === 'object') {
+    const value = Number(scoreMap[normalizedDifficulty]);
+    return Number.isFinite(value) ? value : null;
+  }
+
+  const legacyKey = getGameScopedStorageKey('globalLeaderboardLastPostedScore', gameType);
+  const value = Number(storage[legacyKey]);
   return Number.isFinite(value) ? value : null;
 };
 
-export const readLastPostedEntryForBoard = (boardId, gameType = DEFAULT_GAME_TYPE) => {
+export const readLastPostedEntryForBoard = (
+  boardId,
+  difficulty,
+  gameType = DEFAULT_GAME_TYPE
+) => {
   if (typeof boardId !== 'string' || boardId.trim().length === 0) {
     return null;
   }
 
   const normalizedBoardId = boardId.trim();
+  const normalizedDifficulty = normalizeDifficulty(difficulty);
   return (
-    readPostedGlobalEntries(gameType).find((entry) => entry.boardId === normalizedBoardId) || null
+    readPostedGlobalEntries(gameType).find((entry) => {
+      if (entry.boardId !== normalizedBoardId) {
+        return false;
+      }
+      if (!normalizedDifficulty) {
+        return true;
+      }
+      return entry.difficulty === normalizedDifficulty;
+    }) || null
   );
 };
 
-export const readLastPostedEntryMeta = (gameType = DEFAULT_GAME_TYPE) => {
-  const key = getGameScopedStorageKey('globalLeaderboardLastPostedEntry', gameType);
-  const entry = storage[key];
-  if (!entry || typeof entry !== 'object') {
-    return null;
+const getLastPostedEntryKey = (gameType) =>
+  getGameScopedStorageKey(LAST_POSTED_ENTRY_KEY, gameType);
+
+export const readLastPostedEntryMeta = (difficulty, gameType = DEFAULT_GAME_TYPE) => {
+  const normalizedDifficulty = normalizeDifficulty(difficulty);
+  const key = getLastPostedEntryKey(gameType);
+  const entryMap = storage[key];
+
+  if (normalizedDifficulty && entryMap && typeof entryMap === 'object') {
+    const entry = normalizeLastPostedEntryMeta(entryMap[normalizedDifficulty]);
+    if (entry) {
+      return entry;
+    }
   }
 
-  const difficulty =
-    typeof entry.difficulty === 'string' && entry.difficulty.trim().length > 0
-      ? entry.difficulty.trim()
-      : null;
-  const score = Number(entry.score);
-  const seconds = Number(entry.seconds);
+  const legacyKey = getGameScopedStorageKey('globalLeaderboardLastPostedEntry', gameType);
+  const legacyEntry = normalizeLastPostedEntryMeta(storage[legacyKey]);
+  if (!legacyEntry) {
+    return null;
+  }
+  if (!normalizedDifficulty || legacyEntry.difficulty === normalizedDifficulty) {
+    return legacyEntry;
+  }
 
-  return {
-    difficulty,
-    score: Number.isFinite(score) ? score : null,
-    seconds: Number.isFinite(seconds) ? seconds : null
-  };
+  return null;
 };
 
-export const writeLastPostedScore = (score, gameType = DEFAULT_GAME_TYPE) => {
-  const key = getGameScopedStorageKey('globalLeaderboardLastPostedScore', gameType);
+export const writeLastPostedScore = (
+  score,
+  difficulty,
+  gameType = DEFAULT_GAME_TYPE
+) => {
+  const normalizedDifficulty = normalizeDifficulty(difficulty);
+  const key = getLastPostedScoreKey(gameType);
+  const scoreMap =
+    storage[key] && typeof storage[key] === 'object' && !Array.isArray(storage[key])
+      ? storage[key]
+      : {};
+
+  if (Number.isFinite(score) && normalizedDifficulty) {
+    scoreMap[normalizedDifficulty] = Number(score);
+    storage[key] = scoreMap;
+  } else if (normalizedDifficulty && scoreMap[normalizedDifficulty]) {
+    delete scoreMap[normalizedDifficulty];
+    storage[key] = scoreMap;
+  }
+
   if (Number.isFinite(score)) {
-    storage[key] = Number(score);
-  } else {
-    delete storage[key];
+    const legacyKey = getGameScopedStorageKey('globalLeaderboardLastPostedScore', gameType);
+    storage[legacyKey] = Number(score);
   }
 };
 
 export const writeLastPostedEntryMeta = (entry, gameType = DEFAULT_GAME_TYPE) => {
-  const key = getGameScopedStorageKey('globalLeaderboardLastPostedEntry', gameType);
-  if (!entry || typeof entry !== 'object') {
-    delete storage[key];
+  const normalized = normalizeLastPostedEntryMeta(entry);
+  const key = getLastPostedEntryKey(gameType);
+  const entryMap =
+    storage[key] && typeof storage[key] === 'object' && !Array.isArray(storage[key])
+      ? storage[key]
+      : {};
+
+  if (!normalized || !normalized.difficulty) {
     return;
   }
 
-  const difficulty =
-    typeof entry.difficulty === 'string' && entry.difficulty.trim().length > 0
-      ? entry.difficulty.trim()
-      : null;
-  const score = Number(entry.score);
-  const seconds = Number(entry.seconds);
+  entryMap[normalized.difficulty] = normalized;
+  storage[key] = entryMap;
 
-  storage[key] = {
-    difficulty,
-    score: Number.isFinite(score) ? score : null,
-    seconds: Number.isFinite(seconds) ? seconds : null
-  };
+  const legacyKey = getGameScopedStorageKey('globalLeaderboardLastPostedEntry', gameType);
+  storage[legacyKey] = normalized;
 };
 
 export const recordPostedGlobalEntry = ({
@@ -220,7 +287,7 @@ export const recordPostedGlobalEntry = ({
   const key = getGameScopedStorageKey('globalLeaderboardPostedEntries', gameType);
   storage[key] = entries.slice(0, MAX_TRACKED_POSTED_ENTRIES);
 
-  writeLastPostedScore(score, gameType);
+  writeLastPostedScore(score, candidate.difficulty, gameType);
   writeLastPostedEntryMeta({ difficulty: candidate.difficulty, seconds, score }, gameType);
 
   writeStorage(storage);
@@ -261,8 +328,12 @@ export const shouldPostScore = (state, score) => {
     return false;
   }
 
-  const lastPostedScore = readLastPostedScore(state.gameType);
-  const lastPostedEntry = readLastPostedEntryForBoard(state.puzzle?.boardId, state.gameType);
+  const lastPostedScore = readLastPostedScore(state.difficulty, state.gameType);
+  const lastPostedEntry = readLastPostedEntryForBoard(
+    state.puzzle?.boardId,
+    state.difficulty,
+    state.gameType
+  );
 
   const hasPostedThisBoardScore = hasPostedGlobalEntry({
     boardId: state.puzzle?.boardId,
@@ -271,7 +342,10 @@ export const shouldPostScore = (state, score) => {
     gameType: state.gameType
   });
 
-  if (hasPostedThisBoardScore || (lastPostedScore && score <= lastPostedScore)) {
+  if (
+    hasPostedThisBoardScore ||
+    (Number.isFinite(lastPostedScore) && score <= lastPostedScore)
+  ) {
     return false;
   }
 

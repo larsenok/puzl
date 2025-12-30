@@ -143,7 +143,8 @@ export const createLeaderboardManager = ({
   writeStorage,
   supabase,
   elements,
-  getGameType = () => 'stars'
+  getGameType = () => 'stars',
+  showLocalLeaderboard = true
 }) => {
   const {
     button,
@@ -166,6 +167,12 @@ export const createLeaderboardManager = ({
 
   const supabaseHelpers = createSupabaseHelpers(supabase);
   let lastFocusedElement = null;
+
+  const ensureGlobalView = () => {
+    if (!showLocalLeaderboard && state.leaderboardView !== 'global') {
+      state.leaderboardView = 'global';
+    }
+  };
 
   const resolveGameType = (override) => {
     if (typeof override === 'string' && override.trim().length > 0) {
@@ -193,6 +200,7 @@ export const createLeaderboardManager = ({
   };
 
   const updateViewToggle = () => {
+    ensureGlobalView();
     const isGlobal = state.leaderboardView === 'global';
     const currentView = isGlobal ? 'global' : 'local';
 
@@ -203,6 +211,15 @@ export const createLeaderboardManager = ({
     if (!viewToggle) {
       return;
     }
+
+    if (!showLocalLeaderboard) {
+      viewToggle.hidden = true;
+      viewToggle.setAttribute('aria-hidden', 'true');
+      return;
+    }
+
+    viewToggle.hidden = false;
+    viewToggle.removeAttribute('aria-hidden');
     const switchLabel = translate('leaderboardViewSwitchLabel');
     const localLabel = translate('leaderboardTabLocal');
     const globalLabel = translate('leaderboardTabGlobal');
@@ -483,8 +500,14 @@ export const createLeaderboardManager = ({
       (entry) => typeof entry?.boardId === 'string' && entry.boardId.trim().length > 0
     );
 
-  const getBestLocalEntry = () => {
-    const entries = getLeaderboardEntries();
+  const getBestLocalEntry = (difficulty) => {
+    const normalizedDifficulty =
+      typeof difficulty === 'string' && difficulty.trim().length > 0
+        ? difficulty.trim()
+        : null;
+    const entries = getLeaderboardEntries().filter((entry) =>
+      normalizedDifficulty ? entry.difficulty === normalizedDifficulty : true
+    );
     if (entries.length === 0) {
       return null;
     }
@@ -607,6 +630,14 @@ export const createLeaderboardManager = ({
   };
 
   const renderLocalLeaderboard = () => {
+    if (!showLocalLeaderboard) {
+      if (localView) {
+        localView.hidden = true;
+        localView.setAttribute('aria-hidden', 'true');
+      }
+      return;
+    }
+
     if (localView) {
       const isActive = state.leaderboardView === 'local';
       localView.hidden = !isActive;
@@ -650,6 +681,7 @@ export const createLeaderboardManager = ({
   };
 
   const renderGlobalLeaderboard = () => {
+    ensureGlobalView();
     if (globalView) {
       const isActive = state.leaderboardView === 'global';
       globalView.hidden = !isActive;
@@ -710,12 +742,20 @@ export const createLeaderboardManager = ({
       return;
     }
 
+    const activeDifficulty =
+      typeof state.difficulty === 'string' && state.difficulty.trim().length > 0
+        ? state.difficulty.trim()
+        : null;
+
     const entries = (Array.isArray(state.globalLeaderboard)
       ? state.globalLeaderboard
       : []
     )
       .map((entry) => normalizeEntry(entry))
-      .filter((entry) => entry && entry.initials && entry.uploaded);
+      .filter((entry) => entry && entry.initials && entry.uploaded)
+      .filter((entry) =>
+        activeDifficulty ? entry.difficulty === activeDifficulty : true
+      );
 
     entries.sort(compareEntries);
     globalList.innerHTML = '';
@@ -746,6 +786,7 @@ export const createLeaderboardManager = ({
   };
 
   const renderLeaderboard = () => {
+    ensureGlobalView();
     updateLeaderboardTitle();
     updateViewToggle();
     renderLocalLeaderboard();
@@ -821,6 +862,14 @@ export const createLeaderboardManager = ({
   };
 
   const setLeaderboardView = (view) => {
+    if (!showLocalLeaderboard && view !== 'global') {
+      state.leaderboardView = 'global';
+      renderLeaderboard();
+      if (supabaseHelpers.hasConfiguration()) {
+        loadGlobalLeaderboard();
+      }
+      return;
+    }
     if (view !== 'local' && view !== 'global') {
       return;
     }
@@ -920,6 +969,7 @@ export const createLeaderboardManager = ({
       return;
     }
 
+    ensureGlobalView();
     renderLeaderboard();
     if (supabaseHelpers.hasConfiguration()) {
       loadGlobalLeaderboard();
