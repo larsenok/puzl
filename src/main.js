@@ -63,6 +63,7 @@ const state = {
   puzzle: null,
   boardState: [],
   isSolved: false,
+  viewMode: 'puzzle',
   controlsLocked: Boolean(storage.controlsLocked),
   regionFillEnabled: Boolean(storage.regionFillEnabled),
   timer: {
@@ -134,6 +135,7 @@ const leaderboardGlobalHeading = document.getElementById('leaderboard-global-hea
 const leaderboardCloseButton = document.getElementById('leaderboard-close-button');
 const leaderboardTitleElement = document.getElementById('leaderboard-title');
 const leaderboardViewToggle = document.getElementById('leaderboard-view-toggle');
+const shapesToggleButton = document.getElementById('shapes-toggle-button');
 
 const postScoreOverlay = document.getElementById('post-score-overlay');
 const postScoreForm = document.getElementById('post-score-form');
@@ -150,6 +152,20 @@ let postScoreController = null;
 const columnHintElements = [];
 const rowHintElements = [];
 const cellElements = [];
+const shapesCellElements = [];
+
+const SHAPES_BOARD_SIZE = 6;
+const SHAPES_BOARD_LAYOUT = [
+  [0, 0, 1, 1, 2, 2],
+  [0, 0, 1, 1, 2, 2],
+  [3, 3, 4, 4, 5, 5],
+  [3, 3, 4, 4, 5, 5],
+  [1, 1, 2, 2, 0, 0],
+  [1, 1, 2, 2, 0, 0]
+];
+const shapesBoardState = Array.from({ length: SHAPES_BOARD_SIZE }, () =>
+  Array.from({ length: SHAPES_BOARD_SIZE }, () => false)
+);
 
 const computeRegionFillColor = (color, opacity = REGION_FILL_OPACITY) => {
   if (typeof color !== 'string') {
@@ -643,8 +659,14 @@ const updateLeaderboardAvailability = () => {
 };
 
 const renderCurrentPuzzle = ({ announce = false, message, additionalState } = {}) => {
-  createBoardStructure();
-  updateBoard();
+  const isShapesView = state.viewMode === 'shapes';
+  if (!isShapesView) {
+    if (boardContainer) {
+      boardContainer.setAttribute('aria-label', translate('boardAriaLabel'));
+    }
+    createBoardStructure();
+    updateBoard();
+  }
   updateTimerDisplay();
   setAppGameTypeAttribute(state.gameType);
   updateFooterDescription();
@@ -696,6 +718,30 @@ const setAppGameTypeAttribute = (gameType) => {
   if (appRoot) {
     appRoot.dataset.game = gameType;
   }
+};
+
+const setAppViewAttribute = (viewMode) => {
+  if (appRoot) {
+    appRoot.dataset.view = viewMode;
+  }
+};
+
+const getShapesPalette = () => {
+  const colors = getPaletteColorsById(activeColorPaletteId);
+  if (Array.isArray(colors) && colors.length >= 6) {
+    return colors.slice(0, 6);
+  }
+  return ['#ef4444', '#f59e0b', '#facc15', '#22c55e', '#0ea5e9', '#a855f7'];
+};
+
+const updateShapesToggleButton = () => {
+  if (!shapesToggleButton) {
+    return;
+  }
+  const isShapesView = state.viewMode === 'shapes';
+  const label = isShapesView ? 'Return to game board' : 'Show shapes board';
+  shapesToggleButton.setAttribute('aria-label', label);
+  shapesToggleButton.setAttribute('title', label);
 };
 
 const getCurrentRowTotals = () =>
@@ -1056,6 +1102,73 @@ const createBoardStructure = () => {
   }
 };
 
+const createShapesBoard = () => {
+  setBoardSizeVariable(SHAPES_BOARD_SIZE);
+  columnHintElements.length = 0;
+  rowHintElements.length = 0;
+  cellElements.length = 0;
+  shapesCellElements.length = 0;
+  columnHintsContainer.innerHTML = '';
+  boardContainer.innerHTML = '';
+  if (boardContainer) {
+    boardContainer.setAttribute('aria-label', 'Shapes board');
+  }
+  const palette = getShapesPalette();
+
+  for (let row = 0; row < SHAPES_BOARD_SIZE; row += 1) {
+    const rowWrapper = document.createElement('div');
+    rowWrapper.className = 'board-row';
+
+    const cellRow = document.createElement('div');
+    cellRow.className = 'row-cells';
+    const rowCells = [];
+
+    for (let column = 0; column < SHAPES_BOARD_SIZE; column += 1) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'cell shapes-cell';
+      button.dataset.row = row;
+      button.dataset.column = column;
+      button.dataset.active = String(shapesBoardState[row][column]);
+      const colorIndex = SHAPES_BOARD_LAYOUT[row]?.[column] ?? 0;
+      button.style.setProperty('--shape-color', palette[colorIndex % palette.length]);
+      button.setAttribute(
+        'aria-label',
+        `Shape cell row ${row + 1}, column ${column + 1}`
+      );
+      cellRow.appendChild(button);
+      rowCells[column] = button;
+    }
+
+    rowWrapper.appendChild(cellRow);
+    shapesCellElements[row] = rowCells;
+    boardContainer.appendChild(rowWrapper);
+  }
+};
+
+const toggleShapesCell = (row, column) => {
+  const nextValue = !shapesBoardState[row][column];
+  shapesBoardState[row][column] = nextValue;
+  const element = shapesCellElements[row]?.[column];
+  if (element) {
+    element.dataset.active = String(nextValue);
+  }
+};
+
+const setViewMode = (viewMode) => {
+  if (state.viewMode === viewMode) {
+    return;
+  }
+  state.viewMode = viewMode;
+  setAppViewAttribute(viewMode);
+  updateShapesToggleButton();
+  if (viewMode === 'shapes') {
+    createShapesBoard();
+    return;
+  }
+  renderCurrentPuzzle({ announce: false });
+};
+
 const checkGearsSolution = () => {
   const rowGroups = state.boardState.map((row) => computeGearGroupsForRow(row));
   const columnGroups = getGearColumnGroups();
@@ -1289,6 +1402,10 @@ boardContainer.addEventListener('click', (event) => {
   }
   const row = Number(target.dataset.row);
   const column = Number(target.dataset.column);
+  if (state.viewMode === 'shapes') {
+    toggleShapesCell(row, column);
+    return;
+  }
   cycleCell(row, column);
 });
 
@@ -1339,6 +1456,13 @@ if (resetProgressButton) {
       return;
     }
     resetProgress();
+  });
+}
+
+if (shapesToggleButton) {
+  shapesToggleButton.addEventListener('click', () => {
+    const nextView = state.viewMode === 'shapes' ? 'puzzle' : 'shapes';
+    setViewMode(nextView);
   });
 }
 
@@ -1455,6 +1579,8 @@ const initializeApp = () => {
   updateControlsLockState();
   updateRegionFillState();
   setAppGameTypeAttribute(state.gameType);
+  setAppViewAttribute(state.viewMode);
+  updateShapesToggleButton();
   updateLeaderboardAvailability();
   state.difficulty = normalizeDifficultyForGame(
     readStoredDifficultyForGame(state.gameType),
