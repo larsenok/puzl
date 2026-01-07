@@ -3,6 +3,7 @@ import { DIFFICULTIES, DEFAULT_DIFFICULTY } from './config/difficulties.js';
 import { GAME_TYPES, DEFAULT_GAME_TYPE } from './config/games.js';
 import { DEFAULT_COLOR_PALETTE_ID, getPaletteColorsById } from './palette.js';
 import { CELL_STATES, createEmptyBoard, createPuzzle } from './puzzle.js';
+import { createShapesView } from './shapes.js';
 import { cloneBoard } from './utils/board.js';
 import { STORAGE_KEY, getTimestamp, getTodayKey, writeStorage } from './storage.js';
 import { formatTime } from './app/time.js';
@@ -134,6 +135,7 @@ const leaderboardGlobalHeading = document.getElementById('leaderboard-global-hea
 const leaderboardCloseButton = document.getElementById('leaderboard-close-button');
 const leaderboardTitleElement = document.getElementById('leaderboard-title');
 const leaderboardViewToggle = document.getElementById('leaderboard-view-toggle');
+const shapesToggleButton = document.getElementById('shapes-toggle-button');
 
 const postScoreOverlay = document.getElementById('post-score-overlay');
 const postScoreForm = document.getElementById('post-score-form');
@@ -150,6 +152,7 @@ let postScoreController = null;
 const columnHintElements = [];
 const rowHintElements = [];
 const cellElements = [];
+let shapesView = null;
 
 const computeRegionFillColor = (color, opacity = REGION_FILL_OPACITY) => {
   if (typeof color !== 'string') {
@@ -643,8 +646,14 @@ const updateLeaderboardAvailability = () => {
 };
 
 const renderCurrentPuzzle = ({ announce = false, message, additionalState } = {}) => {
-  createBoardStructure();
-  updateBoard();
+  const isShapesView = shapesView?.isActive?.() ?? false;
+  if (!isShapesView) {
+    if (boardContainer) {
+      boardContainer.setAttribute('aria-label', translate('boardAriaLabel'));
+    }
+    createBoardStructure();
+    updateBoard();
+  }
   updateTimerDisplay();
   setAppGameTypeAttribute(state.gameType);
   updateFooterDescription();
@@ -685,6 +694,17 @@ const setBoardSizeVariable = (size) => {
     appRoot.style.setProperty('--board-size', String(size));
   }
 };
+
+const initializeShapesView = () =>
+  createShapesView({
+    appRoot,
+    boardContainer,
+    columnHintsContainer,
+    toggleButton: shapesToggleButton,
+    getPaletteColors: () => getPaletteColorsById(activeColorPaletteId),
+    setBoardSize: setBoardSizeVariable,
+    onExit: () => renderCurrentPuzzle({ announce: false })
+  });
 
 const setAppDifficultyAttribute = (difficulty) => {
   if (appRoot) {
@@ -1289,6 +1309,9 @@ boardContainer.addEventListener('click', (event) => {
   }
   const row = Number(target.dataset.row);
   const column = Number(target.dataset.column);
+  if (shapesView?.handleBoardClick?.(row, column)) {
+    return;
+  }
   cycleCell(row, column);
 });
 
@@ -1455,6 +1478,7 @@ const initializeApp = () => {
   updateControlsLockState();
   updateRegionFillState();
   setAppGameTypeAttribute(state.gameType);
+  shapesView = initializeShapesView();
   updateLeaderboardAvailability();
   state.difficulty = normalizeDifficultyForGame(
     readStoredDifficultyForGame(state.gameType),
