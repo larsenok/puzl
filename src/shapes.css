@@ -109,10 +109,28 @@
 }
 
 .shapes-cell::before {
-  display: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-weight: 700;
+  color: rgba(15, 23, 42, 0.85);
+  content: '';
 }
 
-.shapes-cell[data-active='true'] {
+.shapes-cell[data-mark='triangle']::before {
+  content: '▲';
+  font-size: 16px;
+}
+
+.shapes-cell[data-mark='x']::before {
+  content: '×';
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.shapes-cell[data-mark='triangle'] {
   box-shadow: inset 0 0 0 2px rgba(15, 23, 42, 0.55), 0 0 0 2px rgba(255, 255, 255, 0.8);
   filter: brightness(0.95);
 }

@@ -1,13 +1,15 @@
 const SHAPES_BOARD_SIZE = 8;
 
-const TETROMINO_BASES = [
+const SHAPE_BASES = [
   { name: 'I', cells: [[0, 0], [1, 0], [2, 0], [3, 0]] },
   { name: 'O', cells: [[0, 0], [1, 0], [0, 1], [1, 1]] },
   { name: 'T', cells: [[0, 0], [1, 0], [2, 0], [1, 1]] },
   { name: 'S', cells: [[1, 0], [2, 0], [0, 1], [1, 1]] },
   { name: 'Z', cells: [[0, 0], [1, 0], [1, 1], [2, 1]] },
   { name: 'J', cells: [[0, 0], [0, 1], [1, 1], [2, 1]] },
-  { name: 'L', cells: [[2, 0], [0, 1], [1, 1], [2, 1]] }
+  { name: 'L', cells: [[2, 0], [0, 1], [1, 1], [2, 1]] },
+  { name: 'P', cells: [[0, 0], [1, 0], [0, 1], [1, 1], [0, 2]] },
+  { name: 'U', cells: [[0, 0], [2, 0], [0, 1], [1, 1], [2, 1]] }
 ];
 
 const normalizeCells = (cells) => {
@@ -33,7 +35,7 @@ const buildRotations = (cells) => {
   return rotations;
 };
 
-const TETROMINO_VARIANTS = TETROMINO_BASES.flatMap((shape) =>
+const SHAPE_VARIANTS = SHAPE_BASES.flatMap((shape) =>
   buildRotations(shape.cells).map((cells) => ({ shape: shape.name, cells }))
 );
 
@@ -48,7 +50,7 @@ const shuffleArray = (items) => {
 
 const createShapesBoardLayout = () => {
   const size = SHAPES_BOARD_SIZE;
-  const maxAttempts = 60;
+  const maxAttempts = 200;
 
   const makeEmptyLayout = () =>
     Array.from({ length: size }, () => Array.from({ length: size }, () => null));
@@ -89,7 +91,7 @@ const createShapesBoardLayout = () => {
       return true;
     }
     const [startRow, startColumn] = next;
-    const variants = shuffleArray(TETROMINO_VARIANTS);
+    const variants = shuffleArray(SHAPE_VARIANTS);
 
     for (const variant of variants) {
       for (const [anchorX, anchorY] of variant.cells) {
@@ -120,7 +122,7 @@ const createShapesBoardLayout = () => {
 
 const createShapesBoardState = () =>
   Array.from({ length: SHAPES_BOARD_SIZE }, () =>
-    Array.from({ length: SHAPES_BOARD_SIZE }, () => false)
+    Array.from({ length: SHAPES_BOARD_SIZE }, () => 'empty')
   );
 
 const defaultShapesPalette = () => [
@@ -131,6 +133,61 @@ const defaultShapesPalette = () => [
   '#0ea5e9',
   '#a855f7'
 ];
+
+const buildAdjacencyMap = (layout) => {
+  const adjacency = new Map();
+  const registerEdge = (from, to) => {
+    if (!adjacency.has(from)) {
+      adjacency.set(from, new Set());
+    }
+    adjacency.get(from).add(to);
+  };
+
+  for (let row = 0; row < layout.length; row += 1) {
+    for (let column = 0; column < layout[row].length; column += 1) {
+      const current = layout[row][column];
+      if (current === null || current === undefined) {
+        continue;
+      }
+      if (!adjacency.has(current)) {
+        adjacency.set(current, new Set());
+      }
+      const neighbors = [
+        [row + 1, column],
+        [row, column + 1]
+      ];
+      neighbors.forEach(([neighborRow, neighborColumn]) => {
+        const neighbor = layout[neighborRow]?.[neighborColumn];
+        if (neighbor !== null && neighbor !== undefined && neighbor !== current) {
+          registerEdge(current, neighbor);
+          registerEdge(neighbor, current);
+        }
+      });
+    }
+  }
+
+  return adjacency;
+};
+
+const assignShapeColors = (layout, palette) => {
+  const adjacency = buildAdjacencyMap(layout);
+  const pieces = Array.from(adjacency.keys()).sort(
+    (a, b) => adjacency.get(b).size - adjacency.get(a).size
+  );
+  const assignments = new Map();
+
+  pieces.forEach((piece) => {
+    const usedColors = new Set(
+      Array.from(adjacency.get(piece) || [])
+        .map((neighbor) => assignments.get(neighbor))
+        .filter(Boolean)
+    );
+    const color = palette.find((candidate) => !usedColors.has(candidate)) || palette[0];
+    assignments.set(piece, color);
+  });
+
+  return assignments;
+};
 
 export const createShapesView = ({
   appRoot,
@@ -181,6 +238,7 @@ export const createShapesView = ({
     }
     const palette = getShapesPalette();
     const shapesBoardLayout = createShapesBoardLayout();
+    const shapeColors = assignShapeColors(shapesBoardLayout, palette);
 
     for (let row = 0; row < SHAPES_BOARD_SIZE; row += 1) {
       const rowWrapper = document.createElement('div');
@@ -196,9 +254,11 @@ export const createShapesView = ({
         button.className = 'cell shapes-cell';
         button.dataset.row = row;
         button.dataset.column = column;
-        button.dataset.active = String(shapesBoardState[row][column]);
-        const colorIndex = shapesBoardLayout[row]?.[column] ?? 0;
-        button.style.setProperty('--shape-color', palette[colorIndex % palette.length]);
+        button.dataset.mark = shapesBoardState[row][column];
+        const shapeIndex = shapesBoardLayout[row]?.[column];
+        const shapeColor =
+          shapeColors.get(shapeIndex) || palette[(shapeIndex ?? 0) % palette.length];
+        button.style.setProperty('--shape-color', shapeColor);
         button.setAttribute(
           'aria-label',
           `Shape cell row ${row + 1}, column ${column + 1}`
@@ -213,12 +273,34 @@ export const createShapesView = ({
     }
   };
 
-  const toggleShapesCell = (row, column) => {
-    const nextValue = !shapesBoardState[row][column];
-    shapesBoardState[row][column] = nextValue;
+  const setShapesCellMark = (row, column, mark) => {
+    shapesBoardState[row][column] = mark;
     const element = shapesCellElements[row]?.[column];
     if (element) {
-      element.dataset.active = String(nextValue);
+      element.dataset.mark = mark;
+    }
+  };
+
+  const markSurroundingCells = (row, column) => {
+    for (let rowOffset = -1; rowOffset <= 1; rowOffset += 1) {
+      for (let columnOffset = -1; columnOffset <= 1; columnOffset += 1) {
+        if (rowOffset === 0 && columnOffset === 0) {
+          continue;
+        }
+        const neighborRow = row + rowOffset;
+        const neighborColumn = column + columnOffset;
+        if (
+          neighborRow < 0 ||
+          neighborRow >= SHAPES_BOARD_SIZE ||
+          neighborColumn < 0 ||
+          neighborColumn >= SHAPES_BOARD_SIZE
+        ) {
+          continue;
+        }
+        if (shapesBoardState[neighborRow][neighborColumn] === 'empty') {
+          setShapesCellMark(neighborRow, neighborColumn, 'x');
+        }
+      }
     }
   };
 
@@ -244,7 +326,8 @@ export const createShapesView = ({
     if (viewMode !== 'shapes') {
       return false;
     }
-    toggleShapesCell(row, column);
+    setShapesCellMark(row, column, 'triangle');
+    markSurroundingCells(row, column);
     return true;
   };
 
