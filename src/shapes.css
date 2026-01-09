@@ -95,6 +95,7 @@
   padding: 6px;
   border-radius: 0;
   background-color: transparent;
+  box-shadow: none;
   --cell-gap: 1px;
 }
 
