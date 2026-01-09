@@ -136,6 +136,7 @@ const leaderboardCloseButton = document.getElementById('leaderboard-close-button
 const leaderboardTitleElement = document.getElementById('leaderboard-title');
 const leaderboardViewToggle = document.getElementById('leaderboard-view-toggle');
 const shapesToggleButton = document.getElementById('shapes-toggle-button');
+const newGridButton = document.getElementById('new-grid-button');
 
 const postScoreOverlay = document.getElementById('post-score-overlay');
 const postScoreForm = document.getElementById('post-score-form');
@@ -701,6 +702,7 @@ const initializeShapesView = () =>
     boardContainer,
     columnHintsContainer,
     toggleButton: shapesToggleButton,
+    newGridButton,
     getPaletteColors: () => getPaletteColorsById(activeColorPaletteId),
     setBoardSize: setBoardSizeVariable,
     onExit: () => renderCurrentPuzzle({ announce: false })
