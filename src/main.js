@@ -136,6 +136,8 @@ const leaderboardCloseButton = document.getElementById('leaderboard-close-button
 const leaderboardTitleElement = document.getElementById('leaderboard-title');
 const leaderboardViewToggle = document.getElementById('leaderboard-view-toggle');
 const shapesToggleButton = document.getElementById('shapes-toggle-button');
+const shapesRequirementToggle = document.getElementById('shapes-requirement-toggle');
+const shapesFinishBanner = document.getElementById('shapes-finish-banner');
 const newGridButton = document.getElementById('new-grid-button');
 
 const postScoreOverlay = document.getElementById('post-score-overlay');
@@ -701,11 +703,18 @@ const initializeShapesView = () =>
     appRoot,
     boardContainer,
     columnHintsContainer,
+    requirementToggle: shapesRequirementToggle,
+    finishBanner: shapesFinishBanner,
     toggleButton: shapesToggleButton,
     newGridButton,
     getPaletteColors: () => getPaletteColorsById(activeColorPaletteId),
     setBoardSize: setBoardSizeVariable,
-    onExit: () => renderCurrentPuzzle({ announce: false })
+    onExit: () => renderCurrentPuzzle({ announce: false }),
+    onViewChange: (nextView) => {
+      storage.shapesViewActive = nextView === 'shapes';
+      persistStorage();
+    },
+    initialView: storage.shapesViewActive ? 'shapes' : 'puzzle'
   });
 
 const setAppDifficultyAttribute = (difficulty) => {

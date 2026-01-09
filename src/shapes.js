@@ -232,17 +232,25 @@ export const createShapesView = ({
   appRoot,
   boardContainer,
   columnHintsContainer,
+  requirementToggle,
+  finishBanner,
   toggleButton,
   newGridButton,
   getPaletteColors,
   setBoardSize,
-  onExit
+  onExit,
+  onViewChange,
+  initialView = 'puzzle'
 }) => {
-  let viewMode = 'puzzle';
+  let viewMode = initialView;
   let shapesBoardState = createShapesBoardState();
+  let shapesBoardLayout = createShapesBoardLayout();
+  let shapesPieceIds = [];
   const shapesCellElements = [];
   let autoMarkState = createShapesFlagState();
   let triangleNeighborCounts = createShapesCountState();
+  let trianglesPlaced = 0;
+  const triangleRequirement = 2;
 
   const setAppViewAttribute = (nextView) => {
     if (appRoot) {
@@ -270,12 +278,90 @@ export const createShapesView = ({
     toggleButton.setAttribute('title', label);
   };
 
+  const updateRequirementToggle = () => {
+    if (!requirementToggle) {
+      return;
+    }
+    const label = `${triangleRequirement} triangles required`;
+    requirementToggle.setAttribute('aria-label', label);
+  };
+
+  const updateFinishBanner = (nextSolved) => {
+    if (!finishBanner) {
+      return;
+    }
+    finishBanner.hidden = !nextSolved;
+  };
+
+  const isBoardSolved = () => {
+    if (!shapesBoardLayout.length) {
+      return false;
+    }
+    const size = SHAPES_BOARD_SIZE;
+    for (let row = 0; row < size; row += 1) {
+      let count = 0;
+      for (let column = 0; column < size; column += 1) {
+        if (shapesBoardState[row][column] === 'triangle') {
+          count += 1;
+        }
+      }
+      if (count !== triangleRequirement) {
+        return false;
+      }
+    }
+
+    for (let column = 0; column < size; column += 1) {
+      let count = 0;
+      for (let row = 0; row < size; row += 1) {
+        if (shapesBoardState[row][column] === 'triangle') {
+          count += 1;
+        }
+      }
+      if (count !== triangleRequirement) {
+        return false;
+      }
+    }
+
+    const shapeCounts = new Map();
+    for (let row = 0; row < size; row += 1) {
+      for (let column = 0; column < size; column += 1) {
+        if (shapesBoardState[row][column] !== 'triangle') {
+          continue;
+        }
+        const shapeId = shapesBoardLayout[row]?.[column];
+        if (shapeId === null || shapeId === undefined) {
+          continue;
+        }
+        shapeCounts.set(shapeId, (shapeCounts.get(shapeId) || 0) + 1);
+      }
+    }
+
+    return shapesPieceIds.every(
+      (shapeId) => (shapeCounts.get(shapeId) || 0) === triangleRequirement
+    );
+  };
+
+  const updateSolvedState = () => {
+    const minimumTriangles = triangleRequirement * SHAPES_BOARD_SIZE;
+    if (trianglesPlaced < minimumTriangles) {
+      updateFinishBanner(false);
+      return;
+    }
+    updateFinishBanner(isBoardSolved());
+  };
+
   const createShapesBoard = () => {
     setBoardSize?.(SHAPES_BOARD_SIZE);
     shapesCellElements.length = 0;
     shapesBoardState = createShapesBoardState();
+    shapesBoardLayout = createShapesBoardLayout();
+    shapesPieceIds = Array.from(
+      new Set(shapesBoardLayout.flat().filter((value) => value != null))
+    );
     autoMarkState = createShapesFlagState();
     triangleNeighborCounts = createShapesCountState();
+    trianglesPlaced = 0;
+    updateFinishBanner(false);
     if (columnHintsContainer) {
       columnHintsContainer.innerHTML = '';
     }
@@ -284,7 +370,6 @@ export const createShapesView = ({
       boardContainer.setAttribute('aria-label', 'Shapes board');
     }
     const palette = getShapesPalette();
-    const shapesBoardLayout = createShapesBoardLayout();
     const shapeColors = assignShapeColors(shapesBoardLayout, palette);
 
     for (let row = 0; row < SHAPES_BOARD_SIZE; row += 1) {
@@ -377,6 +462,7 @@ export const createShapesView = ({
     viewMode = nextView;
     setAppViewAttribute(nextView);
     updateToggleButton();
+    onViewChange?.(nextView);
     if (viewMode === 'shapes') {
       createShapesBoard();
       return;
@@ -400,10 +486,14 @@ export const createShapesView = ({
     if (currentMark === 'x') {
       setShapesCellMark(row, column, 'triangle');
       updateTriangleInfluence(row, column, 1);
+      trianglesPlaced += 1;
+      updateSolvedState();
       return true;
     }
     updateTriangleInfluence(row, column, -1);
     setShapesCellMark(row, column, 'empty');
+    trianglesPlaced = Math.max(0, trianglesPlaced - 1);
+    updateSolvedState();
     return true;
   };
 
@@ -417,8 +507,17 @@ export const createShapesView = ({
       }
     });
   }
+  if (requirementToggle) {
+    requirementToggle.addEventListener('click', () => {
+      requirementToggle.setAttribute('aria-pressed', 'true');
+    });
+  }
   updateToggleButton();
+  updateRequirementToggle();
   setAppViewAttribute(viewMode);
+  if (viewMode === 'shapes') {
+    createShapesBoard();
+  }
 
   return {
     isActive: () => viewMode === 'shapes',

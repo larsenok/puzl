@@ -11,6 +11,10 @@ if (typeof storage.regionFillEnabled !== 'boolean') {
   storage.regionFillEnabled = true;
 }
 
+if (typeof storage.shapesViewActive !== 'boolean') {
+  storage.shapesViewActive = false;
+}
+
 export const persistStorage = () => writeStorage(storage);
 
 export const normalizeGameType = () => DEFAULT_GAME_TYPE;
@@ -37,6 +41,10 @@ export const resetStorage = () => {
 
   if (typeof storage.regionFillEnabled !== 'boolean') {
     storage.regionFillEnabled = true;
+  }
+
+  if (typeof storage.shapesViewActive !== 'boolean') {
+    storage.shapesViewActive = false;
   }
 
   return storage;

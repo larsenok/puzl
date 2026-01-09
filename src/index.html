@@ -59,7 +59,28 @@
           </div>
         </div>
         <div class="column-hints" id="column-hints" aria-label="Column clues"></div>
+        <div class="shapes-controls" id="shapes-controls">
+          <button
+            id="shapes-requirement-toggle"
+            class="shapes-requirement-toggle"
+            type="button"
+            aria-pressed="true"
+            aria-label="Triangles required"
+          >
+            <span class="shapes-requirement-toggle__value">2</span>
+            <span class="shapes-requirement-toggle__icon" aria-hidden="true">▲</span>
+          </button>
+        </div>
         <div class="board" id="board" aria-label="Puzzle board"></div>
+        <div
+          id="shapes-finish-banner"
+          class="shapes-finish-banner"
+          role="status"
+          aria-live="polite"
+          hidden
+        >
+          finished!
+        </div>
         <div class="new-grid-controls">
           <button id="new-grid-button" class="action-button action-button--secondary">
             New grid
