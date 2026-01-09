@@ -154,6 +154,16 @@ const createShapesBoardState = () =>
     Array.from({ length: SHAPES_BOARD_SIZE }, () => 'empty')
   );
 
+const createShapesFlagState = (value = false) =>
+  Array.from({ length: SHAPES_BOARD_SIZE }, () =>
+    Array.from({ length: SHAPES_BOARD_SIZE }, () => value)
+  );
+
+const createShapesCountState = () =>
+  Array.from({ length: SHAPES_BOARD_SIZE }, () =>
+    Array.from({ length: SHAPES_BOARD_SIZE }, () => 0)
+  );
+
 const defaultShapesPalette = () => [
   '#ef4444',
   '#f59e0b',
@@ -223,6 +233,7 @@ export const createShapesView = ({
   boardContainer,
   columnHintsContainer,
   toggleButton,
+  newGridButton,
   getPaletteColors,
   setBoardSize,
   onExit
@@ -230,6 +241,8 @@ export const createShapesView = ({
   let viewMode = 'puzzle';
   let shapesBoardState = createShapesBoardState();
   const shapesCellElements = [];
+  let autoMarkState = createShapesFlagState();
+  let triangleNeighborCounts = createShapesCountState();
 
   const setAppViewAttribute = (nextView) => {
     if (appRoot) {
@@ -261,6 +274,8 @@ export const createShapesView = ({
     setBoardSize?.(SHAPES_BOARD_SIZE);
     shapesCellElements.length = 0;
     shapesBoardState = createShapesBoardState();
+    autoMarkState = createShapesFlagState();
+    triangleNeighborCounts = createShapesCountState();
     if (columnHintsContainer) {
       columnHintsContainer.innerHTML = '';
     }
@@ -305,15 +320,20 @@ export const createShapesView = ({
     }
   };
 
-  const setShapesCellMark = (row, column, mark) => {
+  const setShapesCellMark = (row, column, mark, { auto = false } = {}) => {
     shapesBoardState[row][column] = mark;
+    if (mark === 'x') {
+      autoMarkState[row][column] = auto;
+    } else {
+      autoMarkState[row][column] = false;
+    }
     const element = shapesCellElements[row]?.[column];
     if (element) {
       element.dataset.mark = mark;
     }
   };
 
-  const markSurroundingCells = (row, column) => {
+  const updateTriangleInfluence = (row, column, delta) => {
     for (let rowOffset = -1; rowOffset <= 1; rowOffset += 1) {
       for (let columnOffset = -1; columnOffset <= 1; columnOffset += 1) {
         if (rowOffset === 0 && columnOffset === 0) {
@@ -329,8 +349,22 @@ export const createShapesView = ({
         ) {
           continue;
         }
-        if (shapesBoardState[neighborRow][neighborColumn] === 'empty') {
-          setShapesCellMark(neighborRow, neighborColumn, 'x');
+        triangleNeighborCounts[neighborRow][neighborColumn] = Math.max(
+          0,
+          triangleNeighborCounts[neighborRow][neighborColumn] + delta
+        );
+        if (delta > 0) {
+          if (shapesBoardState[neighborRow][neighborColumn] === 'empty') {
+            setShapesCellMark(neighborRow, neighborColumn, 'x', { auto: true });
+          }
+          continue;
+        }
+        if (
+          triangleNeighborCounts[neighborRow][neighborColumn] === 0 &&
+          shapesBoardState[neighborRow][neighborColumn] === 'x' &&
+          autoMarkState[neighborRow][neighborColumn]
+        ) {
+          setShapesCellMark(neighborRow, neighborColumn, 'empty');
         }
       }
     }
@@ -365,15 +399,23 @@ export const createShapesView = ({
     }
     if (currentMark === 'x') {
       setShapesCellMark(row, column, 'triangle');
-      markSurroundingCells(row, column);
+      updateTriangleInfluence(row, column, 1);
       return true;
     }
+    updateTriangleInfluence(row, column, -1);
     setShapesCellMark(row, column, 'empty');
     return true;
   };
 
   if (toggleButton) {
     toggleButton.addEventListener('click', toggleView);
+  }
+  if (newGridButton) {
+    newGridButton.addEventListener('click', () => {
+      if (viewMode === 'shapes') {
+        createShapesBoard();
+      }
+    });
   }
   updateToggleButton();
   setAppViewAttribute(viewMode);
