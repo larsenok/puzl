@@ -2,7 +2,7 @@ const SHAPES_BOARD_SIZE = 8;
 
 const SHAPE_BASES = [
   {
-    name: 'Block',
+    name: 'Crag',
     cells: [
       [0, 0],
       [1, 0],
@@ -10,38 +10,24 @@ const SHAPE_BASES = [
       [3, 0],
       [0, 1],
       [1, 1],
+      [0, 2],
+      [0, 3]
+    ]
+  },
+  {
+    name: 'Fjord',
+    cells: [
       [2, 1],
-      [3, 1]
+      [3, 1],
+      [1, 2],
+      [2, 2],
+      [3, 2],
+      [1, 3],
+      [2, 3],
+      [3, 3]
     ]
   }
 ];
-
-const normalizeCells = (cells) => {
-  const minX = Math.min(...cells.map(([x]) => x));
-  const minY = Math.min(...cells.map(([, y]) => y));
-  return cells
-    .map(([x, y]) => [x - minX, y - minY])
-    .sort((a, b) => (a[1] - b[1] ? a[1] - b[1] : a[0] - b[0]));
-};
-
-const rotateCells = (cells) => normalizeCells(cells.map(([x, y]) => [y, -x]));
-
-const buildRotations = (cells) => {
-  const rotations = [];
-  let current = normalizeCells(cells);
-  for (let rotation = 0; rotation < 4; rotation += 1) {
-    const signature = JSON.stringify(current);
-    if (!rotations.some((entry) => JSON.stringify(entry) === signature)) {
-      rotations.push(current);
-    }
-    current = rotateCells(current);
-  }
-  return rotations;
-};
-
-const SHAPE_VARIANTS = SHAPE_BASES.flatMap((shape) =>
-  buildRotations(shape.cells).map((cells) => ({ shape: shape.name, cells }))
-);
 
 const getLuminance = (hexColor) => {
   if (typeof hexColor !== 'string' || !hexColor.startsWith('#')) {
@@ -72,85 +58,35 @@ const filterDarkColors = (colors, minimumLuminance = 0.3) =>
     return luminance === null || luminance >= minimumLuminance;
   });
 
-const shuffleArray = (items) => {
-  const array = [...items];
-  for (let i = array.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
-};
-
 const createShapesBoardLayout = () => {
   const size = SHAPES_BOARD_SIZE;
-  const maxAttempts = 200;
-
-  const makeEmptyLayout = () =>
-    Array.from({ length: size }, () => Array.from({ length: size }, () => null));
-
-  const findNextEmpty = (layout) => {
-    for (let row = 0; row < size; row += 1) {
-      for (let column = 0; column < size; column += 1) {
-        if (layout[row][column] === null) {
-          return [row, column];
-        }
-      }
+  const blockSize = 4;
+  const layout = Array.from({ length: size }, () => Array.from({ length: size }, () => null));
+  const shapes = SHAPE_BASES.map((shape) => shape.cells);
+  const rotateCell = ([x, y]) => [blockSize - 1 - y, x];
+  const rotateCells = (cells, rotations) => {
+    let result = cells;
+    for (let rotation = 0; rotation < rotations; rotation += 1) {
+      result = result.map(rotateCell);
     }
-    return null;
+    return result;
   };
 
-  const canPlace = (layout, originRow, originColumn, cells) =>
-    cells.every(([x, y]) => {
-      const row = originRow + y;
-      const column = originColumn + x;
-      return (
-        row >= 0 &&
-        row < size &&
-        column >= 0 &&
-        column < size &&
-        layout[row][column] === null
-      );
-    });
-
-  const placeCells = (layout, originRow, originColumn, cells, value) => {
-    cells.forEach(([x, y]) => {
-      layout[originRow + y][originColumn + x] = value;
-    });
-  };
-
-  const fillLayout = (layout, pieceIndex) => {
-    const next = findNextEmpty(layout);
-    if (!next) {
-      return true;
-    }
-    const [startRow, startColumn] = next;
-    const variants = shuffleArray(SHAPE_VARIANTS);
-
-    for (const variant of variants) {
-      for (const [anchorX, anchorY] of variant.cells) {
-        const originRow = startRow - anchorY;
-        const originColumn = startColumn - anchorX;
-        if (!canPlace(layout, originRow, originColumn, variant.cells)) {
-          continue;
-        }
-        placeCells(layout, originRow, originColumn, variant.cells, pieceIndex);
-        if (fillLayout(layout, pieceIndex + 1)) {
-          return true;
-        }
-        placeCells(layout, originRow, originColumn, variant.cells, null);
-      }
-    }
-    return false;
-  };
-
-  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    const layout = makeEmptyLayout();
-    if (fillLayout(layout, 0)) {
-      return layout;
+  let pieceIndex = 0;
+  for (let blockRow = 0; blockRow < size; blockRow += blockSize) {
+    for (let blockColumn = 0; blockColumn < size; blockColumn += blockSize) {
+      const rotations = Math.floor(Math.random() * 4);
+      shapes.forEach((shapeCells) => {
+        const rotatedCells = rotateCells(shapeCells, rotations);
+        rotatedCells.forEach(([x, y]) => {
+          layout[blockRow + y][blockColumn + x] = pieceIndex;
+        });
+        pieceIndex += 1;
+      });
     }
   }
 
-  return makeEmptyLayout();
+  return layout;
 };
 
 const createShapesBoardState = () =>
