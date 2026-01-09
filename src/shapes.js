@@ -39,31 +39,101 @@ const filterDarkColors = (colors, minimumLuminance = 0.3) =>
   });
 
 const createTriangleSolution = (size) => {
+  const maxAttempts = 200;
   const baseColumns = Array.from({ length: size }, (_, index) => index);
-  const firstPermutation = shuffleArray(baseColumns);
-  let secondPermutation = shuffleArray(baseColumns);
-  let attempts = 0;
-  while (
-    attempts < 50 &&
-    secondPermutation.some((column, row) => column === firstPermutation[row])
-  ) {
-    secondPermutation = shuffleArray(baseColumns);
-    attempts += 1;
-  }
-  if (secondPermutation.some((column, row) => column === firstPermutation[row])) {
-    secondPermutation = [...firstPermutation.slice(1), firstPermutation[0]];
+
+  const attemptPlacement = (randomize) => {
+    const placements = Array.from({ length: size }, () => Array(size).fill(false));
+    const trianglePositions = [];
+    const columnCounts = Array(size).fill(0);
+
+    const canReachTargets = (row) =>
+      columnCounts.every((count) => count <= 2 && count + (size - row) >= 2);
+
+    const isSafe = (row, column) => {
+      if (columnCounts[column] >= 2) {
+        return false;
+      }
+      for (let rowOffset = -1; rowOffset <= 1; rowOffset += 1) {
+        for (let columnOffset = -1; columnOffset <= 1; columnOffset += 1) {
+          if (rowOffset === 0 && columnOffset === 0) {
+            continue;
+          }
+          const neighborRow = row + rowOffset;
+          const neighborColumn = column + columnOffset;
+          if (
+            neighborRow < 0 ||
+            neighborRow >= size ||
+            neighborColumn < 0 ||
+            neighborColumn >= size
+          ) {
+            continue;
+          }
+          if (placements[neighborRow][neighborColumn]) {
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    const placeRow = (row) => {
+      if (row === size) {
+        return columnCounts.every((count) => count === 2);
+      }
+      if (!canReachTargets(row)) {
+        return false;
+      }
+      const columns = randomize ? shuffleArray(baseColumns) : baseColumns;
+      for (let index = 0; index < columns.length; index += 1) {
+        const firstColumn = columns[index];
+        if (!isSafe(row, firstColumn)) {
+          continue;
+        }
+        placements[row][firstColumn] = true;
+        columnCounts[firstColumn] += 1;
+        trianglePositions.push({ row, column: firstColumn });
+
+        const secondColumns = randomize
+          ? shuffleArray(columns.filter((value) => value !== firstColumn))
+          : columns.filter((value) => value !== firstColumn);
+        for (let secondIndex = 0; secondIndex < secondColumns.length; secondIndex += 1) {
+          const secondColumn = secondColumns[secondIndex];
+          if (!isSafe(row, secondColumn)) {
+            continue;
+          }
+          placements[row][secondColumn] = true;
+          columnCounts[secondColumn] += 1;
+          trianglePositions.push({ row, column: secondColumn });
+
+          if (placeRow(row + 1)) {
+            return true;
+          }
+
+          placements[row][secondColumn] = false;
+          columnCounts[secondColumn] -= 1;
+          trianglePositions.pop();
+        }
+
+        placements[row][firstColumn] = false;
+        columnCounts[firstColumn] -= 1;
+        trianglePositions.pop();
+      }
+      return false;
+    };
+
+    return placeRow(0) ? trianglePositions : null;
+  };
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const result = attemptPlacement(true);
+    if (result) {
+      return { trianglePositions: result };
+    }
   }
 
-  const trianglePositions = [];
-
-  for (let row = 0; row < size; row += 1) {
-    const firstColumn = firstPermutation[row];
-    const secondColumn = secondPermutation[row];
-    trianglePositions.push({ row, column: firstColumn });
-    trianglePositions.push({ row, column: secondColumn });
-  }
-
-  return { trianglePositions };
+  const fallback = attemptPlacement(false);
+  return { trianglePositions: fallback || [] };
 };
 
 const pairTriangleSeeds = (trianglePositions) => {
