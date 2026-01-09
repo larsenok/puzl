@@ -1,33 +1,13 @@
 const SHAPES_BOARD_SIZE = 8;
 
-const SHAPE_BASES = [
-  {
-    name: 'Crag',
-    cells: [
-      [0, 0],
-      [1, 0],
-      [2, 0],
-      [3, 0],
-      [0, 1],
-      [1, 1],
-      [0, 2],
-      [0, 3]
-    ]
-  },
-  {
-    name: 'Fjord',
-    cells: [
-      [2, 1],
-      [3, 1],
-      [1, 2],
-      [2, 2],
-      [3, 2],
-      [1, 3],
-      [2, 3],
-      [3, 3]
-    ]
+const shuffleArray = (items) => {
+  const copy = [...items];
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]];
   }
-];
+  return copy;
+};
 
 const getLuminance = (hexColor) => {
   if (typeof hexColor !== 'string' || !hexColor.startsWith('#')) {
@@ -58,35 +38,247 @@ const filterDarkColors = (colors, minimumLuminance = 0.3) =>
     return luminance === null || luminance >= minimumLuminance;
   });
 
-const createShapesBoardLayout = () => {
-  const size = SHAPES_BOARD_SIZE;
-  const blockSize = 4;
-  const layout = Array.from({ length: size }, () => Array.from({ length: size }, () => null));
-  const shapes = SHAPE_BASES.map((shape) => shape.cells);
-  const rotateCell = ([x, y]) => [blockSize - 1 - y, x];
-  const rotateCells = (cells, rotations) => {
-    let result = cells;
-    for (let rotation = 0; rotation < rotations; rotation += 1) {
-      result = result.map(rotateCell);
-    }
-    return result;
-  };
+const createTriangleSolution = (size) => {
+  const baseColumns = Array.from({ length: size }, (_, index) => index);
+  const firstPermutation = shuffleArray(baseColumns);
+  let secondPermutation = shuffleArray(baseColumns);
+  let attempts = 0;
+  while (
+    attempts < 50 &&
+    secondPermutation.some((column, row) => column === firstPermutation[row])
+  ) {
+    secondPermutation = shuffleArray(baseColumns);
+    attempts += 1;
+  }
+  if (secondPermutation.some((column, row) => column === firstPermutation[row])) {
+    secondPermutation = [...firstPermutation.slice(1), firstPermutation[0]];
+  }
 
-  let pieceIndex = 0;
-  for (let blockRow = 0; blockRow < size; blockRow += blockSize) {
-    for (let blockColumn = 0; blockColumn < size; blockColumn += blockSize) {
-      const rotations = Math.floor(Math.random() * 4);
-      shapes.forEach((shapeCells) => {
-        const rotatedCells = rotateCells(shapeCells, rotations);
-        rotatedCells.forEach(([x, y]) => {
-          layout[blockRow + y][blockColumn + x] = pieceIndex;
-        });
-        pieceIndex += 1;
-      });
+  const trianglePositions = [];
+
+  for (let row = 0; row < size; row += 1) {
+    const firstColumn = firstPermutation[row];
+    const secondColumn = secondPermutation[row];
+    trianglePositions.push({ row, column: firstColumn });
+    trianglePositions.push({ row, column: secondColumn });
+  }
+
+  return { trianglePositions };
+};
+
+const pairTriangleSeeds = (trianglePositions) => {
+  const shuffled = shuffleArray(trianglePositions);
+  const pairs = [];
+  for (let index = 0; index < shuffled.length; index += 2) {
+    pairs.push([shuffled[index], shuffled[index + 1]]);
+  }
+  return pairs;
+};
+
+const findPathBetween = (start, end, layout, shapeId) => {
+  const size = layout.length;
+  const queue = [start];
+  const visited = Array.from({ length: size }, () => Array.from({ length: size }, () => false));
+  const previous = Array.from({ length: size }, () => Array.from({ length: size }, () => null));
+  const directions = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1]
+  ];
+
+  visited[start.row][start.column] = true;
+
+  while (queue.length) {
+    const current = queue.shift();
+    if (current.row === end.row && current.column === end.column) {
+      const path = [];
+      let cursor = current;
+      while (cursor) {
+        path.push(cursor);
+        cursor = previous[cursor.row][cursor.column];
+      }
+      return path.reverse();
+    }
+
+    directions.forEach(([rowOffset, columnOffset]) => {
+      const neighborRow = current.row + rowOffset;
+      const neighborColumn = current.column + columnOffset;
+      if (
+        neighborRow < 0 ||
+        neighborRow >= size ||
+        neighborColumn < 0 ||
+        neighborColumn >= size
+      ) {
+        return;
+      }
+      if (visited[neighborRow][neighborColumn]) {
+        return;
+      }
+      const occupant = layout[neighborRow][neighborColumn];
+      if (occupant !== null && occupant !== shapeId) {
+        return;
+      }
+      visited[neighborRow][neighborColumn] = true;
+      previous[neighborRow][neighborColumn] = current;
+      queue.push({ row: neighborRow, column: neighborColumn });
+    });
+  }
+
+  return null;
+};
+
+const createShapeTargets = (minSizes, totalCells) => {
+  const maxSize = 14;
+  const sizes = [...minSizes];
+  let remaining = totalCells - sizes.reduce((sum, value) => sum + value, 0);
+
+  while (remaining > 0) {
+    const index = Math.floor(Math.random() * sizes.length);
+    if (sizes[index] < maxSize) {
+      sizes[index] += 1;
+      remaining -= 1;
     }
   }
 
-  return layout;
+  if (Math.max(...sizes) < Math.min(...sizes) + 3) {
+    const receiver = Math.floor(Math.random() * sizes.length);
+    const donor = sizes.findIndex((value, index) => value > minSizes[index] && index !== receiver);
+    if (donor >= 0) {
+      sizes[donor] -= 1;
+      sizes[receiver] += 1;
+    }
+  }
+
+  return sizes;
+};
+
+const collectFrontierCells = (layout, cells) => {
+  const size = layout.length;
+  const frontier = new Set();
+  const directions = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1]
+  ];
+
+  cells.forEach(({ row, column }) => {
+    directions.forEach(([rowOffset, columnOffset]) => {
+      const neighborRow = row + rowOffset;
+      const neighborColumn = column + columnOffset;
+      if (
+        neighborRow < 0 ||
+        neighborRow >= size ||
+        neighborColumn < 0 ||
+        neighborColumn >= size
+      ) {
+        return;
+      }
+      if (layout[neighborRow][neighborColumn] !== null) {
+        return;
+      }
+      frontier.add(`${neighborRow},${neighborColumn}`);
+    });
+  });
+
+  return Array.from(frontier, (value) => {
+    const [row, column] = value.split(',').map((entry) => Number(entry));
+    return { row, column };
+  });
+};
+
+const createShapesBoardLayout = () => {
+  const size = SHAPES_BOARD_SIZE;
+  const totalCells = size * size;
+  const maxAttempts = 120;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const layout = Array.from({ length: size }, () => Array.from({ length: size }, () => null));
+    const { trianglePositions } = createTriangleSolution(size);
+    const pairs = pairTriangleSeeds(trianglePositions);
+    const shapes = pairs.map((pair, index) => ({
+      id: index,
+      cells: pair.map((seed) => ({ ...seed }))
+    }));
+
+    pairs.forEach(([first, second], index) => {
+      layout[first.row][first.column] = index;
+      layout[second.row][second.column] = index;
+    });
+
+    const routingOrder = shuffleArray(shapes.map((shape) => shape.id));
+    let routed = true;
+
+    routingOrder.forEach((shapeId) => {
+      if (!routed) {
+        return;
+      }
+      const [start, end] = pairs[shapeId];
+      const path = findPathBetween(start, end, layout, shapeId);
+      if (!path) {
+        routed = false;
+        return;
+      }
+      path.forEach((cell) => {
+        if (layout[cell.row][cell.column] === null) {
+          layout[cell.row][cell.column] = shapeId;
+          shapes[shapeId].cells.push(cell);
+        }
+      });
+    });
+
+    if (!routed) {
+      continue;
+    }
+
+    const minSizes = shapes.map((shape) => shape.cells.length);
+    const targets = createShapeTargets(minSizes, totalCells);
+    let remainingCells = totalCells - minSizes.reduce((sum, value) => sum + value, 0);
+    let safetyCounter = totalCells * 20;
+
+    while (remainingCells > 0 && safetyCounter > 0) {
+      safetyCounter -= 1;
+      const candidates = shapes
+        .map((shape, index) => ({
+          shape,
+          index,
+          frontier: collectFrontierCells(layout, shape.cells)
+        }))
+        .filter(
+          ({ shape, index, frontier }) =>
+            frontier.length > 0 && shape.cells.length < targets[index]
+        );
+      const fallbackCandidates =
+        candidates.length > 0
+          ? candidates
+          : shapes
+              .map((shape, index) => ({
+                shape,
+                index,
+                frontier: collectFrontierCells(layout, shape.cells)
+              }))
+              .filter(({ frontier }) => frontier.length > 0);
+
+      if (!fallbackCandidates.length) {
+        break;
+      }
+
+      const pick = fallbackCandidates[Math.floor(Math.random() * fallbackCandidates.length)];
+      const frontierCell = pick.frontier[Math.floor(Math.random() * pick.frontier.length)];
+      layout[frontierCell.row][frontierCell.column] = pick.shape.id;
+      pick.shape.cells.push(frontierCell);
+      remainingCells -= 1;
+    }
+
+    if (remainingCells === 0) {
+      return layout;
+    }
+  }
+
+  return Array.from({ length: size }, (_, row) =>
+    Array.from({ length: size }, () => row)
+  );
 };
 
 const createShapesBoardState = () =>
