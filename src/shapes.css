@@ -121,12 +121,12 @@
 
 .shapes-cell[data-mark='triangle']::before {
   content: '▲';
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .shapes-cell[data-mark='x']::before {
   content: '×';
-  font-size: 12px;
+  font-size: 14px;
   opacity: 0.75;
 }
 

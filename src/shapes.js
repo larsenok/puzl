@@ -39,6 +39,35 @@ const SHAPE_VARIANTS = SHAPE_BASES.flatMap((shape) =>
   buildRotations(shape.cells).map((cells) => ({ shape: shape.name, cells }))
 );
 
+const getLuminance = (hexColor) => {
+  if (typeof hexColor !== 'string' || !hexColor.startsWith('#')) {
+    return null;
+  }
+  const normalized = hexColor.replace('#', '').trim();
+  if (normalized.length !== 6) {
+    return null;
+  }
+  const red = Number.parseInt(normalized.slice(0, 2), 16);
+  const green = Number.parseInt(normalized.slice(2, 4), 16);
+  const blue = Number.parseInt(normalized.slice(4, 6), 16);
+  if ([red, green, blue].some((value) => Number.isNaN(value))) {
+    return null;
+  }
+  const [r, g, b] = [red, green, blue].map((value) => {
+    const channel = value / 255;
+    return channel <= 0.03928
+      ? channel / 12.92
+      : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+const filterDarkColors = (colors, minimumLuminance = 0.3) =>
+  colors.filter((color) => {
+    const luminance = getLuminance(color);
+    return luminance === null || luminance >= minimumLuminance;
+  });
+
 const shuffleArray = (items) => {
   const array = [...items];
   for (let i = array.length - 1; i > 0; i -= 1) {
@@ -211,7 +240,10 @@ export const createShapesView = ({
   const getShapesPalette = () => {
     const colors = getPaletteColors?.() || [];
     if (Array.isArray(colors) && colors.length >= 6) {
-      return colors.slice(0, 6);
+      const filteredColors = filterDarkColors(colors);
+      if (filteredColors.length >= 6) {
+        return filteredColors.slice(0, 6);
+      }
     }
     return defaultShapesPalette();
   };
@@ -326,8 +358,17 @@ export const createShapesView = ({
     if (viewMode !== 'shapes') {
       return false;
     }
-    setShapesCellMark(row, column, 'triangle');
-    markSurroundingCells(row, column);
+    const currentMark = shapesBoardState[row][column];
+    if (currentMark === 'empty') {
+      setShapesCellMark(row, column, 'x');
+      return true;
+    }
+    if (currentMark === 'x') {
+      setShapesCellMark(row, column, 'triangle');
+      markSurroundingCells(row, column);
+      return true;
+    }
+    setShapesCellMark(row, column, 'empty');
     return true;
   };
 
