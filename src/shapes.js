@@ -430,10 +430,33 @@ export const createShapesView = ({
       return false;
     }
     const size = SHAPES_BOARD_SIZE;
+    const neighborOffsets = [-1, 0, 1];
+    const hasAdjacentTriangle = (row, column) =>
+      neighborOffsets.some((rowOffset) =>
+        neighborOffsets.some((columnOffset) => {
+          if (rowOffset === 0 && columnOffset === 0) {
+            return false;
+          }
+          const neighborRow = row + rowOffset;
+          const neighborColumn = column + columnOffset;
+          if (
+            neighborRow < 0 ||
+            neighborRow >= size ||
+            neighborColumn < 0 ||
+            neighborColumn >= size
+          ) {
+            return false;
+          }
+          return shapesBoardState[neighborRow][neighborColumn] === 'triangle';
+        })
+      );
     for (let row = 0; row < size; row += 1) {
       let count = 0;
       for (let column = 0; column < size; column += 1) {
         if (shapesBoardState[row][column] === 'triangle') {
+          if (hasAdjacentTriangle(row, column)) {
+            return false;
+          }
           count += 1;
         }
       }
@@ -616,6 +639,9 @@ export const createShapesView = ({
       return true;
     }
     if (currentMark === 'x') {
+      if (triangleNeighborCounts[row][column] > 0) {
+        return false;
+      }
       setShapesCellMark(row, column, 'triangle');
       updateTriangleInfluence(row, column, 1);
       trianglesPlaced += 1;
