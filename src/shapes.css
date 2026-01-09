@@ -93,8 +93,8 @@
 
 .app[data-view='shapes'] .board {
   padding: 6px;
-  border-radius: 10px;
-  background-color: #cbd5f5;
+  border-radius: 0;
+  background-color: transparent;
   --cell-gap: 1px;
 }
 
@@ -137,6 +137,49 @@
 
 .new-grid-controls {
   display: none;
+}
+
+.shapes-controls {
+  display: none;
+  justify-content: center;
+}
+
+.app[data-view='shapes'] .shapes-controls {
+  display: flex;
+}
+
+.shapes-requirement-toggle {
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  border-radius: 999px;
+  padding: 6px 14px;
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 1px 0 rgba(148, 163, 184, 0.4);
+}
+
+.shapes-requirement-toggle__icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.shapes-finish-banner {
+  display: none;
+  align-self: center;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background-color: #22c55e;
+  color: #0f172a;
+  font-weight: 700;
+  text-transform: lowercase;
+}
+
+.app[data-view='shapes'] .shapes-finish-banner:not([hidden]) {
+  display: inline-flex;
 }
 
 .app[data-view='shapes'] .new-grid-controls {
