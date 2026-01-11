@@ -118,6 +118,25 @@
   font-weight: 700;
   color: rgba(15, 23, 42, 0.85);
   content: '';
+  z-index: 1;
+}
+
+.shapes-cell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: transparent;
+  opacity: 0;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.shapes-cell[data-error-row='true']::after,
+.shapes-cell[data-error-column='true']::after,
+.shapes-cell[data-error-shape='true']::after {
+  background-color: rgba(239, 68, 68, 0.18);
+  opacity: 1;
 }
 
 .shapes-cell[data-mark='triangle']::before {
