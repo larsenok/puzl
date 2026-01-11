@@ -808,9 +808,10 @@ export const createLeaderboardManager = ({
       .filter((entry) => (activeDifficulty ? entry.difficulty === activeDifficulty : true));
 
     entries.sort(compareEntries);
+    const visibleEntries = entries.slice(0, MAX_LEADERBOARD_ENTRIES);
     globalList.innerHTML = '';
 
-    if (!entries.length) {
+    if (!visibleEntries.length) {
       globalEmptyState.textContent = translate('leaderboardGlobalEmpty');
       globalEmptyState.hidden = false;
       globalEmptyState.removeAttribute('aria-hidden');
@@ -824,7 +825,7 @@ export const createLeaderboardManager = ({
     globalList.hidden = false;
     globalList.removeAttribute('aria-hidden');
 
-    entries.forEach((entry, index) => {
+    visibleEntries.forEach((entry, index) => {
       globalList.appendChild(
         createLeaderboardListItem({
           entry,
@@ -887,7 +888,7 @@ export const createLeaderboardManager = ({
         .filter((entry) => entry && entry.initials && entry.uploaded)
         .sort(compareEntries);
 
-      state.globalLeaderboard = normalizedEntries.slice(0, MAX_LEADERBOARD_ENTRIES);
+      state.globalLeaderboard = normalizedEntries;
       state.globalLeaderboardLoaded = true;
       storage[getGlobalFetchDateKey()] = todayKey;
       writeGlobalCacheEntry({
