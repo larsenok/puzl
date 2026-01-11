@@ -1112,12 +1112,12 @@ const checkGearsSolution = () => {
     stopTimer();
     state.isSolved = true;
     updateTimerLockState();
-    postScoreController?.updateButtonState();
-    const solvedMessage = translate('statusSolved');
-    updateStatus('success', solvedMessage);
     if (!alreadySolved) {
       recordLeaderboardEntry();
     }
+    postScoreController?.updateButtonState();
+    const solvedMessage = translate('statusSolved');
+    updateStatus('success', solvedMessage);
     persistCurrentState({
       solved: true,
       solvedAt: getTimestamp(),
@@ -1173,12 +1173,12 @@ const checkSolution = () => {
     stopTimer();
     state.isSolved = true;
     updateTimerLockState();
-    postScoreController?.updateButtonState();
-    const solvedMessage = translate('statusSolved');
-    updateStatus('success', solvedMessage);
     if (!alreadySolved) {
       recordLeaderboardEntry();
     }
+    postScoreController?.updateButtonState();
+    const solvedMessage = translate('statusSolved');
+    updateStatus('success', solvedMessage);
     persistCurrentState({
       solved: true,
       solvedAt: getTimestamp(),
