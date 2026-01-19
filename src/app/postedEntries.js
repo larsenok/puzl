@@ -163,6 +163,10 @@ export const readLastPostedScore = (difficulty, gameType = DEFAULT_GAME_TYPE) =>
     return Number.isFinite(value) ? value : null;
   }
 
+  if (normalizedDifficulty) {
+    return null;
+  }
+
   const legacyKey = getGameScopedStorageKey('globalLeaderboardLastPostedScore', gameType);
   const value = Number(storage[legacyKey]);
   return Number.isFinite(value) ? value : null;
