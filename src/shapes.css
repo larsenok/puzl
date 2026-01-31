@@ -162,6 +162,7 @@
 .shapes-controls {
   display: none;
   justify-content: center;
+  gap: 8px;
 }
 
 .app[data-view='shapes'] .shapes-controls {
