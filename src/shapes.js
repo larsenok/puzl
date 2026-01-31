@@ -1,4 +1,10 @@
-const SHAPES_BOARD_SIZE = 8;
+const SHAPES_CONFIGS = [
+  { requirement: 2, size: 8 },
+  { requirement: 3, size: 10 }
+];
+
+const getShapesConfig = (requirement) =>
+  SHAPES_CONFIGS.find((config) => config.requirement === requirement) || SHAPES_CONFIGS[0];
 
 const shuffleArray = (items) => {
   const copy = [...items];
@@ -38,7 +44,7 @@ const filterDarkColors = (colors, minimumLuminance = 0.3) =>
     return luminance === null || luminance >= minimumLuminance;
   });
 
-const createTriangleSolution = (size) => {
+const createTriangleSolution = (size, requirement) => {
   const maxAttempts = 200;
   const baseColumns = Array.from({ length: size }, (_, index) => index);
 
@@ -48,10 +54,13 @@ const createTriangleSolution = (size) => {
     const columnCounts = Array(size).fill(0);
 
     const canReachTargets = (row) =>
-      columnCounts.every((count) => count <= 2 && count + (size - row) >= 2);
+      columnCounts.every(
+        (count) =>
+          count <= requirement && count + (size - row) * requirement >= requirement
+      );
 
     const isSafe = (row, column) => {
-      if (columnCounts[column] >= 2) {
+      if (columnCounts[column] >= requirement) {
         return false;
       }
       for (let rowOffset = -1; rowOffset <= 1; rowOffset += 1) {
@@ -79,47 +88,35 @@ const createTriangleSolution = (size) => {
 
     const placeRow = (row) => {
       if (row === size) {
-        return columnCounts.every((count) => count === 2);
+        return columnCounts.every((count) => count === requirement);
       }
       if (!canReachTargets(row)) {
         return false;
       }
       const columns = randomize ? shuffleArray(baseColumns) : baseColumns;
-      for (let index = 0; index < columns.length; index += 1) {
-        const firstColumn = columns[index];
-        if (!isSafe(row, firstColumn)) {
-          continue;
+      const selectColumns = (startIndex, selections) => {
+        if (selections.length === requirement) {
+          return placeRow(row + 1);
         }
-        placements[row][firstColumn] = true;
-        columnCounts[firstColumn] += 1;
-        trianglePositions.push({ row, column: firstColumn });
-
-        const secondColumns = randomize
-          ? shuffleArray(columns.filter((value) => value !== firstColumn))
-          : columns.filter((value) => value !== firstColumn);
-        for (let secondIndex = 0; secondIndex < secondColumns.length; secondIndex += 1) {
-          const secondColumn = secondColumns[secondIndex];
-          if (!isSafe(row, secondColumn)) {
+        for (let index = startIndex; index < columns.length; index += 1) {
+          const column = columns[index];
+          if (!isSafe(row, column)) {
             continue;
           }
-          placements[row][secondColumn] = true;
-          columnCounts[secondColumn] += 1;
-          trianglePositions.push({ row, column: secondColumn });
-
-          if (placeRow(row + 1)) {
+          placements[row][column] = true;
+          columnCounts[column] += 1;
+          trianglePositions.push({ row, column });
+          if (selectColumns(index + 1, selections.concat(column))) {
             return true;
           }
-
-          placements[row][secondColumn] = false;
-          columnCounts[secondColumn] -= 1;
+          placements[row][column] = false;
+          columnCounts[column] -= 1;
           trianglePositions.pop();
         }
+        return false;
+      };
 
-        placements[row][firstColumn] = false;
-        columnCounts[firstColumn] -= 1;
-        trianglePositions.pop();
-      }
-      return false;
+      return selectColumns(0, []);
     };
 
     return placeRow(0) ? trianglePositions : null;
@@ -136,13 +133,13 @@ const createTriangleSolution = (size) => {
   return { trianglePositions: fallback || [] };
 };
 
-const pairTriangleSeeds = (trianglePositions) => {
+const groupTriangleSeeds = (trianglePositions, groupSize) => {
   const shuffled = shuffleArray(trianglePositions);
-  const pairs = [];
-  for (let index = 0; index < shuffled.length; index += 2) {
-    pairs.push([shuffled[index], shuffled[index + 1]]);
+  const groups = [];
+  for (let index = 0; index < shuffled.length; index += groupSize) {
+    groups.push(shuffled.slice(index, index + groupSize));
   }
-  return pairs;
+  return groups;
 };
 
 const findPathBetween = (start, end, layout, shapeId) => {
@@ -258,23 +255,23 @@ const collectFrontierCells = (layout, cells) => {
   });
 };
 
-const createShapesBoardLayout = () => {
-  const size = SHAPES_BOARD_SIZE;
+const createShapesBoardLayout = (size, requirement) => {
   const totalCells = size * size;
   const maxAttempts = 120;
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const layout = Array.from({ length: size }, () => Array.from({ length: size }, () => null));
-    const { trianglePositions } = createTriangleSolution(size);
-    const pairs = pairTriangleSeeds(trianglePositions);
-    const shapes = pairs.map((pair, index) => ({
+    const { trianglePositions } = createTriangleSolution(size, requirement);
+    const groups = groupTriangleSeeds(trianglePositions, requirement);
+    const shapes = groups.map((group, index) => ({
       id: index,
-      cells: pair.map((seed) => ({ ...seed }))
+      cells: group.map((seed) => ({ ...seed }))
     }));
 
-    pairs.forEach(([first, second], index) => {
-      layout[first.row][first.column] = index;
-      layout[second.row][second.column] = index;
+    groups.forEach((group, index) => {
+      group.forEach((seed) => {
+        layout[seed.row][seed.column] = index;
+      });
     });
 
     const routingOrder = shuffleArray(shapes.map((shape) => shape.id));
@@ -284,18 +281,21 @@ const createShapesBoardLayout = () => {
       if (!routed) {
         return;
       }
-      const [start, end] = pairs[shapeId];
-      const path = findPathBetween(start, end, layout, shapeId);
-      if (!path) {
-        routed = false;
-        return;
-      }
-      path.forEach((cell) => {
-        if (layout[cell.row][cell.column] === null) {
-          layout[cell.row][cell.column] = shapeId;
-          shapes[shapeId].cells.push(cell);
+      const seeds = groups[shapeId];
+      const anchor = seeds[0];
+      for (let seedIndex = 1; seedIndex < seeds.length; seedIndex += 1) {
+        const path = findPathBetween(anchor, seeds[seedIndex], layout, shapeId);
+        if (!path) {
+          routed = false;
+          return;
         }
-      });
+        path.forEach((cell) => {
+          if (layout[cell.row][cell.column] === null) {
+            layout[cell.row][cell.column] = shapeId;
+            shapes[shapeId].cells.push(cell);
+          }
+        });
+      }
     });
 
     if (!routed) {
@@ -351,20 +351,14 @@ const createShapesBoardLayout = () => {
   );
 };
 
-const createShapesBoardState = () =>
-  Array.from({ length: SHAPES_BOARD_SIZE }, () =>
-    Array.from({ length: SHAPES_BOARD_SIZE }, () => 'empty')
-  );
+const createShapesBoardState = (size) =>
+  Array.from({ length: size }, () => Array.from({ length: size }, () => 'empty'));
 
-const createShapesFlagState = (value = false) =>
-  Array.from({ length: SHAPES_BOARD_SIZE }, () =>
-    Array.from({ length: SHAPES_BOARD_SIZE }, () => value)
-  );
+const createShapesFlagState = (size, value = false) =>
+  Array.from({ length: size }, () => Array.from({ length: size }, () => value));
 
-const createShapesCountState = () =>
-  Array.from({ length: SHAPES_BOARD_SIZE }, () =>
-    Array.from({ length: SHAPES_BOARD_SIZE }, () => 0)
-  );
+const createShapesCountState = (size) =>
+  Array.from({ length: size }, () => Array.from({ length: size }, () => 0));
 
 const defaultShapesPalette = () => [
   '#ef4444',
@@ -434,7 +428,7 @@ export const createShapesView = ({
   appRoot,
   boardContainer,
   columnHintsContainer,
-  requirementToggle,
+  requirementButtons = [],
   finishBanner,
   toggleButton,
   newGridButton,
@@ -445,15 +439,16 @@ export const createShapesView = ({
   initialView = 'puzzle'
 }) => {
   let viewMode = initialView;
-  let shapesBoardState = createShapesBoardState();
-  let shapesBoardLayout = createShapesBoardLayout();
+  let triangleRequirement = getShapesConfig(2).requirement;
+  let shapesBoardSize = getShapesConfig(triangleRequirement).size;
+  let shapesBoardState = createShapesBoardState(shapesBoardSize);
+  let shapesBoardLayout = createShapesBoardLayout(shapesBoardSize, triangleRequirement);
   let shapesPieceIds = [];
   const shapesCellElements = [];
   const shapesRowElements = [];
-  let autoMarkState = createShapesFlagState();
-  let triangleNeighborCounts = createShapesCountState();
+  let autoMarkState = createShapesFlagState(shapesBoardSize);
+  let triangleNeighborCounts = createShapesCountState(shapesBoardSize);
   let trianglesPlaced = 0;
-  const triangleRequirement = 2;
 
   const setAppViewAttribute = (nextView) => {
     if (appRoot) {
@@ -482,11 +477,21 @@ export const createShapesView = ({
   };
 
   const updateRequirementToggle = () => {
-    if (!requirementToggle) {
+    if (!requirementButtons.length) {
       return;
     }
-    const label = `${triangleRequirement} triangles required`;
-    requirementToggle.setAttribute('aria-label', label);
+    requirementButtons.forEach((button) => {
+      if (!button) {
+        return;
+      }
+      const requirementValue = Number(button.dataset.requirement);
+      const label = `${requirementValue} triangles required`;
+      button.setAttribute('aria-label', label);
+      button.setAttribute(
+        'aria-pressed',
+        requirementValue === triangleRequirement ? 'true' : 'false'
+      );
+    });
   };
 
   const updateFinishBanner = (nextSolved) => {
@@ -500,7 +505,7 @@ export const createShapesView = ({
     if (!shapesBoardLayout.length) {
       return false;
     }
-    const size = SHAPES_BOARD_SIZE;
+    const size = shapesBoardSize;
     const neighborOffsets = [-1, 0, 1];
     const hasAdjacentTriangle = (row, column) =>
       neighborOffsets.some((rowOffset) =>
@@ -568,7 +573,7 @@ export const createShapesView = ({
   };
 
   const updateSolvedState = () => {
-    const minimumTriangles = triangleRequirement * SHAPES_BOARD_SIZE;
+    const minimumTriangles = triangleRequirement * shapesBoardSize;
     if (trianglesPlaced < minimumTriangles) {
       updateFinishBanner(false);
       return;
@@ -577,7 +582,7 @@ export const createShapesView = ({
   };
 
   const updateErrorHighlights = () => {
-    const size = SHAPES_BOARD_SIZE;
+    const size = shapesBoardSize;
     const rowCounts = Array(size).fill(0);
     const columnCounts = Array(size).fill(0);
     const shapeCounts = new Map();
@@ -640,16 +645,16 @@ export const createShapesView = ({
   };
 
   const createShapesBoard = () => {
-    setBoardSize?.(SHAPES_BOARD_SIZE);
+    setBoardSize?.(shapesBoardSize);
     shapesCellElements.length = 0;
     shapesRowElements.length = 0;
-    shapesBoardState = createShapesBoardState();
-    shapesBoardLayout = createShapesBoardLayout();
+    shapesBoardState = createShapesBoardState(shapesBoardSize);
+    shapesBoardLayout = createShapesBoardLayout(shapesBoardSize, triangleRequirement);
     shapesPieceIds = Array.from(
       new Set(shapesBoardLayout.flat().filter((value) => value != null))
     );
-    autoMarkState = createShapesFlagState();
-    triangleNeighborCounts = createShapesCountState();
+    autoMarkState = createShapesFlagState(shapesBoardSize);
+    triangleNeighborCounts = createShapesCountState(shapesBoardSize);
     trianglesPlaced = 0;
     updateFinishBanner(false);
     if (columnHintsContainer) {
@@ -662,7 +667,7 @@ export const createShapesView = ({
     const palette = getShapesPalette();
     const shapeColors = assignShapeColors(shapesBoardLayout, palette);
 
-    for (let row = 0; row < SHAPES_BOARD_SIZE; row += 1) {
+    for (let row = 0; row < shapesBoardSize; row += 1) {
       const rowWrapper = document.createElement('div');
       rowWrapper.className = 'board-row';
 
@@ -670,7 +675,7 @@ export const createShapesView = ({
       cellRow.className = 'row-cells';
       const rowCells = [];
 
-      for (let column = 0; column < SHAPES_BOARD_SIZE; column += 1) {
+      for (let column = 0; column < shapesBoardSize; column += 1) {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'cell shapes-cell';
@@ -720,9 +725,9 @@ export const createShapesView = ({
         const neighborColumn = column + columnOffset;
         if (
           neighborRow < 0 ||
-          neighborRow >= SHAPES_BOARD_SIZE ||
+          neighborRow >= shapesBoardSize ||
           neighborColumn < 0 ||
-          neighborColumn >= SHAPES_BOARD_SIZE
+          neighborColumn >= shapesBoardSize
         ) {
           continue;
         }
@@ -804,11 +809,24 @@ export const createShapesView = ({
       }
     });
   }
-  if (requirementToggle) {
-    requirementToggle.addEventListener('click', () => {
-      requirementToggle.setAttribute('aria-pressed', 'true');
+  requirementButtons.forEach((button) => {
+    if (!button) {
+      return;
+    }
+    button.addEventListener('click', () => {
+      const requirementValue = Number(button.dataset.requirement);
+      if (!Number.isInteger(requirementValue)) {
+        return;
+      }
+      const config = getShapesConfig(requirementValue);
+      triangleRequirement = config.requirement;
+      shapesBoardSize = config.size;
+      updateRequirementToggle();
+      if (viewMode === 'shapes') {
+        createShapesBoard();
+      }
     });
-  }
+  });
   updateToggleButton();
   updateRequirementToggle();
   setAppViewAttribute(viewMode);

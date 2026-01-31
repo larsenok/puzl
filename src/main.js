@@ -137,6 +137,7 @@ const leaderboardTitleElement = document.getElementById('leaderboard-title');
 const leaderboardViewToggle = document.getElementById('leaderboard-view-toggle');
 const shapesToggleButton = document.getElementById('shapes-toggle-button');
 const shapesRequirementToggle = document.getElementById('shapes-requirement-toggle');
+const shapesRequirementToggleThree = document.getElementById('shapes-requirement-toggle-3');
 const shapesFinishBanner = document.getElementById('shapes-finish-banner');
 const newGridButton = document.getElementById('new-grid-button');
 
@@ -703,7 +704,7 @@ const initializeShapesView = () =>
     appRoot,
     boardContainer,
     columnHintsContainer,
-    requirementToggle: shapesRequirementToggle,
+    requirementButtons: [shapesRequirementToggle, shapesRequirementToggleThree],
     finishBanner: shapesFinishBanner,
     toggleButton: shapesToggleButton,
     newGridButton,
