@@ -1,10 +1,54 @@
 const SHAPES_CONFIGS = [
   { requirement: 2, size: 8 },
-  { requirement: 3, size: 10 }
+  { requirement: 3, size: 12 }
 ];
 
 const getShapesConfig = (requirement) =>
   SHAPES_CONFIGS.find((config) => config.requirement === requirement) || SHAPES_CONFIGS[0];
+
+const PRESET_TRIANGLE_SOLUTIONS = new Map([
+  [
+    '12x3',
+    [
+      { row: 0, column: 1 },
+      { row: 0, column: 3 },
+      { row: 0, column: 5 },
+      { row: 1, column: 7 },
+      { row: 1, column: 9 },
+      { row: 1, column: 11 },
+      { row: 2, column: 1 },
+      { row: 2, column: 3 },
+      { row: 2, column: 5 },
+      { row: 3, column: 7 },
+      { row: 3, column: 9 },
+      { row: 3, column: 11 },
+      { row: 4, column: 1 },
+      { row: 4, column: 3 },
+      { row: 4, column: 5 },
+      { row: 5, column: 7 },
+      { row: 5, column: 9 },
+      { row: 5, column: 11 },
+      { row: 6, column: 0 },
+      { row: 6, column: 2 },
+      { row: 6, column: 4 },
+      { row: 7, column: 6 },
+      { row: 7, column: 8 },
+      { row: 7, column: 10 },
+      { row: 8, column: 0 },
+      { row: 8, column: 2 },
+      { row: 8, column: 4 },
+      { row: 9, column: 6 },
+      { row: 9, column: 8 },
+      { row: 9, column: 10 },
+      { row: 10, column: 0 },
+      { row: 10, column: 2 },
+      { row: 10, column: 4 },
+      { row: 11, column: 6 },
+      { row: 11, column: 8 },
+      { row: 11, column: 10 }
+    ]
+  ]
+]);
 
 const shuffleArray = (items) => {
   const copy = [...items];
@@ -45,6 +89,10 @@ const filterDarkColors = (colors, minimumLuminance = 0.3) =>
   });
 
 const createTriangleSolution = (size, requirement) => {
+  const preset = PRESET_TRIANGLE_SOLUTIONS.get(`${size}x${requirement}`);
+  if (preset) {
+    return { trianglePositions: preset.map((position) => ({ ...position })) };
+  }
   const maxAttempts = 200;
   const baseColumns = Array.from({ length: size }, (_, index) => index);
 
